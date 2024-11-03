@@ -1,0 +1,8 @@
+.linkhover {
+    color: rgba(0, 0, 0, 0.6);
+    transition: all 0.2s;
+  }
+  
+  .linkhover:hover {
+    color: rgba(0, 0, 0, 1);
+  }

@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import Underline from "./underline/Underline";
+import HoverPopup from "../HoverPopup";
+import TextLink from "../textlink/TextLink";
 
 export default function NavigationHeader() {
     return (
@@ -10,19 +12,30 @@ export default function NavigationHeader() {
                 <h1>Logo</h1>
                 <div className="flex flex-row gap-2">
                     <Underline>
-                        <Link href="/">HOME</Link>
+                        <TextLink href="/" text="HOME" className="!text-black hover:!text-greenPrimary transition-all" />
                     </Underline>
                     <Underline>
-                        <Link href="/shop">SHOP</Link>
+                        <TextLink href="/shop" text="SHOP" className="!text-black hover:!text-greenPrimary transition-all" />
                     </Underline>
                     <Underline>
-                        <Link href="/type">TYPE</Link>
+                        <HoverPopup
+                            classNames={{ "hover": "border pl-10 py-8 bg-white" }}
+                            hoverElement={
+                                <div className="flex flex-col gap-8 w-64">
+                                    <TextLink href="/" text="Link 1" />
+                                    <TextLink href="/" text="Link 2" />
+                                    <TextLink href="/" text="Link 3" />
+                                </div>
+                            }
+                        >
+                            <h1 className="text-black hover:text-greenPrimary transition-all">TYPES</h1>
+                        </HoverPopup>
                     </Underline>
                     <Underline>
-                        <Link href="/about">ABOUT US</Link>
+                        <TextLink href="/about" text="ABOUT US" className="!text-black hover:!text-greenPrimary transition-all" />
                     </Underline>
                     <Underline>
-                        <Link href="/contact">CONTACT US</Link>
+                        <TextLink href="/contact" text="CONTACT US" className="!text-black hover:!text-greenPrimary transition-all" />
                     </Underline>
                 </div>
             </div>
