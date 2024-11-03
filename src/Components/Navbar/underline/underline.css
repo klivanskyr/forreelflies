@@ -1,0 +1,16 @@
+.underline-hover::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 2px;
+    background-color: var(--greenPrimary);
+    transform: scaleX(0); /* Hidden initally */
+    transform-origin: left;
+    transition: transform 0.3s ease;
+  }
+  
+  .underline-hover:hover::after {
+    transform: scaleX(1); /* Full width on hover */
+  }
