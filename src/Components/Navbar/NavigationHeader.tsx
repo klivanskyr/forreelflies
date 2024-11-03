@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Underline from "./underline/Underline";
 import HoverPopup from "../HoverPopup";
-import TextLink from "../textlink/TextLink";
+import TextLink from "../Links/textlink/TextLink";
 
 export default function NavigationHeader() {
     return (
