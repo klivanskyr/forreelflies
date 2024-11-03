@@ -20,3 +20,24 @@ body {
   background: var(--background);
 }
 
+.greenButton {
+  background-color: var(--greenPrimary);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+.footer-header {
+  font-size: 1.75rem;
+  font-weight: 450;
+}
+
+.footer-header::after {
+  content: '';
+  display: block;
+  width: 60%;
+  height: 0.1rem;
+  background-color: rgba(0, 0, 0, 0.8);
+}

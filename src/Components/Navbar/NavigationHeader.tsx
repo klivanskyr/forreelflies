@@ -7,7 +7,7 @@ import TextLink from "../Links/textlink/TextLink";
 
 export default function NavigationHeader() {
     return (
-        <div className="flex flex-row justify-between gap-2 px-32">
+        <div className="flex flex-row justify-between gap-2 px-32 py-4">
             <div className="flex flex-row gap-8">
                 <h1>Logo</h1>
                 <div className="flex flex-row gap-2">
