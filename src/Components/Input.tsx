@@ -1,4 +1,6 @@
-export default function Input({ className="", label, placeholder, type = 'text', onChange, value, ...props }:{ className?: string, label?: string, placeholder?: string, type?: string, onChange?: any, value?: string, props?: any }) {
+import { FormEventHandler } from "react";
+
+export default function Input<T>({ className="", label, placeholder, type = 'text', onChange, value, ...props }:{ className?: string, label?: string, placeholder?: string, type?: string, onChange?: FormEventHandler<HTMLInputElement>, value?: string, props?: T }) {
   return (
     <div className="w-full h-full">
       {label && <label className={""}>{label}</label>}

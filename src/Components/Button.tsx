@@ -1,7 +1,9 @@
+import { FormEventHandler } from "react"
+
 type ButtonTypes = "submit" | "reset" | "button" | undefined
 type Color = "white" | "green"
 
-export default function Button({ className="", type, text, value, onChange, color="green" }: { className?: string, type: ButtonTypes, text: string, value?: string, onChange?: any, color?: Color }) {
+export default function Button({ className="", type, text, value, onChange, color="green" }: { className?: string, type: ButtonTypes, text: string, value?: string, onChange?: FormEventHandler<HTMLButtonElement>, color?: Color }) {
     return (
         <div className="w-fit h-fit">
             <button

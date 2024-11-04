@@ -1,4 +1,6 @@
-export default function Textarea({ className = "", label, placeholder, type = 'text', onChange, value, ...props }: { className?: string, label?: string, placeholder?: string, type?: string, onChange?: any, value?: string, props?: any }) {
+import { FormEventHandler } from "react";
+
+export default function Textarea<T>({ className = "", label, placeholder, type = 'text', onChange, value, ...props }: { className?: string, label?: string, placeholder?: string, type?: string, onChange?: FormEventHandler<HTMLTextAreaElement>, value?: string, props?: T }) {
     return (
         <div className="w-full h-full">
             {label && <label className={""}>{label}</label>}

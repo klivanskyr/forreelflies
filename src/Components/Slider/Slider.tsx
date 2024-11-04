@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { wrap } from "popmotion";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
@@ -9,9 +9,9 @@ export default function Slider({ children }: { children: React.ReactNode[] }) {
     const [[page, direction], setPage] = useState([0, 0]);
     const imageIndex = wrap(0, children.length, page); // Use wrap to loop through the children
 
-    const paginate = (newDirection: number) => {
+    const paginate = useCallback((newDirection: number) => {
         setPage([page + newDirection, newDirection]);
-    };
+    }, [page]);
 
     useEffect(() => {
         const interval = setInterval(() => {
