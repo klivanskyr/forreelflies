@@ -9,13 +9,17 @@ export default function Slider({ children }: { children: React.ReactNode[] }) {
     const [[page, direction], setPage] = useState([0, 0]);
     const imageIndex = wrap(0, children.length, page); // Use wrap to loop through the children
 
+    const paginate = (newDirection: number) => {
+        setPage([page + newDirection, newDirection]);
+    };
+
     useEffect(() => {
         const interval = setInterval(() => {
             paginate(1);
         }, 5000);
     
         return () => clearInterval(interval);
-    }, [page]);
+    }, [page, paginate]);
 
     const variants = {
         enter: (direction: number) => ({
@@ -32,11 +36,7 @@ export default function Slider({ children }: { children: React.ReactNode[] }) {
             x: direction < 0 ? 1000 : -1000,
             opacity: 0
         })
-    };
-
-    const paginate = (newDirection: number) => {
-        setPage([page + newDirection, newDirection]);
-    };
+    };  
 
     const swipeConfidenceThreshold = 10000;
     const swipePower = (offset: number, velocity: number) => Math.abs(offset) * velocity;
