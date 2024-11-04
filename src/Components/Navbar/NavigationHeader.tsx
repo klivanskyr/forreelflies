@@ -1,16 +1,15 @@
-// import NavbarLink from "./NavbarLink"
-
-import Link from "next/link";
 import Underline from "./underline/Underline";
-import HoverPopup from "../HoverPopup";
+import HoverPopup from "../hoverComponents/HoverPopup";
 import TextLink from "../Links/textlink/TextLink";
+import logo from "@/../public/logo.jpeg";
+import Image from "next/image";
 
 export default function NavigationHeader() {
     return (
-        <div className="flex flex-row justify-between gap-2 px-32 py-4">
-            <div className="flex flex-row gap-8">
-                <h1>Logo</h1>
-                <div className="flex flex-row gap-2">
+        <div className="flex flex-row items-center justify-between gap-2 px-32 py-4">
+            <div className="flex flex-row items-center gap-8">
+                <Image src={logo.src} alt="logo" width={200} height={200} />
+                <div className="flex flex-row gap-4">
                     <Underline>
                         <TextLink href="/" text="HOME" className="!text-black hover:!text-greenPrimary transition-all" />
                     </Underline>
@@ -28,7 +27,7 @@ export default function NavigationHeader() {
                                 </div>
                             }
                         >
-                            <h1 className="text-black hover:text-greenPrimary transition-all">TYPES</h1>
+                            <h1 className="text-black hover:text-greenPrimary transition-all text-lg">TYPES</h1>
                         </HoverPopup>
                     </Underline>
                     <Underline>

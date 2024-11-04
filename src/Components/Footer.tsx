@@ -1,12 +1,14 @@
+import Image from "next/image";
 import Link from "next/link";
+import logo from "@/../public/logo_noback.png";
 
 export default function Footer() {
     return (
         <div className="w-full flex flex-col">
-            <div className="flex flex-col bg-gray-200 p-6">
+            <div className="flex flex-col bg-gray-100 p-6">
                 <div className="flex flex-row w-full justify-around">
                     <div className="flex flex-col gap-2">
-                        <h3 className="text-[5rem]">Logo</h3>
+                        <Image src={logo.src} alt="ForReelFlies Logo" width={300} height={300} />
                         <h4>Words are supposed to be here</h4>
                     </div>
                     <div className="flex flex-col gap-1.5">
