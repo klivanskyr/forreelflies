@@ -15,7 +15,7 @@ export default function Gallery({ children }: { children: React.ReactNode }) {
         );
     } else {
         return (
-            <div className="flex flex-row gap-4">
+            <div className="flex flex-row gap-4 2xl:h-[500px]">
                 {/* First item spanning vertically */}
                 <div className="w-full">
                     {childrenArray[0]}

@@ -1,20 +1,21 @@
-import { FormEventHandler } from "react"
+import { FormEventHandler, MouseEventHandler } from "react"
 
-type ButtonTypes = "submit" | "reset" | "button" | undefined
 type Color = "white" | "green"
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+    className?: string;
+    text?: string
+    color?: Color
+  }
 
-export default function Button({ className="", type, text, value, onChange, color="green" }: { className?: string, type: ButtonTypes, text: string, value?: string, onChange?: FormEventHandler<HTMLButtonElement>, color?: Color }) {
+export default function Button({ className="", text, color="green", ...props }: ButtonProps ) {
     return (
-        <div className="w-fit h-fit">
-            <button
-                className={`${color === "green" ? "bg-greenPrimary text-white" : "bg-white text-greenPrimary"} py-2 px-4 rounded-lg shadow-input ${className}`}
-                type={type}
-                value={value}
-                onChange={onChange}
-            >
-                {text}
-            </button>
-        </div>
+        <button 
+            className={`${color === "green" ? "bg-greenPrimary text-white" : "bg-white text-greenPrimary border border-greenPrimary"} py-2 px-4 rounded-lg shadow-input ${className}`}
+            {...props}
+        >
+            
+            {text}
+        </button>
     )
 }
   

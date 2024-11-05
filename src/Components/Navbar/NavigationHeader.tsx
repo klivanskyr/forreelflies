@@ -1,10 +1,18 @@
+'use client';
+
 import Underline from "./underline/Underline";
 import HoverPopup from "../hoverComponents/HoverPopup";
 import TextLink from "../Links/textlink/TextLink";
 import logo from "@/../public/logo.jpeg";
 import Image from "next/image";
+import Sidebar from "../Sidebar";
+import Button from "../Button";
+import { useState } from "react";
+import LoginSidebar from "../Sidebar/LoginSidebar";
 
 export default function NavigationHeader() {
+    const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+
     return (
         <div className="flex flex-row items-center justify-between gap-2 px-32 py-4">
             <div className="flex flex-row items-center gap-8">
@@ -38,10 +46,11 @@ export default function NavigationHeader() {
                     </Underline>
                 </div>
             </div>
-            <div className="flex flex-row gap-2">
+            <div className="flex flex-row gap-2 items-center justify-center">
                 <h1>Search</h1>
                 <h1>Cart</h1>
-                <h1>Profile</h1>
+                <Button onClick={() => setSidebarOpen(prev => !prev)} text="Login/Signup" color="white" type="button" />
+                <LoginSidebar open={sidebarOpen} setOpen={setSidebarOpen} />
             </div>
         </div>
     )
