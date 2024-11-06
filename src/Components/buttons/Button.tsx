@@ -1,5 +1,3 @@
-import { FormEventHandler, MouseEventHandler } from "react"
-
 type Color = "white" | "green"
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     className?: string;
