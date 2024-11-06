@@ -14,7 +14,7 @@ const config: Config = {
         greenPrimary: "var(--greenPrimary)",
       },
       boxShadow: {
-        "card": "0 2px 50px 15px rgba(0, 0, 0, 0.125)",
+        "card": "0 2px 50px 15px rgba(0, 0, 0, 0.025)",
         "input": "0 4px 20px 0 rgba(0, 0, 0, 0.025)",
       },
     },
