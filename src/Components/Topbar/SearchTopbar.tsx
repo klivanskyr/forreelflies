@@ -6,7 +6,7 @@ import placeholder from "@/../public/placeholder.png";
 import BasicCard from "../cards/BasicCard";
 import { ButtonLink, TextLink } from "../Links";
 import Searchbar from "../inputs/Searchbar";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function Card({ src, alt, title, subtitle, link }: { src: string, alt: string, title: string, subtitle: string, link: string }) {
     return (
@@ -25,12 +25,24 @@ function Card({ src, alt, title, subtitle, link }: { src: string, alt: string, t
 
 export default function SearchTopbar({ open, setOpen }: { open: boolean, setOpen: (open: boolean) => void }) {
     const [search, setSearch] = useState<string>("");
+    const [searchChanged, setSearchChanged] = useState<boolean>(false);
+
+    useEffect(() => {
+        if (search.length > 3) {
+            setSearchChanged(true);
+        }
+
+        if (!open) {
+            setSearch("");
+            setSearchChanged(false);
+        }
+    }, [search, open]);
 
     return (
-        <Topbar open={open} setOpen={setOpen} className={`${search.length > 3 ? "h-[100%] duration-700 transition-all" : "h-[80%]"}`}>
+        <Topbar open={open} setOpen={setOpen} className={`${searchChanged ? "h-[100%] duration-700 transition-all" : ""}`}>
             <div className="flex flex-col items-center gap-12">
                 <h1 className="text-2xl">What are you looking for?</h1>
-                <Searchbar classNames={{ form: "max-w-[450px]", input: "" }} value={search} onChange={(e) => setSearch(e.target.value)} />
+                <Searchbar placeholder="Search..." classNames={{ form: "max-w-[450px]", input: "" }} value={search} onChange={(e) => setSearch(e.target.value)} onSubmit={(e) => e.preventDefault()} />
                 <div className="flex flex-row gap-2 items-center">
                     <h1 className="italic">TRENDING SEARCHES:</h1>
                     <TextLink href="/" text="Oil" className="!text-black hover:!text-white hover:bg-greenPrimary transition-all py-1.5 px-2" />
