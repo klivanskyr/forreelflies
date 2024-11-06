@@ -14,7 +14,7 @@ interface SearchbarProps {
     };
   }
 
-export default function Searchbar({ classNames={ form: "", input: "" }, placeholder="", label="", value, onChange=() => {}, onSubmit=() => {} }: SearchbarProps ) {
+export default function Searchbar({ classNames={ form: "", input: "" }, placeholder="", onChange=() => {}, onSubmit=() => {} }: SearchbarProps ) {
     return (
         <form 
             className={`${classNames.form} flex flex-row justify-between w-full border-b-[0.1rem] border-black pb-1 gap-2`}

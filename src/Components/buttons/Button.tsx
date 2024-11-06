@@ -13,7 +13,6 @@ export default function Button({ className="", text, color="green", ...props }: 
             className={`${color === "green" ? "bg-greenPrimary text-white" : "bg-white text-greenPrimary border border-greenPrimary"} py-2 px-4 rounded-lg shadow-input ${className}`}
             {...props}
         >
-            
             {text}
         </button>
     )
