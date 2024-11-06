@@ -3,7 +3,7 @@ import { Slider } from "@/Components/Slider";
 import Slide from "@/Components/Slider/Slide";
 import placeholder from "@/../public/placeholder.png";
 import PaginatedCardList from "@/Components/cards/PaginatedCardList";
-import Card from "@/Components/cards/Card";
+import Card from "@/Components/cards/RatingCard";
 import Gallery from "@/Components/Gallery";
 import SlideLink from "@/Components/Links/SlideLink";
 

@@ -5,13 +5,17 @@ import HoverPopup from "../hoverComponents/HoverPopup";
 import TextLink from "../Links/textlink/TextLink";
 import logo from "@/../public/logo.jpeg";
 import Image from "next/image";
-import Sidebar from "../Sidebar";
-import Button from "../Button";
+import Button from "../buttons/Button";
 import { useState } from "react";
 import LoginSidebar from "../Sidebar/LoginSidebar";
+import IconButton from "../buttons/IconButton";
+import { IoSearchOutline as SearchIcon } from "react-icons/io5";
+import SearchTopbar from "../Topbar/SearchTopbar";
+
 
 export default function NavigationHeader() {
     const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+    const [topbarOpen, setTopbarOpen] = useState<boolean>(false);
 
     return (
         <div className="flex flex-row items-center justify-between gap-2 px-32 py-4">
@@ -47,7 +51,8 @@ export default function NavigationHeader() {
                 </div>
             </div>
             <div className="flex flex-row gap-2 items-center justify-center">
-                <h1>Search</h1>
+                <IconButton onClick={() => setTopbarOpen(prev => !prev)} icon={<SearchIcon className="w-[25px] h-[25px]" />}/>
+                <SearchTopbar open={topbarOpen} setOpen={setTopbarOpen} />
                 <h1>Cart</h1>
                 <Button onClick={() => setSidebarOpen(prev => !prev)} text="Login/Signup" color="white" type="button" />
                 <LoginSidebar open={sidebarOpen} setOpen={setSidebarOpen} />

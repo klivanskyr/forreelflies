@@ -2,9 +2,9 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import Button from "../Button";
-import Input from "../Input";
-import Sidebar from "../Sidebar";
+import Button from "../buttons/Button";
+import Input from "../inputs/Input";
+import Sidebar from "./Sidebar";
 import Checkbox from "../Checkbox";
 import { TextLink } from "../Links";
 
