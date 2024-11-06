@@ -1,11 +1,11 @@
-import { ButtonLink } from "@/Components/Links";
-import { Slider } from "@/Components/Slider";
-import Slide from "@/Components/Slider/Slide";
+import { ButtonLink } from "@/components/Links";
+import { Slider } from "@/components/Slider";
+import Slide from "@/components/Slider/Slide";
 import placeholder from "@/../public/placeholder.png";
-import PaginatedCardList from "@/Components/cards/PaginatedCardList";
-import Card from "@/Components/cards/RatingCard";
-import Gallery from "@/Components/Gallery";
-import SlideLink from "@/Components/Links/SlideLink";
+import PaginatedCardList from "@/components/cards/PaginatedCardList";
+import Card from "@/components/cards/RatingCard";
+import Gallery from "@/components/Gallery";
+import SlideLink from "@/components/Links/SlideLink";
 
 export default function Home() {
   return (
