@@ -5,7 +5,7 @@ export default function Gallery({ children }: { children: React.ReactNode }) {
 
     if (childrenArray.length % 2 === 0) {
         return (
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap gap-4 h-[500px] w-full">
                 {childrenArray.map((child, index) => (
                     <div key={index} className="flex-1">
                         {child}
@@ -15,16 +15,14 @@ export default function Gallery({ children }: { children: React.ReactNode }) {
         );
     } else {
         return (
-            <div className="flex flex-row gap-4 2xl:h-[500px]">
-                {/* First item spanning vertically */}
-                <div className="w-full">
+            <div className="flex flex-row gap-4 h-[450px] 2xl:h-[500px] w-full relative">
+                <div className="w-full relative">
                     {childrenArray[0]}
                 </div>
 
-                {/* Remaining items in a 2x2 grid on the right */}
-                <div className="grid grid-cols-2 gap-4 w-full h-full">
+                <div className="grid grid-cols-2 gap-4 w-full h-full relative">
                     {childrenArray.slice(1).map((child, index) => (
-                        <div key={index} className="h-full w-full">
+                        <div key={index} className="h-full w-full relative">
                             {child}
                         </div>
                     ))}
