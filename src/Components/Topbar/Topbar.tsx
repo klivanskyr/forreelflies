@@ -6,11 +6,15 @@ import { useEffect } from "react";
 export default function Topbar({ className="", open, setOpen, children }: { className?: string, open: boolean, setOpen: (open: boolean) => void, children: React.ReactNode }) {
 
     useEffect(() => {
-        document.body.style.overflow = "hidden";
-        return () => {
-            document.body.style.overflow = "scroll"
-        };
-    }, []);
+        if (open) {
+            document.body.style.overflow = "hidden";
+            return () => {
+                document.body.style.overflow = "scroll"
+            };
+        } else {
+            document.body.style.overflow = "scroll";
+        }
+    }, [open]);
 
     return (
         <>
