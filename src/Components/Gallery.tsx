@@ -5,7 +5,7 @@ export default function Gallery({ children }: { children: React.ReactNode }) {
 
     if (childrenArray.length % 2 === 0) {
         return (
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap gap-4 h-[500px] w-full">
                 {childrenArray.map((child, index) => (
                     <div key={index} className="flex-1">
                         {child}
@@ -15,7 +15,7 @@ export default function Gallery({ children }: { children: React.ReactNode }) {
         );
     } else {
         return (
-            <div className="flex flex-row gap-4 2xl:h-[500px]">
+            <div className="flex flex-row gap-4 2xl:h-[500px] w-full">
                 {/* First item spanning vertically */}
                 <div className="w-full">
                     {childrenArray[0]}

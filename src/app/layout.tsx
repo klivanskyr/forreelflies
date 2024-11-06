@@ -5,7 +5,7 @@ import Footer from "@/Components/Footer";
 
 export const metadata: Metadata = {
   title: "ForReelFlies",
-  description: "Suck my balls",
+  description: "",
 };
 
 export default function RootLayout({
