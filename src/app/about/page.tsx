@@ -1,7 +1,7 @@
 import placeholder from "@/../public/placeholder.png";
-import Slide from "@/components/Slider/Slide";
+import Slide from "@/Components/Slider/Slide";
 import Link from "next/link";
-import { ButtonLink } from "@/components/Links";
+import { ButtonLink } from "@/Components/Links";
 
 export default function Page() {
     return (
