@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Navbar } from "@/Components/Navbar";
+import Footer from "@/Components/Footer";
 
 export const metadata: Metadata = {
   title: "ForReelFlies",
@@ -17,6 +18,7 @@ export default function RootLayout({
       <body>
         <Navbar />
         {children}
+        <Footer />
       </body>
     </html>
   );
