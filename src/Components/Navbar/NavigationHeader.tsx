@@ -1,24 +1,19 @@
-'use client';
-
+"use server";
 import Underline from "./underline/Underline";
 import HoverPopup from "../hoverComponents/HoverPopup";
 import TextLink from "../Links/textlink/TextLink";
 import logo from "@/../public/logo.jpeg";
 import Image from "next/image";
-import Button from "../buttons/Button";
-import { useState } from "react";
-import LoginSidebar from "../Sidebar/LoginSidebar";
-import IconButton from "../buttons/IconButton";
-import { IoSearchOutline as SearchIcon } from "react-icons/io5";
-import SearchTopbar from "../Topbar/SearchTopbar";
+import SigninButtonAndBar from "./SigninButtonAndBar";
+import NavSearchTopBar from "./NavSearchTopBar";
+import ProfileButtonAndBar from "./ProfileButtonAndBar";
 
-
-export default function NavigationHeader() {
-    const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
-    const [topbarOpen, setTopbarOpen] = useState<boolean>(false);
-
+export default async function NavigationHeader() {
+    const { tokenToUser } = await import("@/lib/firebase-admin");
+    const user = await tokenToUser();
+    
     return (
-        <div className="flex flex-row items-center justify-between gap-2 px-32 py-4">
+        <div className="flex flex-row items-center justify-between gap-2 px-32">
             <div className="flex flex-row items-center gap-8">
                 <Image src={logo.src} alt="logo" width={200} height={200} />
                 <div className="flex flex-row gap-4">
@@ -51,11 +46,9 @@ export default function NavigationHeader() {
                 </div>
             </div>
             <div className="flex flex-row gap-2 items-center justify-center">
-                <IconButton onClick={() => setTopbarOpen(prev => !prev)} icon={<SearchIcon className="w-[25px] h-[25px]" />}/>
-                <SearchTopbar open={topbarOpen} setOpen={setTopbarOpen} />
-                <h1>Cart</h1>
-                <Button onClick={() => setSidebarOpen(prev => !prev)} text="Login/Signup" color="white" type="button" />
-                <LoginSidebar open={sidebarOpen} setOpen={setSidebarOpen} />
+                <NavSearchTopBar />
+                <h1 className="2xl:text-2xl">Cart</h1>
+                {user ? <ProfileButtonAndBar /> : <SigninButtonAndBar />}
             </div>
         </div>
     )
