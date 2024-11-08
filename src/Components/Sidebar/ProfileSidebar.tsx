@@ -1,3 +1,4 @@
+import SignoutButton from "../buttons/SignOutButton";
 import { TextLink } from "../Links";
 import Sidebar from "./Sidebar";
 import { useRouter } from "next/navigation";
@@ -5,22 +6,9 @@ import { useRouter } from "next/navigation";
 export default function ProfileSidebar({ open, setOpen }: { open: boolean, setOpen: (open: boolean) => void }) {
     const router = useRouter();
 
-    const signOut = async () => {
-        try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/signout`, {
-                method: "POST",
-                credentials: "include",
-            })
-
-            if (response.ok) {
-                setOpen(false);
-                router.refresh();
-            } else {
-                console.error("Failed to log out");
-            }
-        } catch (error) {
-            console.error(error);
-        }
+    const onSignOut = () => {
+        setOpen(false);
+        router.refresh();
     }
 
     return (
@@ -31,13 +19,13 @@ export default function ProfileSidebar({ open, setOpen }: { open: boolean, setOp
                     <h1 className="text-2xl">MY ACCOUNT</h1>
                 </div>
                 <div className="flex flex-col h-[75%] justify-between">
-                    <TextLink href="/" text="DASHBOARD" />
-                    <TextLink href="/" text="ORDERS" />
-                    <TextLink href="/" text="WISHLIST" />
-                    <TextLink href="/" text="ADDRESSES" />
-                    <TextLink href="/" text="PAYMENT METHODS" />
-                    <TextLink href="/" text="ACCOUNT SETTINGS" />
-                    <button className="linkhover text-lg w-fit" onClick={() => signOut()}>LOGOUT</button>
+                    <TextLink href="/my-account" text="DASHBOARD" onClick={() => setOpen(false)} />
+                    <TextLink href="/my-account/orders" text="ORDERS" onClick={() => setOpen(false)} />
+                    <TextLink href="/my-account/wishlist" text="WISHLIST" onClick={() => setOpen(false)} />
+                    <TextLink href="/my-account/edit-address" text="ADDRESSES" onClick={() => setOpen(false)} />
+                    <TextLink href="/my-account/payment-methods" text="PAYMENT METHODS" onClick={() => setOpen(false)} />
+                    <TextLink href="/my-account/edit-account" text="ACCOUNT SETTINGS" onClick={() => setOpen(false)} />
+                    <SignoutButton text={"LOGOUT"} onSignOut={onSignOut} />
                 </div>
             </div>
         </Sidebar>

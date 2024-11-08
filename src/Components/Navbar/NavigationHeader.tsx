@@ -13,7 +13,7 @@ export default async function NavigationHeader() {
     const user = await tokenToUser();
     
     return (
-        <div className="flex flex-row items-center justify-between gap-2 px-32 py-4">
+        <div className="flex flex-row items-center justify-between gap-2 px-32">
             <div className="flex flex-row items-center gap-8">
                 <Image src={logo.src} alt="logo" width={200} height={200} />
                 <div className="flex flex-row gap-4">
@@ -48,7 +48,7 @@ export default async function NavigationHeader() {
             <div className="flex flex-row gap-2 items-center justify-center">
                 <NavSearchTopBar />
                 <h1>Cart</h1>
-                {user ? <ProfileButtonAndBar user={user} /> : <SigninButtonAndBar />}
+                {user ? <ProfileButtonAndBar /> : <SigninButtonAndBar />}
             </div>
         </div>
     )
