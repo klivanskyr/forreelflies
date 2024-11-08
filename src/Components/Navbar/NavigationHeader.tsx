@@ -6,6 +6,7 @@ import logo from "@/../public/logo.jpeg";
 import Image from "next/image";
 import SigninButtonAndBar from "./SigninButtonAndBar";
 import NavSearchTopBar from "./NavSearchTopBar";
+import ProfileButtonAndBar from "./ProfileButtonAndBar";
 
 export default async function NavigationHeader() {
     const { tokenToUser } = await import("@/lib/firebase-admin");
@@ -47,7 +48,7 @@ export default async function NavigationHeader() {
             <div className="flex flex-row gap-2 items-center justify-center">
                 <NavSearchTopBar />
                 <h1>Cart</h1>
-                {user ? <h1>{user.email}</h1> : <SigninButtonAndBar />}
+                {user ? <ProfileButtonAndBar user={user} /> : <SigninButtonAndBar />}
             </div>
         </div>
     )

@@ -122,8 +122,8 @@ export default function LoginSidebar({ setOpen, open }: { setOpen: (open: boolea
                     </div>
                     {activeSection === "login" ? (
                         <form className="flex flex-col w-full gap-3 items-center" onSubmit={handleLoginSubmit}>
-                            <Input className="px-2" name="email" label="Email" placeholder="Email" value={login.email} onChange={(e) => setLogin({ ...login, email: e.target.value })} autoComplete="email"/>
-                            <Input className="px-2" name="password" label="Password" type="password" placeholder="Password" value={login.password} onChange={(e) => setLogin({ ...login, password: e.target.value })} autoComplete="current-password"/>
+                            <Input className="!px-4" name="email" label="Email" placeholder="Email" value={login.email} onChange={(e) => setLogin({ ...login, email: e.target.value })} autoComplete="email"/>
+                            <Input className="!px-4" name="password" label="Password" type="password" placeholder="Password" value={login.password} onChange={(e) => setLogin({ ...login, password: e.target.value })} autoComplete="current-password"/>
                             <div className="flex flex-row w-full justify-between items-center px-1">
                                 <Checkbox label="Remember password?" bool={login.remember} setBool={(newBool: boolean) => setLogin({ ...login, remember: newBool })} />
                                 <TextLink className="text-sm !text-blue-500 hover:!text-blue-700" text="Forgot password?" href="/forgot-password" />
