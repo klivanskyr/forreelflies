@@ -10,7 +10,7 @@ export default function ProfileButtonAndBar() {
     
     return (
         <>
-            <IconButton onClick={() => setSidebarOpen(prev => !prev)} icon={<CgProfile className="w-[25px] h-[25px]"/>} />
+            <IconButton onClick={() => setSidebarOpen(prev => !prev)} icon={<CgProfile className="w-[25px] 2xl:w-[35px] h-[25px] 2xl:h-[35px]"/>} />
             <ProfileSidebar open={sidebarOpen} setOpen={setSidebarOpen} />
         </>
     )

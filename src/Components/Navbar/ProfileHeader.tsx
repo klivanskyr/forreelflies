@@ -1,3 +1,5 @@
+import { TextLink } from "../Links";
+
 export default function ProfileHeader() {
     return (
         <div className="flex flex-row justify-between bg-gray-100 px-32 py-2">
@@ -6,7 +8,7 @@ export default function ProfileHeader() {
                 <h1>facebook</h1>
             </div>
             <div>
-                <h1>Edit Profile</h1>
+                <TextLink text="Become A Vender" href="/vender-signup" />
             </div>
         </div>
     )

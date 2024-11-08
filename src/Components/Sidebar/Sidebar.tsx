@@ -21,7 +21,7 @@ export default function Sidebar({ open, setOpen, children }: { open: boolean, se
                 {open && (
                     <>
                         <motion.div 
-                            className="fixed top-0 right-0 w-[40%] 2xl:w-[35%] h-dvh z-[1000] bg-white"
+                            className="fixed top-0 right-0 w-[40%] 2xl:w-[30%] : h-dvh z-[1000] bg-white"
                             initial={{ right: "-30%", opacity: 0 }}
                             animate={{ right: 0, opacity: 1 }}
                             exit={{ right: "-30%", opacity: 0 }}
