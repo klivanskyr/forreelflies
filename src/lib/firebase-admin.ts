@@ -18,7 +18,16 @@ const adminAuth = getAuth(adminApp);
 
 export { adminApp, adminAuth };
 
-export const tokenToUser = async (): Promise<User | null> => {
+type DbUser = {
+    uid: string;
+    email: string;
+    displayName: string;
+    photoURL: string;
+    isVendor: boolean;
+    isAdmin: boolean;
+}
+
+export const tokenToUser = async (): Promise<DbUser | null> => {
     try {
         const token = await cookies().get('token')?.value;
 
@@ -49,7 +58,7 @@ export const tokenToUser = async (): Promise<User | null> => {
 
         const { user } = await responseUser.json();
 
-        return user as User;
+        return user as DbUser;
     } catch (error) {
         console.error(error);
         return null;

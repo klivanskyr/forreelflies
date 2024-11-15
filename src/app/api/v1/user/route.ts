@@ -1,4 +1,7 @@
+import { db } from "@/lib/firebase";
 import { adminAuth } from "@/lib/firebase-admin";
+import { addDoc, collection, doc, setDoc } from "firebase/firestore";
+import { cp } from "fs";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -44,10 +47,29 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         }
 
         try {
-            await adminAuth.createUser({
+            // Add user to Firebase Auth
+            const userRecord = await adminAuth.createUser({
                 email,
                 password,
             });
+
+            try {
+                // Add user to Firestore
+                await setDoc(doc(db, "users", userRecord.uid), {
+                    username: email.split("@")[0],
+                    email,
+                    isVendor: false
+                });
+            } catch (error) {
+                // Delete user from Firebase Auth if Firestore fails
+                await adminAuth.deleteUser(userRecord.uid);
+                if (error instanceof Error) {
+                    return NextResponse.json({ error: error.message }, { status: 400 });
+                } else {
+                    return NextResponse.json({ error: `An error occurred: ${error}` }, { status: 400 });
+                }
+            }
+
             return NextResponse.json({ message: "Successfully created user" }, { status: 200 });
         } catch (error) {
             if (error instanceof Error) {
