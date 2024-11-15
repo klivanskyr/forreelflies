@@ -17,8 +17,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             return NextResponse.json({ uid: validUser.uid }, { status: 200 });
         } catch (error) {
             if (error instanceof Error) {
-                console.log(`SERVER ERROR: ${error.message}`);
-                return NextResponse.json({ error: error.message }, { status: 400 });
+                if (error.message.includes("auth/id-token-expired")) {
+                    console.log("SERVER ERROR: Token expired");
+                    const res = NextResponse.json({ message: "Token expired" }, { status: 401 });
+                    res.cookies.set("token", "", { expires: new Date(0) });
+                    return res;
+                } else {
+                    console.log(`SERVER ERROR: ${error.message}`);
+                    return NextResponse.json({ error: error.message }, { status: 400 });
+                }
             } else {
                 console.log(`SERVER ERROR: An error occurred: ${error}`);
                 return NextResponse.json({ error: `An error occurred: ${error}` }, { status: 400 });

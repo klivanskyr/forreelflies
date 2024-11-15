@@ -45,8 +45,7 @@ export default function LoginSidebar({ setOpen, open }: { setOpen: (open: boolea
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                setError(error.message);
+                setError("Try Again: Invalid Credentials");
                 return;
             } else {
                 router.refresh();
@@ -88,6 +87,7 @@ export default function LoginSidebar({ setOpen, open }: { setOpen: (open: boolea
             setError("An error occurred, please try again");
             return;
         } else {
+            setError("Account created successfully. Please Login");
             setRegister({ email: "", password: "", confirmPassword: "" });
         }
     }
@@ -139,9 +139,9 @@ export default function LoginSidebar({ setOpen, open }: { setOpen: (open: boolea
                         <div className="flex flex-col items-center gap-6 w-full">
                             <form className="flex flex-col w-full gap-8 items-center" onSubmit={handleRegisterSubmit}>
                                 <div className="flex flex-col items-center w-full h-full gap-1">
-                                    <Input className="px-2" name="email" label="Email" placeholder="Email" value={register.email} onChange={(e) => setRegister({ ...register, email: e.target.value })} autoComplete="email" />
-                                    <Input className="px-2" name="password" type="password" label="Password" placeholder="Password" value={register.password} onChange={(e) => setRegister({ ...register, password: e.target.value})} autoComplete="new-password" />
-                                    <Input className="px-2" name="confirm-password" type="password" label="Confirm Password" placeholder="Confirm Password" value={register.confirmPassword} onChange={(e) => setRegister({ ...register, confirmPassword: e.target.value })} autoComplete="new-password" />
+                                    <Input className="!px-4" name="email" label="Email" placeholder="Email" value={register.email} onChange={(e) => setRegister({ ...register, email: e.target.value })} autoComplete="email" />
+                                    <Input className="!px-4" name="password" type="password" label="Password" placeholder="Password" value={register.password} onChange={(e) => setRegister({ ...register, password: e.target.value})} autoComplete="new-password" />
+                                    <Input className="!px-4" name="confirm-password" type="password" label="Confirm Password" placeholder="Confirm Password" value={register.confirmPassword} onChange={(e) => setRegister({ ...register, confirmPassword: e.target.value })} autoComplete="new-password" />
                                 </div>
                                 <Button className="w-full" name="register" text="Register" type="submit" />
                                 <AnimatePresence>
