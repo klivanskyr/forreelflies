@@ -3,7 +3,7 @@ import { TextLink } from "../Links";
 import Sidebar from "./Sidebar";
 import { useRouter } from "next/navigation";
 
-export default function ProfileSidebar({ open, setOpen }: { open: boolean, setOpen: (open: boolean) => void }) {
+export default function ProfileSidebar({ isVendor, open, setOpen }: { isVendor: boolean, open: boolean, setOpen: (open: boolean) => void }) {
     const router = useRouter();
 
     const onSignOut = () => {
@@ -19,6 +19,7 @@ export default function ProfileSidebar({ open, setOpen }: { open: boolean, setOp
                     <h1 className="text-2xl">MY ACCOUNT</h1>
                 </div>
                 <div className="flex flex-col h-[75%] justify-between">
+                    {isVendor && <TextLink href="/store-manager" text="STORE MANAGER" onClick={() => setOpen(false)} />}
                     <TextLink href="/my-account" text="DASHBOARD" onClick={() => setOpen(false)} />
                     <TextLink href="/my-account/orders" text="ORDERS" onClick={() => setOpen(false)} />
                     <TextLink href="/my-account/wishlist" text="WISHLIST" onClick={() => setOpen(false)} />

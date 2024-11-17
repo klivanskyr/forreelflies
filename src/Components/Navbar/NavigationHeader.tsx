@@ -48,7 +48,7 @@ export default async function NavigationHeader() {
             <div className="flex flex-row gap-2 items-center justify-center">
                 <NavSearchTopBar />
                 <h1 className="2xl:text-2xl">Cart</h1>
-                {user ? <ProfileButtonAndBar /> : <SigninButtonAndBar />}
+                {user ? <ProfileButtonAndBar isVendor={user.isVendor} /> : <SigninButtonAndBar />}
             </div>
         </div>
     )

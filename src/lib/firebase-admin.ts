@@ -18,13 +18,13 @@ const adminAuth = getAuth(adminApp);
 
 export { adminApp, adminAuth };
 
-type DbUser = {
+export type DbUser = {
     uid: string;
     email: string;
-    displayName: string;
-    photoURL: string;
+    username: string;
+    photoURL?: string;
     isVendor: boolean;
-    isAdmin: boolean;
+    isAdmin?: boolean;
 }
 
 export const tokenToUser = async (): Promise<DbUser | null> => {

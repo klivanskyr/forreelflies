@@ -1,6 +1,6 @@
 import { db } from "@/lib/firebase";
 import { adminAuth } from "@/lib/firebase-admin";
-import { addDoc, collection, doc, setDoc } from "firebase/firestore";
+import { addDoc, collection, doc, getDoc, setDoc } from "firebase/firestore";
 import { cp } from "fs";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -15,8 +15,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
         try {
             const user = await adminAuth.getUser(uid);
+
+            const userDoc = await getDoc(doc(db, "users", uid));
+            if (!userDoc.exists()) {
+                console.log("SERVER ERROR: User not found");
+                return NextResponse.json({ error: "User not found" }, { status: 400 });
+            }
+
+            const userDb = userDoc.data();
             console.log("SERVER SUCCESS: Successfully fetched user");
-            return NextResponse.json({ user }, { status: 200 });
+            return NextResponse.json({ user: { uid, ...userDb } }, { status: 200 });
         } catch (error) {
             if (error instanceof Error) {
                 console.log(`SERVER ERROR: ${error.message}`);

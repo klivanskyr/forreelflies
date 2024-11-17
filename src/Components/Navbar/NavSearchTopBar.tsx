@@ -11,7 +11,7 @@ export default function NavSearchTopBar() {
 
     return (
         <>
-            <IconButton onClick={() => setTopbarOpen(prev => !prev)} icon={<SearchIcon className="w-[25px] h-[25px] 2xl:w-[35px] 2xl:h-[35px]" />}/>
+            <IconButton onClick={() => setTopbarOpen(prev => !prev)} icon={<SearchIcon className="w-[25px] h-[25px] 2xl:w-[30px] 2xl:h-[30px]" />}/>
             <SearchTopbar open={topbarOpen} setOpen={setTopbarOpen} />
         </>
     )

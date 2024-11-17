@@ -18,7 +18,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             const ret = NextResponse.json({ message: "Successfully signed in" }, { status: 200 });
             ret.cookies.set("token", token, {
                 httpOnly: true,
-                maxAge: 60 * 60 * 24 * 7,
+                maxAge: 1000000000000000,
                 sameSite: "strict",
             });
             console.log("SERVER SUCCESS: Successfully signed in");

@@ -19,7 +19,7 @@ export default function SignOutButton({ text, startingIcon, onSignOut=() => {}, 
     }
 
     return (
-        <button className={`${className} linkhover text-lg w-fit flex flex-row items-center gap-1`} onClick={() => signOut()}>
+        <button className={`${className} linkhover text-lg w-fit flex flex-row items-center gap-1.5`} onClick={() => signOut()}>
             {startingIcon ? startingIcon : <></>}
             <h1>{text}</h1>
         </button>
