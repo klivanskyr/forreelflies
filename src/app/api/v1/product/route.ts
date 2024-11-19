@@ -4,7 +4,7 @@
 
 
 import { db } from "@/lib/firebase";
-import { collection, getDoc, getDocs, limit, orderBy, query, where, startAfter, doc, OrderByDirection, addDoc, setDoc } from "firebase/firestore";
+import { collection, getDoc, getDocs, orderBy, query, where, doc, OrderByDirection, addDoc, setDoc } from "firebase/firestore";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {

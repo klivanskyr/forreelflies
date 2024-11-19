@@ -1,8 +1,8 @@
 import TablePage from './TablePage';
 
 export type Column<T> = {
-    label: string,
-    key: (item: T) => string
+    label: JSX.Element,
+    key: (item: T) => JSX.Element
 }
 
 export default function Table<T>({ items, columns }: { items: T[], columns: Column<T>[], itemsPerPage: number }) {

@@ -1,5 +1,9 @@
 import { Product, Vendor } from "@/app/types/types";
+import Button from "@/Components/buttons/Button";
+import NoVendorRedirect from "@/Components/storeManagerHelpers/NoVendorRedirect";
+import StoreManagerProductsTable from "@/Components/storeManagerHelpers/StoreManagerProductsTable";
 import StoreManagerTemplate from "@/Components/storeManagerHelpers/StoreManagerTemplate";
+import StoreManagerProductsHeader from "@/Components/StoreManagerProductsHeader";
 import Table from "@/Components/Table/Table";
 
 export default async function Page() {
@@ -37,7 +41,7 @@ export default async function Page() {
     }
 
     const vendor = await getVendor(user.uid);
-    if (!vendor) {
+    if (!vendor  || !vendor.id) {
         return (
             <div>
                 <h1>Vendor not found</h1>
@@ -47,19 +51,11 @@ export default async function Page() {
     const products = await getProducts(vendor);
 
     return (
-        <StoreManagerTemplate>
-            <Table 
-                columns={
-                    [
-                        { label: 'Name', key: (item: Product) => item.name },
-                        { label: 'Price', key: (item: Product) => "$" + item.price.toFixed(2) },
-                        { label: 'Stock', key: (item: Product) => item.stockStatus || "Unknown" },
-                        { label: 'Posted', key: (item: Product) => item.isDraft ? "Draft" : "Posted" }
-                    ]
-                }
-                items={products}
-                itemsPerPage={5}
-            />
-        </StoreManagerTemplate>
+        <NoVendorRedirect vendor={vendor}>
+            <StoreManagerTemplate>
+                <StoreManagerProductsHeader vendorId={vendor.id} />
+                <StoreManagerProductsTable vendorId={vendor.id} products={products} />
+            </StoreManagerTemplate>
+        </NoVendorRedirect>
     )
 }

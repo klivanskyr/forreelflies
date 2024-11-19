@@ -1,3 +1,5 @@
+'use client';
+
 type Color = "white" | "green"
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     className?: string;

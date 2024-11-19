@@ -1,18 +1,6 @@
+import NoVendorRedirect from "@/Components/storeManagerHelpers/NoVendorRedirect";
 import StoreManagerTemplate from "@/Components/storeManagerHelpers/StoreManagerTemplate";
-
-type Vendor = {
-    id: string,
-    storeName: string,
-    storeStreetAddress: string,
-    storeCountry: string,
-    storeZip: string,
-    storeState: string,
-    storeDescription: string,
-    storePhone: string,
-    storeSlug: string,
-    storeCity: string,
-    storeEmail: string,
-}
+import { Vendor } from "../types/types";
 
 export default async function Page() {
     const { tokenToUser } = await import("@/lib/firebase-admin");
@@ -53,16 +41,18 @@ export default async function Page() {
     }
     
     return (
-        <StoreManagerTemplate>
-            <div className="flex flex-col p-2">
-                <div className="flex flex-row items-center shadow-lg border py-3 px-4">
-                    <h1 className="min-w-[6rem] my-10 mx-12">STORE ICON</h1>
-                    <div className="w-full flex flex-col items-center p-8 gap-2">
-                        <h1 className="text-greenPrimary text-2xl">For Reel Flies Store Manager</h1>
-                        <h2 className="text-xl">{vendor.storeName}</h2>
+        <NoVendorRedirect vendor={vendor}>
+            <StoreManagerTemplate>
+                <div className="flex flex-col p-2">
+                    <div className="flex flex-row items-center shadow-lg border py-3 px-4">
+                        <h1 className="min-w-[6rem] my-10 mx-12">STORE ICON</h1>
+                        <div className="w-full flex flex-col items-center p-8 gap-2">
+                            <h1 className="text-greenPrimary text-2xl">For Reel Flies Store Manager</h1>
+                            <h2 className="text-xl">{vendor.storeName}</h2>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </StoreManagerTemplate>
+            </StoreManagerTemplate>
+        </NoVendorRedirect>
     )
 }

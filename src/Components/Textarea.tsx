@@ -1,6 +1,8 @@
+'use client';
+
 export default function Textarea<T>({ className = "", label, placeholder, onChange=()=>{}, value, ...props }: { className?: string, label?: string, placeholder?: string, onChange?: React.ChangeEventHandler<HTMLTextAreaElement>, value?: string, props?: T }) {
     return (
-        <div className="w-full h-full">
+        <div className="w-full h-fit">
             {label && <label className="text-sm">{label}</label>}
             <textarea
                 placeholder={placeholder || ""}

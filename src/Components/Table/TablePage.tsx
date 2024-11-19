@@ -3,10 +3,11 @@
 import { useState } from "react";
 import TableBody from "./TableBody";
 import TableFilter from "./TableFilter";
+import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
-export default function Page<T>({ rows, headers }: { rows: string[][], headers: string[]}) {
+export default function Page<T>({ rows, headers }: { rows: JSX.Element[][], headers: JSX.Element[]}) {
     const [page, setPage] = useState<number>(0);
-    const [rowsPerPage, setRowsPerPage] = useState<number>(5);
+    const [rowsPerPage, setRowsPerPage] = useState<number>(10);
 
     return (
         <div className="w-full h-full flex flex-col justify-between">
@@ -16,9 +17,9 @@ export default function Page<T>({ rows, headers }: { rows: string[][], headers: 
                 )}
             </TableFilter>
 
-            <div className="flex flex-row gap-4">
-                <button onClick={() => setPage(page - 1)} disabled={page === 0}>Previous</button>
-                <button onClick={() => setPage(page + 1)} disabled={(page + 1) * rowsPerPage >= rows.length}>Next</button>
+            <div className="flex flex-row gap-32 justify-center items-center p-6">
+                <button onClick={() => setPage(page - 1)} disabled={page === 0}><FaChevronLeft className={`w-[25px] h-[25px] ${page === 0 ? "text-gray-500" : "text-black"}`} /></button>
+                <button onClick={() => setPage(page + 1)} disabled={(page + 1) * rowsPerPage >= rows.length}><FaChevronRight className={`w-[25px] h-[25px] ${(page + 1) * rowsPerPage >= rows.length ? "text-gray-500" : "text-black"}`} /></button>
             </div>
         </div>
     )
