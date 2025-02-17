@@ -22,6 +22,12 @@ export type DbUser = {
     uid: string;
     email: string;
     username: string;
+    phoneNumber?: string;
+    streetAddress?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
     photoURL?: string;
     isVendor: boolean;
     isAdmin?: boolean;

@@ -22,8 +22,19 @@ body {
 
 .greenButton {
   background-color: var(--greenPrimary);
+  transition: all 0.3s;
   color: white;
   border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+.greenButton:hover {
+  background-color: #1a5d2c;
+}
+
+.nocolorButton {
   padding: 0.5rem 1rem;
   border-radius: 0.25rem;
   cursor: pointer;

@@ -20,7 +20,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                 if (error.message.includes("auth/id-token-expired")) {
                     console.log("SERVER ERROR: Token expired");
                     const res = NextResponse.json({ message: "Token expired" }, { status: 401 });
-                    res.cookies.set("token", "", { expires: new Date(0) });
+                    // delete cookie
+                    res.cookies.delete("token");
                     return res;
                 } else {
                     console.log(`SERVER ERROR: ${error.message}`);
