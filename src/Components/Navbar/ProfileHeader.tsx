@@ -7,7 +7,7 @@ export default async function ProfileHeader() {
     const user = await tokenToUser();
 
     return (
-        <div className="flex flex-row justify-between bg-gray-100 px-32 py-2">
+        <div className="flex flex-row justify-between bg-gray-100 py-2 md:px-8 lg:px-32">
             <div className="px-4 py-1 flex flex-row gap-4">
                 <FaFacebook size={30} />
                 <FaInstagram size={30} />

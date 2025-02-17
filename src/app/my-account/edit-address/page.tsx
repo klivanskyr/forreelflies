@@ -1,4 +1,5 @@
 import DashboardTemplate from "@/Components/dashboardHelpers/dashboardTemplate";
+import AddressPage from "@/Components/my-account/AddressPage";
 
 export default async function Page() {
     const { tokenToUser } = await import("@/lib/firebase-admin");
@@ -9,8 +10,10 @@ export default async function Page() {
     }
 
     return (
-        <DashboardTemplate user={user}>
-            <h1>Edit Addresses</h1>
-        </DashboardTemplate>
+        <>
+            <DashboardTemplate user={user}>
+                <AddressPage user={user} />
+            </DashboardTemplate>
+        </>
     )
 }

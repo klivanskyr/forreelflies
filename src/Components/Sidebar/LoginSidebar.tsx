@@ -48,9 +48,9 @@ export default function LoginSidebar({ setOpen, open }: { setOpen: (open: boolea
                 setError("Try Again: Invalid Credentials");
                 return;
             } else {
-                router.refresh();
                 setOpen(false);
                 setLogin({ email: "", password: "", remember: false });
+                router.refresh();
 
             }
         } catch (error) {
@@ -87,8 +87,9 @@ export default function LoginSidebar({ setOpen, open }: { setOpen: (open: boolea
             setError("An error occurred, please try again");
             return;
         } else {
-            setError("Account created successfully. Please Login");
+            setError("Account created successfully.");
             setRegister({ email: "", password: "", confirmPassword: "" });
+            router.refresh();
         }
     }
 

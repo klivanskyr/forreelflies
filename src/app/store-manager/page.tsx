@@ -1,6 +1,7 @@
 import NoVendorRedirect from "@/Components/storeManagerHelpers/NoVendorRedirect";
 import StoreManagerTemplate from "@/Components/storeManagerHelpers/StoreManagerTemplate";
 import { Vendor } from "../types/types";
+import NoXRedirect from "@/Components/NoXRedirect";
 
 export default async function Page() {
     const { tokenToUser } = await import("@/lib/firebase-admin");
@@ -41,7 +42,7 @@ export default async function Page() {
     }
     
     return (
-        <NoVendorRedirect vendor={vendor}>
+        <NoXRedirect<Vendor> x={vendor} redirectUrl="/?login=true" alertMessage="You must be logged in as a vendor to access the store manager">
             <StoreManagerTemplate>
                 <div className="flex flex-col p-2">
                     <div className="flex flex-row items-center shadow-lg border py-3 px-4">
@@ -53,6 +54,6 @@ export default async function Page() {
                     </div>
                 </div>
             </StoreManagerTemplate>
-        </NoVendorRedirect>
+        </NoXRedirect>
     )
 }

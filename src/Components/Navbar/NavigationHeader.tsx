@@ -7,13 +7,15 @@ import Image from "next/image";
 import SigninButtonAndBar from "./SigninButtonAndBar";
 import NavSearchTopBar from "./NavSearchTopBar";
 import ProfileButtonAndBar from "./ProfileButtonAndBar";
+import Link from "next/link";
+import { FiShoppingCart } from "react-icons/fi";
 
 export default async function NavigationHeader() {
     const { tokenToUser } = await import("@/lib/firebase-admin");
     const user = await tokenToUser();
     
     return (
-        <div className="flex flex-row items-center justify-between gap-2 px-32">
+        <div className="flex flex-row items-center justify-between gap-2 md:px-8 lg:px-32">
             <div className="flex flex-row items-center gap-8">
                 <Image src={logo.src} alt="logo" width={200} height={200} />
                 <div className="flex flex-row gap-4">
@@ -47,7 +49,7 @@ export default async function NavigationHeader() {
             </div>
             <div className="flex flex-row gap-2 items-center justify-center">
                 <NavSearchTopBar />
-                <h1 className="2xl:text-2xl">Cart</h1>
+                <Link href="/cart"><FiShoppingCart className="h-6 w-6" /></Link>
                 {user ? <ProfileButtonAndBar isVendor={user.isVendor} /> : <SigninButtonAndBar />}
             </div>
         </div>
