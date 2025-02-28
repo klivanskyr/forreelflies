@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Product } from "../types/types";
 import NoXRedirect from "@/Components/NoXRedirect";
 import Breadcrumbs from "@/Components/Breadcrumbs";
-import CalculateShippingButton from "@/Components/buttons/CalculateShippingButton";
 import { calculateShipping } from "@/helpers/calculateShipping";
 
 type CartId = {
@@ -10,7 +9,7 @@ type CartId = {
     quantity: number,
 }
 
-type CartItem = {
+export type CartItem = {
     product: Product,
     quantity: number,
 };
