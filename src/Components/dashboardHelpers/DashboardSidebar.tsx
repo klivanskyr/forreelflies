@@ -21,6 +21,7 @@ export default function DashboardSidebar() {
             <TextLink className={`w-fit ${path === "/my-account/wishlist" ? "!text-greenPrimary" : ""}`} href="/my-account/wishlist" text="Wishlist" startingIcon={<WishlistIcon className={`${path === "/my-account/wishlist" ? "fill-greenPrimary" : ""}`}/>} />
             <TextLink className={`w-fit ${path === "/my-account/payment-methods" ? "!text-greenPrimary" : ""}`} href="/my-account/payment-methods" text="Payment Methods" startingIcon={<PaymentIcon className={`${path === "/my-account/payment-methods" ? "fill-greenPrimary" : ""}`}/>} />
             <TextLink className={`w-fit ${path === "/my-account/edit-account" ? "!text-greenPrimary" : ""}`} href="/my-account/edit-account" text="Account Settings" startingIcon={<SettingsIcon className={`${path === "/my-account/account-settings" ? "fill-greenPrimary" : ""}`}/>} />
+            <TextLink className={`w-fit ${path === "/my-account/edit-address" ? "!text-greenPrimary" : ""}`} href="/my-account/edit-address" text="Address Book" startingIcon={<SettingsIcon className={`${path === "/my-account/address-book" ? "fill-greenPrimary" : ""}`}/>} />
             <SignOutButton className="w-fit" text="Sign Out" startingIcon={<LogoutIcon />} onSignOut={() => router.refresh()}/>
         </div>
     )

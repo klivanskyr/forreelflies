@@ -1,10 +1,13 @@
 import Link from "next/link";
-import { Product } from "../types/types";
+import { Product, Rate } from "../types/types";
 import NoXRedirect from "@/Components/NoXRedirect";
 import Breadcrumbs from "@/Components/Breadcrumbs";
 import { calculateShipping } from "@/helpers/calculateShipping";
+import Button from "@/Components/buttons/Button";
+import { VendorItem } from "../api/v1/checkout/route";
+import CheckoutButton from "@/Components/CheckoutButton";
 
-type CartId = {
+export type CartId = {
     id: string,
     quantity: number,
 }
@@ -22,7 +25,6 @@ export default async function Page() {
         return <></>;
     }
 
-    
     const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/user/cart?id=${user?.uid}`,
         {
@@ -37,7 +39,6 @@ export default async function Page() {
     const cartIds: CartId[] = data.data as CartId[]; // Object with productId as keys and quantity as values
 
     const promises: Promise<CartItem>[] = cartIds.map((cartId) => {
-        const url = `${process.env.NEXT_PUBLIC_API_URL}/product?id=${cartId.id}`;
         return fetch(`${process.env.NEXT_PUBLIC_API_URL}/product?id=${cartId.id}`, {
             method: "GET",
             headers: {
@@ -64,14 +65,49 @@ export default async function Page() {
         .reduce((acc, val) => acc + val, 0);
 
     // Dummy shipping/tax
-    const [rates, err] = await calculateShipping(user, cartItems.map(item => item.product));
-    if (err) {
-        console.error(err);
+    // Only calculate shipping if user has shipping address
+    let rates: Rate[] = [];
+    if (user.streetAddress && user.city && user.state && user.zipCode && user.country) {
+        const [calculatedRates, err] = await calculateShipping(user, cartItems.map(item => item.product));
+        rates = calculatedRates;
+        if (err) {
+            console.error(err);
+        }
     }
 
     const shippingCost = rates.reduce((acc, rate) => acc + rate.amount, 0);
     const tax = 0;
     const total = subtotal + shippingCost + tax;
+
+    // Create a single Stripe Checkout Session for all vendors 
+    const sellerIds = cartItems.map((item) => item.product.vendorId);
+    const uniqueSellerIds = [...new Set(sellerIds)];
+    const sellerSessionsPromises = uniqueSellerIds.map((sellerId) => (
+        fetch(`${process.env.API_URL}/vendor?vendorId=${sellerId}`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+            }
+        })));
+    const sellerSessions = await Promise.all(sellerSessionsPromises);
+    const sellerDataPromises = await Promise.all(sellerSessions.map((session) => session.json()));
+    const sellerData = sellerDataPromises.map((data) => data.vendor);
+
+    const vendorItems: VendorItem[] = sellerData.map((vendor) => {
+            const vendorCartItems = cartItems.filter((item) => item.product.vendorId === vendor.id);
+            const shippingfee = rates.find((rate) => rate.sellerId === vendor.id)?.amount;
+    
+            if (!shippingfee) {
+                console.error("Shipping fee not found for vendor: ", vendor.id);
+            }
+    
+            return {
+                vendorId: vendor.id,
+                stripeAccountId: vendor.stripeAccountId,
+                cartItems: vendorCartItems,
+                shippingFee: shippingfee || 0,
+            }
+        });
 
     return (
         <NoXRedirect x={user} redirectUrl="/?login=true">
@@ -197,10 +233,10 @@ export default async function Page() {
                         {/* Shipping */}
                         <div className="flex flex-col text-gray-700">
                             <div className="text-sm text-gray-500 flex flex-col justify-between">
-                                {rates.map((rate, i) => (
+                                {rates.length > 0 && rates.map((rate, i) => (
                                     <div key={i}>{rate.sellerName} --- {rate.provider}, Estimated Days: {rate.estimatedDays}: <span className="font-semibold">${rate.amount}</span></div>
                                 ))}
-                                {/* <CalculateShippingButton user={user} products={cartItems.map(item => item.product)} /> */}
+                                {rates.length === 0 && <Link href="/" className="text-blue-500">Add shipping information to calculate shipping cost</Link>}
                             </div>
                         </div>
 
@@ -211,9 +247,7 @@ export default async function Page() {
                         </div>
 
                         {/* Buttons (Checkout, Payment, etc.) */}
-                        <Link href="/checkout" className="greenButton text-center">
-                            PROCEED TO CHECKOUT
-                        </Link>
+                        <CheckoutButton vendorItems={vendorItems} />
                         <Link href="/shop" className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 text-center">
                             CONTINUE SHOPPING
                         </Link>

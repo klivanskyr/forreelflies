@@ -63,6 +63,8 @@ export async function calculateShipping(buyer: DbUser, products: Product[]): Pro
 
         if (!response.ok) {
             console.log("Failed to fetch rates");
+            const error = await response.json();
+            console.log("Error: ", error)
             return null;
         }
 
@@ -85,6 +87,7 @@ export async function calculateShipping(buyer: DbUser, products: Product[]): Pro
         const sellerRates = response?.rates;
         const sellerId = response?.sellerInfo.vendorId;
         const sellerName = response?.sellerInfo.vendorName;
+        console.log("Seller rates: ", sellerRates, "Seller ID: ", sellerId, "Seller Name: ", sellerName);
         const cheapestRate = sellerRates.find((rate: any) => rate.attributes.includes("CHEAPEST"));
         if (!cheapestRate) return null;
 

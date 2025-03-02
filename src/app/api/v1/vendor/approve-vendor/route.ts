@@ -99,7 +99,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             // Generate onboarding link for the vendor
             const accountLink = await stripe.accountLinks.create({
                 account: account.id,
-                refresh_url: 'https://yourplatform.com/reauth', // CHANGE THIS
+                refresh_url: `${process.env.URL}`, // 'https://yourplatform.com/reauth', // CHANGE THIS
                 return_url: `${process.env.URL}`, // Where the user is sent after verification
                 type: 'account_onboarding',
             });

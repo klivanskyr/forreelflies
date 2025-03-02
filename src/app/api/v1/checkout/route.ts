@@ -1,50 +1,120 @@
 import { CartItem } from "@/app/cart/page";
 import { NextRequest, NextResponse } from "next/server";
+import { describe } from "node:test";
+import { GiConsoleController } from "react-icons/gi";
 
 import Stripe from "stripe";
+
+export type VendorItem = {
+    vendorId: string;
+    stripeAccountId: string;
+    cartItems: CartItem[];
+    shippingFee: number;
+};
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
     try {
         const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
-        const { cartItems, connectedAccountId, shippingFee, tax }: { cartItems: CartItem[], connectedAccountId: string, shippingFee: number, tax: number } = await request.json();
-        if (!cartItems || !connectedAccountId || !shippingFee || !tax) {
-            return NextResponse.json({ error: "Required fields: { cartItems: CartItem[], connectedAccountId: string, shippingFee: number, tax: number }" }, { status: 400 });
-        }
-        // Check cartItems is CartItem[]
-        if (!Array.isArray(cartItems)) {
-            return NextResponse.json({ error: "cartItems must be an array" }, { status: 400 });
+
+        // Extract vendorItems from the request body
+        const { vendorItems }: { vendorItems: VendorItem[] } = await request.json();
+
+        if (!vendorItems || vendorItems.length === 0) {
+            return NextResponse.json({ error: "Required field: vendorItems (array)" }, { status: 400 });
         }
 
-        const lineItems = cartItems.map((item) => {
-            return {
-                price_data: {
-                    currency: "usd",
-                    product_data: {
-                        name: item.product.name,
-                    },
-                    unit_amount: item.product.price,
-                },
-                quantity: item.quantity,
+        // verify the vendorItems array follows the correct structure
+        for (const vendor of vendorItems) {
+            if (!vendor.vendorId || !vendor.stripeAccountId || !vendor.cartItems || !vendor.shippingFee) {
+                return NextResponse.json({ error: "Each vendor item must have: vendorId, stripeAccountId, cartItems, shippingFee" }, { status: 400 });
             }
+        }
+
+        let totalAmountCents = 0;
+        let totalShippingfeeCents = 0;
+        let lineItems: any[] = [];
+        let vendorDetails: any[] = [];
+
+        // Process each vendor's items
+        for (const vendor of vendorItems) {
+            if (!vendor.cartItems || vendor.cartItems.length === 0) {
+                return NextResponse.json({ error: `Vendor ${vendor.vendorId} has no cart items` }, { status: 400 });
+            }
+
+            if (!vendor.stripeAccountId) {
+                return NextResponse.json({ error: `Vendor ${vendor.vendorId} is missing Stripe Account ID` }, { status: 400 });
+            }
+
+            let vendorTotal = 0;
+
+            // Convert items into Stripe line items
+            vendor.cartItems.forEach((item) => {
+                const itemTotalCents = item.product.price * item.quantity * 100; // Convert price to cents
+                lineItems.push({
+                    price_data: {
+                        currency: "usd",
+                        product_data: { 
+                            name: item.product.name ,
+                            images: item.product.images,
+                            description: item.product.shortDescription
+                        },
+                        unit_amount: itemTotalCents / item.quantity,
+                    },
+                    quantity: item.quantity,
+                });
+
+                vendorTotal += itemTotalCents;
+            });
+
+            // Add vendorTotal to totalAmount
+            totalAmountCents += vendorTotal;
+
+            // Add shipping fee to totalShippingfee
+            totalShippingfeeCents += vendor.shippingFee * 100; //Convert to cents
+
+            // Store vendor details for transfer processing
+            vendorDetails.push({
+                vendorId: vendor.vendorId,
+                stripeAccountId: vendor.stripeAccountId,
+                amount: vendorTotal,
+            });
+        }
+
+        // Calculate platform fee (10% of total)
+        const applicationFeeAmount = Math.round(totalAmountCents * 0.1);
+
+        // Create a single Stripe Checkout Session
+        const session = await stripe.checkout.sessions.create({
+            line_items: lineItems,
+            payment_intent_data: {
+                // application_fee_amount: applicationFeeAmount, // Platform fee Application fee is now in the transfor stage
+                // metadata: {
+                //     vendorDetails: JSON.stringify(vendorDetails), // Store vendor details for transfers
+                // },
+            },
+            metadata: {
+                vendorDetails: JSON.stringify(vendorDetails), // Store vendor details for transfers
+            },
+            shipping_options: [
+                {
+                    shipping_rate_data: {
+                        type: "fixed_amount",
+                        fixed_amount: { amount: totalShippingfeeCents, currency: "usd" }, 
+                        display_name: "Multi-Vendor Shipping",
+                    },
+                },
+            ],
+            mode: "payment",
+            ui_mode: "hosted",
+            success_url: `${process.env.URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.URL}/checkout/cancel`,
         });
 
-        const session = stripe.checkout.sessions.create({
-            line_items: lineItems,  
-            payment_intent_data: {
-                application_fee_amount: 1, // THE AMOUNT TO BE TRANSFERRED TO US. CHANGE TO A PERCENTAGE OF THE TOTAL    
-            },
-            mode: "payment",
-            ui_mode: "embedded",
-            success_url: process.env.URL + "/checkout/success",
-            cancel_url: process.env.URL + "/cart/",
-            return_url: process.env.URL + "/cart", 
-        })
+        console.log("session", session);
+
+        return NextResponse.json({ data: { url: session.url }}, { status: 200 });
 
     } catch (error) {
-        if (error instanceof Error) {
-            return NextResponse.json({ error: error.message }, { status: 400 });
-        } else {
-            return NextResponse.json({ error: "Unknown error" }, { status: 400 });
-        }
+        return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 400 });
     }
 }
