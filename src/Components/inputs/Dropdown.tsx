@@ -35,13 +35,13 @@ export default function Dropdown({ classNames, label, options, selected, setSele
                 </button>
             </div>
             {open && (
-                <div tabIndex={-1} className="absolute bottom-0 left-0 translate-y-[95%] bg-white border w-full h-fit max-h-[100px] rounded-lg p-2 flex flex-col overflow-y-auto">
-                    {options.map((option, index) => (
-                        <button className="text-left" key={index} onClick={() => { setSelected(option.value); setOpen(false) }}>
-                            <p className={`${classNames?.option || ""} py-1 px-2 hover:bg-gray-100 cursor-pointer`}>{option.label}</p>
-                        </button>
-                    ))}
-                </div>
+            <div tabIndex={-1} className="absolute bottom-0 left-0 translate-y-[95%] bg-white border w-full h-fit max-h-[110px] rounded-lg p-2 pb-2 flex flex-col overflow-y-auto">
+                {options.map((option, index) => (
+                    <button className="text-left" key={index} onClick={() => { setSelected(option.value); setOpen(false) }}>
+                        <p className={`${classNames?.option || ""} py-1 px-2 hover:bg-gray-100 cursor-pointer`}>{option.label}</p>
+                    </button>
+                ))}
+            </div>
             )}
         </div>
     );

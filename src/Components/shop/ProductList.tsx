@@ -1,64 +1,38 @@
 'use client';
 
-import { Product, Sort } from "@/app/types/types"
-import { useEffect, useState } from "react";
+import { Layout, Product, Sort } from "@/app/types/types";
 import BasicCard from "../cards/BasicCard";
 import Link from "next/link";
 
-type Layout = "column" | "grid2" | "grid3" | "grid4" 
-
-export default function ProductList({ sort, pageSize }: { sort: Sort, pageSize: number }) {
-    const [products, setProducts] = useState([])
-    const [page, setPage] = useState<number>(1);
-    const [totalPages, setTotalPages] = useState<number | null>(null);
-    const [layout, setLayout] = useState<Layout>("grid2")
-
-    useEffect(() => {
-        const fetchProducts = async () => {
-            if (pageSize === -1) { // Get all products
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/product?sort=${sort}`)
-                if (!response.ok) {
-                    console.error("Error fetching products")
-                    setProducts([])
-                } 
-        
-                const data = await response.json()
-                console.log("data", data)
-                setProducts(data.data)
-                return
-            } 
-
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/product?sort=${sort}&page=${page}&pageSize=${pageSize}`)
+export default async function ProductList({ sort, pageSize, page, layout }: { sort: Sort, pageSize: number, page: number, layout: Layout }) {
+    const fetchProducts = async () => {
+        if (pageSize === -1) { // Get all products
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/product?sort=${sort}`)
             if (!response.ok) {
                 console.error("Error fetching products")
-                setProducts([])
-            } 
-    
+                return []
+            }
+
             const data = await response.json()
-            console.log("data", data)
-            setProducts(data.data)
-            setTotalPages(data.meta.totalPages)
+            return data.data
         }
 
-        fetchProducts()
-    }, [sort, page, pageSize])
-
-    const incrementPage = () => {
-        if (totalPages !== null && page < totalPages) {
-            setPage(page + 1)
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/product?sort=${sort}&page=${page}&pageSize=${pageSize}`)
+        if (!response.ok) {
+            console.error("Error fetching products")
+            return []
         }
+
+        const data = await response.json()
+        return data.data
     }
 
-    const decrementPage = () => {
-        if (totalPages !== null && page > 1) {
-            setPage(page - 1)
-        }
-    }
+    const products = await fetchProducts()
 
     const divClassName = () => {
         switch (layout) {
             case "column":
-                return "flex flex-col"
+                return "grid grid-cols-1 items-center justify-items-center m-2 max-w-[500px] gap-2"
             case "grid2":
                 return "grid grid-cols-2 items-center justify-items-center m-2 gap-2"
             case "grid3":
@@ -68,11 +42,37 @@ export default function ProductList({ sort, pageSize }: { sort: Sort, pageSize: 
         }
     }
 
+    const cardClassName = () => {
+        switch (layout) {
+            case "column":
+                return "!h-[75dvh]"
+            case "grid2":
+                return "!h-[80dvh]"
+            case "grid3":
+                return "!h-[62dvh]"
+            case "grid4":
+                return "!h-[50dvh]"
+        }
+    }
+
+    
+    // const incrementPage = () => {
+    //     if (totalPages !== null && page < totalPages) {
+    //         setPage(page + 1)
+    //     }
+    // }
+
+    // const decrementPage = () => {
+    //     if (totalPages !== null && page > 1) {
+    //         setPage(page - 1)
+    //     }
+    // }
+
     return (
         <div>
             <div className={divClassName()}>
                 {products.map((product: Product) => (
-                        <BasicCard className="w-full !h-[75dvh]" key={product.id}>
+                        <BasicCard className={`w-full ${cardClassName()}`} key={product.id}>
                             <div className="h-full flex flex-col items-center w-full">
                                 {product?.images && <Link className="w-full flex items-center justify-center overflow-hidden"href={`/product/${product.id}`}><img className="h-full object-contain" src={product.images[0]} alt={product.name} /></Link>}
                                 <div className="flex flex-col w-full h-full justify-between items-center">
@@ -97,8 +97,8 @@ export default function ProductList({ sort, pageSize }: { sort: Sort, pageSize: 
                 ))}
             </div>
 
-            <button onClick={() => decrementPage()}>prev</button>
-            <button onClick={() => incrementPage()}>next</button>
+            {/* <button onClick={() => decrementPage()}>prev</button>
+            <button onClick={() => incrementPage()}>next</button> */}
         </div>
     )
 }
