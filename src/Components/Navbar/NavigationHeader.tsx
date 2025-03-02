@@ -13,6 +13,21 @@ import { FiShoppingCart } from "react-icons/fi";
 export default async function NavigationHeader() {
     const { tokenToUser } = await import("@/lib/firebase-admin");
     const user = await tokenToUser();
+
+    // Get number of items in users cart to display on cart icon
+    let numItemsInCart: number | undefined;
+    if (user) {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/cart?id=${user?.uid}`, {
+                method: "GET",
+                headers: {
+                "Content-Type": "application/json",
+                },
+            }
+        );
+    
+        const json = await response.json();
+        numItemsInCart = json?.data?.length() || undefined;
+    }
     
     return (
         <div className="flex flex-row items-center justify-between gap-2 md:px-8 lg:px-32">
@@ -49,7 +64,14 @@ export default async function NavigationHeader() {
             </div>
             <div className="flex flex-row gap-2 items-center justify-center">
                 <NavSearchTopBar />
-                <Link href="/cart"><FiShoppingCart className="h-6 w-6" /></Link>
+                <Link href="/cart" className="relative">
+                    <FiShoppingCart className="h-6 w-6" />
+                    {numItemsInCart && 
+                        <div className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2">
+                            <div className="bg-blue-500 rounded-full w-[17px] h-[17px] text-center content-center"><p className="text-xs font-semibold">{numItemsInCart}</p></div>
+                        </div>
+                    }
+                </Link>
                 {user ? <ProfileButtonAndBar isVendor={user.isVendor} /> : <SigninButtonAndBar />}
             </div>
         </div>
