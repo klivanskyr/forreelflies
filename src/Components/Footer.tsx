@@ -30,7 +30,6 @@ export default function Footer() {
                         <h3 className="footer-header">Contact Us</h3>
                         <h4>Email: test@email.com</h4>
                         <h4>Phone: 123 125 1234</h4>
-                        <h4>LOGOS OF STUFF</h4>
                     </div>
                 </div>
 

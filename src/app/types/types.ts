@@ -41,6 +41,8 @@ export type Vendor = {
 }
 
 export type Sort = "latest" | "oldest" | "priceLowToHigh" | "priceHighToLow";
+export type PageSize = 5 | 10 | 20 | 50 | 100 | -1;
+export type Layout = "column" | "grid2" | "grid3" | "grid4";
 
 export type Rate = {
     products: Product[],
