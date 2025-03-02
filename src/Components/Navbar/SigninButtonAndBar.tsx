@@ -21,7 +21,7 @@ export default function SigninButtonAndBar() {
     
     return (
         <>
-            <Button onClick={() => setSidebarOpen(!login)} text="Login/Signup" color="white" type="button" />
+            <Button className="mx-1.5" onClick={() => setSidebarOpen(!login)} text="Login/Signup" color="white" type="button" />
             <LoginSidebar open={login} setOpen={setSidebarOpen} />
         </>
     )
