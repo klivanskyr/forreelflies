@@ -7,7 +7,7 @@ import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 export default function Page({ rows, headers }: { rows: JSX.Element[][], headers: JSX.Element[]}) {
     const [page, setPage] = useState<number>(0);
-    const [rowsPerPage, _] = useState<number>(10);
+    const [rowsPerPage, ] = useState<number>(10);
 
     return (
         <div className="w-full h-full flex flex-col justify-between">

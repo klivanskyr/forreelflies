@@ -47,10 +47,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             }
         }
 
-        let totalAmountCents = 0;
         let totalShippingfeeCents = 0;
         const lineItems: LineItem[] = [];
-        let vendorDetails: VendorDetails[] = [];
+        const vendorDetails: VendorDetails[] = [];
 
         // Process each vendor's items
         for (const vendor of vendorItems) {
@@ -83,9 +82,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                 vendorTotal += itemTotalCents;
             });
 
-            // Add vendorTotal to totalAmount
-            totalAmountCents += vendorTotal;
-
             // Add shipping fee to totalShippingfee
             totalShippingfeeCents += vendor.shippingFee * 100; //Convert to cents
 
@@ -103,12 +99,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         // Create a single Stripe Checkout Session
         const session = await stripe.checkout.sessions.create({
             line_items: lineItems,
-            payment_intent_data: {
-                // application_fee_amount: applicationFeeAmount, // Platform fee Application fee is now in the transfor stage
-                // metadata: {
-                //     vendorDetails: JSON.stringify(vendorDetails), // Store vendor details for transfers
-                // },
-            },
+            // payment_intent_data: {
+            //     application_fee_amount: applicationFeeAmount, // Platform fee Application fee is now in the transfor stage
+            //     metadata: {
+            //         vendorDetails: JSON.stringify(vendorDetails), // Store vendor details for transfers
+            //     },
+            // },
             metadata: {
                 vendorDetails: JSON.stringify(vendorDetails), // Store vendor details for transfers
             },

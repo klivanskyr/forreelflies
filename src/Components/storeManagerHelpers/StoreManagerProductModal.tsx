@@ -27,7 +27,7 @@ export interface ProductInput {
 }
 
 interface Props<T> {
-    handleSubmit: () => Object,
+    handleSubmit: () => object,
     errorMessage: string,
     vendorId: string,
     input: T,
