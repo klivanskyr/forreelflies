@@ -17,6 +17,29 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { NextRequest, NextResponse } from "next/server";
 
+type T = {
+    name: string;
+    price: number;
+    vendorId: string;
+    vendorName: string;
+    quantityOptions: number[];
+    isDraft: boolean;
+    shippingWeight: number;
+    shippingLength: number;
+    shippingWidth: number;
+    shippingHeight: number;
+    images: string[];
+    createdAt: Date;
+    shortDescription?: string;
+    longDescription?: string;
+    tags?: string[];
+    categories?: string[];
+    stockStatus?: string;
+    processingTime?: string;
+    upsells?: string[];
+    crossSells?: string[];
+}
+
 export async function GET(request: NextRequest): Promise<NextResponse> {
     try {
         const id = request.nextUrl.searchParams.get("id");
@@ -235,7 +258,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         }
 
         // Prepare product data
-        const productData: { [key: string]: any } = {
+        const productData: T = {
             name,
             price,
             vendorId,
@@ -249,8 +272,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             images: imageUrls, // Store Firebase Storage URLs
             createdAt: new Date(),
         };
-
-        // Add optional fields
+        
+        // Conditionally add optional fields
         const optionalFields = [
             "shortDescription",
             "longDescription",
@@ -261,9 +284,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             "upsells",
             "crossSells",
         ];
+        
+        // Ugly but works
         for (const field of optionalFields) {
             const value = formData.get(field)?.toString();
-            if (value) productData[field] = value;
+            if (value) {
+                if (field === "tags" || field === "categories" || field === "upsells" || field === "crossSells") {
+                    productData[field] = JSON.parse(value);
+                } else if (field === "stockStatus" || field === "processingTime" || field === "shortDescription" || field === "longDescription") {
+                    productData[field] = value;
+                }
+            }
         }
 
         // Save product to Firestore
