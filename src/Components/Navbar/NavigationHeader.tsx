@@ -25,8 +25,9 @@ export default async function NavigationHeader() {
             }
         );
     
-        const json = await response.json();
-        numItemsInCart = json?.data?.length() || undefined;
+        const json = await response.json() as { data: any[] };
+        const data = json.data;
+        numItemsInCart = data.length;
     }
     
     return (
@@ -66,9 +67,9 @@ export default async function NavigationHeader() {
                 <NavSearchTopBar />
                 <Link href="/cart" className="relative">
                     <FiShoppingCart className="h-6 w-6" />
-                    {numItemsInCart && 
-                        <div className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2">
-                            <div className="bg-blue-500 rounded-full w-[17px] h-[17px] text-center content-center"><p className="text-xs font-semibold">{numItemsInCart}</p></div>
+                    {user && 
+                        <div className="absolute top-0 right-0 translate-x-[70%] -translate-y-[60%]">
+                            <div className="bg-blue-400 rounded-full w-[17px] h-[17px] text-center content-center"><p className="text-xs font-medium">{numItemsInCart}</p></div>
                         </div>
                     }
                 </Link>

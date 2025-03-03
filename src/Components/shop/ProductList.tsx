@@ -1,33 +1,37 @@
-'use client';
-
 import { Layout, Product, Sort } from "@/app/types/types";
 import BasicCard from "../cards/BasicCard";
 import Link from "next/link";
+import AddToCartButton from "../buttons/AddToCartButton";
+import ProductListButtons from "./ProductListButtons";
 
 export default async function ProductList({ sort, pageSize, page, layout }: { sort: Sort, pageSize: number, page: number, layout: Layout }) {
-    const fetchProducts = async () => {
+    const { tokenToUser } = await import("@/lib/firebase-admin");
+    const user = await tokenToUser();
+    
+    const fetchProducts = async (): Promise<{ data: any, meta: any }> => {
         if (pageSize === -1) { // Get all products
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/product?sort=${sort}`)
             if (!response.ok) {
                 console.error("Error fetching products")
-                return []
+                return { data: [], meta: {} }
             }
 
-            const data = await response.json()
-            return data.data
+            const json = await response.json()
+            return { data: json.data, meta: json.meta }
         }
 
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/product?sort=${sort}&page=${page}&pageSize=${pageSize}`)
         if (!response.ok) {
             console.error("Error fetching products")
-            return []
+            return { data: [], meta: {} }
         }
 
         const data = await response.json()
-        return data.data
+        return { data: data.data, meta: data.meta }
     }
 
-    const products = await fetchProducts()
+    const response = await fetchProducts();
+    const products = response?.data || [];
 
     const divClassName = () => {
         switch (layout) {
@@ -55,21 +59,8 @@ export default async function ProductList({ sort, pageSize, page, layout }: { so
         }
     }
 
-    
-    // const incrementPage = () => {
-    //     if (totalPages !== null && page < totalPages) {
-    //         setPage(page + 1)
-    //     }
-    // }
-
-    // const decrementPage = () => {
-    //     if (totalPages !== null && page > 1) {
-    //         setPage(page - 1)
-    //     }
-    // }
-
     return (
-        <div>
+        <div className="mb-2">
             <div className={divClassName()}>
                 {products.map((product: Product) => (
                         <BasicCard className={`w-full ${cardClassName()}`} key={product.id}>
@@ -89,7 +80,7 @@ export default async function ProductList({ sort, pageSize, page, layout }: { so
                                     </div>
                                     <div className="flex flex-col gap-1 w-full">
                                         <Link href={`/product/${product.id}`}><button className="nocolorButton w-full border border-gray-100 text-black hover:bg-gray-100">View Item</button></Link>
-                                        <button className="greenButton hover:bg-green-800 w-full">Add to Cart</button>
+                                        <AddToCartButton product={product} quantity={product.quantityOptions.reduce((acc, q) => q < acc ? q : acc)} user={user} /> {/* Opens login sidebar if not logged in.  */}
                                     </div>
                                 </div>
                             </div>
@@ -97,8 +88,7 @@ export default async function ProductList({ sort, pageSize, page, layout }: { so
                 ))}
             </div>
 
-            {/* <button onClick={() => decrementPage()}>prev</button>
-            <button onClick={() => incrementPage()}>next</button> */}
+            <ProductListButtons page={page} totalPages={response?.meta?.totalPages}/>
         </div>
     )
 }
