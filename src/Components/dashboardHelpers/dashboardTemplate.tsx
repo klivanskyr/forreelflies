@@ -1,4 +1,3 @@
-import { User } from "firebase/auth";
 import DashboardSidebar from "./DashboardSidebar";
 import { DbUser } from "@/lib/firebase-admin";
 

@@ -1,10 +1,8 @@
 import { Product, Vendor } from "@/app/types/types";
-import Button from "@/Components/buttons/Button";
 import NoVendorRedirect from "@/Components/storeManagerHelpers/NoVendorRedirect";
 import StoreManagerProductsTable from "@/Components/storeManagerHelpers/StoreManagerProductsTable";
 import StoreManagerTemplate from "@/Components/storeManagerHelpers/StoreManagerTemplate";
 import StoreManagerProductsHeader from "@/Components/StoreManagerProductsHeader";
-import Table from "@/Components/Table/Table";
 
 export default async function Page() {
     const { tokenToUser } = await import("@/lib/firebase-admin");
@@ -54,7 +52,7 @@ export default async function Page() {
         <NoVendorRedirect vendor={vendor}>
             <StoreManagerTemplate>
                 <StoreManagerProductsHeader vendorId={vendor.id} />
-                <StoreManagerProductsTable vendorId={vendor.id} products={products} />
+                <StoreManagerProductsTable products={products} />
             </StoreManagerTemplate>
         </NoVendorRedirect>
     )

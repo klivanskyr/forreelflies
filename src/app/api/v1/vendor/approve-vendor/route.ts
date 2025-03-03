@@ -67,7 +67,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             }
 
             // CHECK TO SEE IF USER IS ALREADY A VENDOR
-            const q: any = await getDocs(query(collection(db, "vendors"), where("ownerUid", "==", uid)));
+            const q = await getDocs(query(collection(db, "vendors"), where("ownerUid", "==", uid)));
             if (!q.empty) {
                 console.log("SERVER ERROR: User is already a vendor");
                 return NextResponse.json({ message: "User is already a vendor" }, { status: 400 });

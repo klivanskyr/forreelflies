@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from "react";
 import Button from "../buttons/Button";
 import Checkbox from "../Checkbox";
 import Dropdown from "../inputs/Dropdown";
@@ -8,7 +7,7 @@ import Input from "../inputs/Input";
 import TagInput from "../inputs/TagInput";
 import Modal from "../modal/Modal";
 import Textarea from "../Textarea";
-import { Product, StockStatus } from "@/app/types/types";
+import { StockStatus } from "@/app/types/types";
 
 export interface ProductInput {
     name: string;
@@ -28,7 +27,7 @@ export interface ProductInput {
 }
 
 interface Props<T> {
-    handleSubmit: () => {},
+    handleSubmit: () => Object,
     errorMessage: string,
     vendorId: string,
     input: T,
@@ -37,7 +36,7 @@ interface Props<T> {
     setModalOpen: (newBool: boolean) => void
 }
 
-export default function StoreManagerProductModal({ handleSubmit, errorMessage, vendorId, input, setInput, modalOpen, setModalOpen }: Props<ProductInput>) {    
+export default function StoreManagerProductModal({ handleSubmit, errorMessage, input, setInput, modalOpen, setModalOpen }: Props<ProductInput>) {    
     const stockStatusOptions = [
         { value: "inStock", label: "In Stock" },
         { value: "outOfStock", label: "Out of Stock" },

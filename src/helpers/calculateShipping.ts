@@ -1,6 +1,15 @@
 import { Product, Rate, Vendor } from "@/app/types/types"
 import { DbUser } from "@/lib/firebase-admin"
 
+type T = {
+    object_id: string;
+    amount: string;
+    currency: string;
+    provider: string;
+    attributes: string[];
+    estimated_days: number;
+}
+
 export async function calculateShipping(buyer: DbUser, products: Product[]): Promise<[Rate[], string]> {
     // Create buyer address
     const address_to = {
@@ -15,7 +24,7 @@ export async function calculateShipping(buyer: DbUser, products: Product[]): Pro
 
     // Get unique seller IDs
     const sellerIds = [...new Set(products.map((product) => product.vendorId))];
-    const sellerNames = products.map((product) => product.vendorName);
+    // const sellerNames = products.map((product) => product.vendorName);
 
 
     // Get rates for each seller
@@ -76,19 +85,26 @@ export async function calculateShipping(buyer: DbUser, products: Product[]): Pro
             vendorName: vendor.storeName,
         }
 
-        const rates = await response.json();
+        const rates: T[] = await response.json();
         return {rates, sellerInfo};
     });
 
     const ratesResponses = await Promise.all(ratesPromises); // Array of arrays of objects. Each array is the rates for each seller.
 
+    // Check if any rates are null
+    if (ratesResponses.some((response) => response === null)) {
+        return [[], "Failed to fetch rates"];
+    }
+
+    const cleanedRatesResponses = ratesResponses.filter((response) => response !== null);    
+
     // Select the cheapest rate per vendor
-    const rates: Rate[] = ratesResponses.map((response) => {
+    const rates: Rate[] = cleanedRatesResponses.map((response) => {
         const sellerRates = response?.rates;
         const sellerId = response?.sellerInfo.vendorId;
         const sellerName = response?.sellerInfo.vendorName;
         console.log("Seller rates: ", sellerRates, "Seller ID: ", sellerId, "Seller Name: ", sellerName);
-        const cheapestRate = sellerRates.find((rate: any) => rate.attributes.includes("CHEAPEST"));
+        const cheapestRate = sellerRates.find((rate) => rate.attributes.includes("CHEAPEST"));
         if (!cheapestRate) return null;
 
         return {

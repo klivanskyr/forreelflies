@@ -1,7 +1,6 @@
 'use client';
 
 import SignOutButton from "@/Components/buttons/SignOutButton";
-import { TextLink } from "@/Components/Links";
 import { FaHome as HomeIcon } from "react-icons/fa";
 import { FaImage as MediaIcon } from "react-icons/fa";
 import { FaBoxOpen as ProductsIcon } from "react-icons/fa";
@@ -14,7 +13,6 @@ import { FaStar as ReviewsIcon } from "react-icons/fa";
 import { FaChartLine as ReportsIcon } from "react-icons/fa";
 import { FaCog as SettingsIcon } from "react-icons/fa";
 import { FaPowerOff as LogoutIcon } from "react-icons/fa";
-import { usePathname } from "next/navigation";
 import PathHighlightTextLink from "../Links/PathHighlightTextLink";
 
 const classNames = {
@@ -25,9 +23,7 @@ const classNames = {
     div: "w-fit",
 }
 
-export default function StoreManagerSidebar({ className=""}:{ className?: string }) {
-    const path = usePathname();
-
+export default function StoreManagerSidebar({ className="" }:{ className?: string }) {
     return (
         <div className={`${className} flex flex-col w-[15%]`}>
             <PathHighlightTextLink 
@@ -108,19 +104,6 @@ export default function StoreManagerSidebar({ className=""}:{ className?: string
                 path={"/store-manager/settings"}
             />
             <SignOutButton className="w-fit text-base px-2 py-1 !gap-2" text="Sign Out" startingIcon={<LogoutIcon className="w-[15px] h-[15px]"/>} />
-
-            {/* <TextLink className={`${path === "/store-manager"}`} href="/store-manager/" text="Home" startingIcon={<HomeIcon />} />
-            <TextLink className="" href="/store-manager/media" text="Media" startingIcon={<MediaIcon />} />
-            <TextLink className="" href="/store-manager/products" text="Products" startingIcon={<ProductsIcon />} />
-            <TextLink className="" href="/store-manager/orders" text="Orders" startingIcon={<OrdersIcon />} />
-            <TextLink className="" href="/store-manager/payments" text="Payments" startingIcon={<PaymentsIcon />} />
-            <TextLink className="" href="/store-manager/customers" text="Customers" startingIcon={<CustomersIcon />} />
-            <TextLink className="" href="/store-manager/promotions" text="Promotions" startingIcon={<PromotionsIcon />}  />
-            <TextLink className="" href="/store-manager/refund" text="Refund" startingIcon={<RefundIcon />} />
-            <TextLink className="" href="/store-manager/reviews" text="Reviews" startingIcon={<ReviewsIcon />} />
-            <TextLink className="" href="/store-manager/reports" text="Reports" startingIcon={<ReportsIcon />} />
-            <TextLink className="" href="/store-manager/settings" text="Settings" startingIcon={<SettingsIcon />} />
-            <SignOutButton className="w-fit" text="Sign Out" startingIcon={<LogoutIcon />} /> */}
         </div>
     )
 }

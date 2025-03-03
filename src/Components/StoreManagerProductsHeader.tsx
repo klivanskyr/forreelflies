@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Button from "./buttons/Button";
-import { Product } from "@/app/types/types";
 import StoreManagerProductModal, { ProductInput } from "./storeManagerHelpers/StoreManagerProductModal";
 
 export default function StoreManagerProductsHeader({ vendorId }: { vendorId: string }) {

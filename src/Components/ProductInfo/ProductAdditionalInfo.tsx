@@ -3,7 +3,6 @@
 import { Product } from "@/app/types/types";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { DiBlackberry } from "react-icons/di";
 
 type Tab = "Description" | "Specifications" | "Reviews";
 const tabs: Tab[] = ["Description", "Specifications", "Reviews"];

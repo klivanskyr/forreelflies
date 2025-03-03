@@ -1,4 +1,4 @@
-export default function TableBody<T>({ headers, rows }: { headers: JSX.Element[], rows: JSX.Element[][] }) {
+export default function TableBody({ headers, rows }: { headers: JSX.Element[], rows: JSX.Element[][] }) {
     return (
         <div className="grid" style={{ display: 'grid', gridTemplateColumns: `repeat(${headers.length}, 1fr)` }}>
             {headers.map((header, index) => (

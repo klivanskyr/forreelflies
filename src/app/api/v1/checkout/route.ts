@@ -1,7 +1,5 @@
 import { CartItem } from "@/app/cart/page";
 import { NextRequest, NextResponse } from "next/server";
-import { describe } from "node:test";
-import { GiConsoleController } from "react-icons/gi";
 
 import Stripe from "stripe";
 
@@ -10,6 +8,25 @@ export type VendorItem = {
     stripeAccountId: string;
     cartItems: CartItem[];
     shippingFee: number;
+};
+
+type LineItem = {
+    price_data: {
+        currency: string;
+        product_data: {
+            name: string;
+            images: string[] | undefined;
+            description: string | undefined;
+        };
+        unit_amount: number;
+    };
+    quantity: number;
+};
+
+type VendorDetails = {
+    vendorId: string;
+    stripeAccountId: string;
+    amount: number;
 };
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -32,8 +49,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
         let totalAmountCents = 0;
         let totalShippingfeeCents = 0;
-        let lineItems: any[] = [];
-        let vendorDetails: any[] = [];
+        const lineItems: LineItem[] = [];
+        let vendorDetails: VendorDetails[] = [];
 
         // Process each vendor's items
         for (const vendor of vendorItems) {
@@ -81,7 +98,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         }
 
         // Calculate platform fee (10% of total)
-        const applicationFeeAmount = Math.round(totalAmountCents * 0.1);
+        // const applicationFeeAmount = Math.round(totalAmountCents * 0.1);
 
         // Create a single Stripe Checkout Session
         const session = await stripe.checkout.sessions.create({
