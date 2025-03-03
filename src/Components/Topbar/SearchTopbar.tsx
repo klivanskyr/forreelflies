@@ -39,8 +39,8 @@ export default function SearchTopbar({ open, setOpen }: { open: boolean, setOpen
     }, [search, open]);
 
     return (
-        <Topbar open={open} setOpen={setOpen} className={`${searchChanged ? "h-[100%] duration-700 transition-all" : ""}`}>
-            <div className="flex flex-col items-center gap-12">
+        <Topbar open={open} setOpen={setOpen} className={`${searchChanged ? "h-full duration-700 transition-all" : ""}`}>
+            <div className="flex flex-col items-center gap-14">
                 <h1 className="text-2xl">What are you looking for?</h1>
                 <Searchbar placeholder="Search..." classNames={{ form: "max-w-[450px]", input: "" }} value={search} onChange={(e) => setSearch(e.target.value)} onSubmit={(e) => e.preventDefault()} />
                 <div className="flex flex-row gap-2 items-center">
@@ -49,9 +49,9 @@ export default function SearchTopbar({ open, setOpen }: { open: boolean, setOpen
                     <TextLink href="/" text="Parfum" className="!text-black hover:!text-white hover:bg-greenPrimary transition-all py-1.5 px-2" />
                     <TextLink href="/" text="Fresh" className="!text-black hover:!text-white hover:bg-greenPrimary transition-all py-1.5 px-2"/>
                 </div>
-                <div className="flex flex-col gap-2 items-center mt-2 mb-8">
+                <div className="flex flex-col gap-6 items-center mt-2 mb-8">
                     <h1 className="text-2xl">POPULAR CATEGORIES:</h1>
-                    <div className="flex flex-row gap-2">
+                    <div className="flex flex-row gap-8">
                         <Card src={placeholder.src} alt="placeholder" title="Dry Flies" subtitle="# Products" link="/" />
                         <Card src={placeholder.src} alt="placeholder" title="Nymphs" subtitle="# Products" link="/" />
                         <Card src={placeholder.src} alt="placeholder" title="Wet Flies" subtitle="# Products" link="/" />

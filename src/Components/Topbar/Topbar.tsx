@@ -26,7 +26,7 @@ export default function Topbar({ className="", open, setOpen, children }: { clas
                             initial={{ top: "-50%", opacity: 0 }}
                             animate={{ top: 0, opacity: 1 }}
                             exit={{ top: "-50%", opacity: 0 }}
-                            transition={{ duration: 0.4, type: "spring", stiffness: 100, damping: 20 }}
+                            transition={{ duration: 0.3, type: "spring", stiffness: 100, damping: 20 }}
                         >   
                             <div className="flex flex-col items-center w-full h-full">
                                 <div className="flex flex-row justify-end w-full px-8">

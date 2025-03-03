@@ -7,11 +7,18 @@ import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 export default function Slider({ children }: { children: React.ReactNode[] }) {
     const [[page, direction], setPage] = useState([0, 0]);
-    const imageIndex = wrap(0, children.length, page); // Use wrap to loop through the children
+    const [isAnimating, setIsAnimating] = useState(false);
+    const imageIndex = wrap(0, children.length, page); 
 
-    const paginate = useCallback((newDirection: number) => {
-        setPage([page + newDirection, newDirection]);
-    }, [page]);
+    const paginate = useCallback(
+        (newDirection: number) => {
+            if (isAnimating) return;
+            setPage([page + newDirection, newDirection]);
+            setIsAnimating(true); 
+        },
+        [page, isAnimating]
+    );
+
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -43,7 +50,7 @@ export default function Slider({ children }: { children: React.ReactNode[] }) {
 
     return (
         <div className="relative w-full h-dvh overflow-hidden">
-            <AnimatePresence initial={false} custom={direction}>
+            <AnimatePresence initial={false} custom={direction} onExitComplete={() => setIsAnimating(false)}>
                 <motion.div
                     key={page}
                     custom={direction}
@@ -55,7 +62,7 @@ export default function Slider({ children }: { children: React.ReactNode[] }) {
                         x: { type: "spring", stiffness: 300, damping: 30 },
                         opacity: { duration: 0.2 }
                     }}
-                    drag="x"
+                    drag={!isAnimating ? "x" : false}
                     dragConstraints={{ left: 0, right: 0 }}
                     dragElastic={1}
                     onDragEnd={(e, { offset, velocity }) => {
