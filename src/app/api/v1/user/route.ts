@@ -2,7 +2,6 @@ import { db } from "@/lib/firebase";
 import { adminAuth } from "@/lib/firebase-admin";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from 'next/headers'
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
     try {
@@ -14,7 +13,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         }
 
         try {
-            const user = await adminAuth.getUser(uid);
+            const _ = await adminAuth.getUser(uid);
 
             const userDoc = await getDoc(doc(db, "users", uid));
             if (!userDoc.exists()) {
@@ -135,7 +134,7 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
         // check auth with adminAuth
         try {
             await adminAuth.verifyIdToken(auth as string);
-        } catch (error) {
+        } catch (_) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
         

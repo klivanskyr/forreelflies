@@ -1,4 +1,3 @@
-import NoVendorRedirect from "@/Components/storeManagerHelpers/NoVendorRedirect";
 import StoreManagerTemplate from "@/Components/storeManagerHelpers/StoreManagerTemplate";
 import { Vendor } from "../types/types";
 import NoXRedirect from "@/Components/NoXRedirect";

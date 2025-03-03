@@ -5,9 +5,9 @@ import TableBody from "./TableBody";
 import TableFilter from "./TableFilter";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
-export default function Page<T>({ rows, headers }: { rows: JSX.Element[][], headers: JSX.Element[]}) {
+export default function Page({ rows, headers }: { rows: JSX.Element[][], headers: JSX.Element[]}) {
     const [page, setPage] = useState<number>(0);
-    const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+    const [rowsPerPage, _] = useState<number>(10);
 
     return (
         <div className="w-full h-full flex flex-col justify-between">

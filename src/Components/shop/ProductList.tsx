@@ -8,7 +8,7 @@ export default async function ProductList({ sort, pageSize, page, layout }: { so
     const { tokenToUser } = await import("@/lib/firebase-admin");
     const user = await tokenToUser();
     
-    const fetchProducts = async (): Promise<{ data: any, meta: any }> => {
+    const fetchProducts = async () => {
         if (pageSize === -1) { // Get all products
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/product?sort=${sort}`)
             if (!response.ok) {

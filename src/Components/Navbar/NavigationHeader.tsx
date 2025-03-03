@@ -25,7 +25,7 @@ export default async function NavigationHeader() {
             }
         );
     
-        const json = await response.json() as { data: any[] };
+        const json = await response.json();
         const data = json.data;
         numItemsInCart = data.length;
     }

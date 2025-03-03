@@ -6,7 +6,7 @@ export default function CheckoutSuccess() {
     const searchParams = useSearchParams();
     const sessionId = searchParams.get("session_id");
     const [loading, setLoading] = useState(true);
-    const [orderDetails, setOrderDetails] = useState(null);
+    const [_, setOrderDetails] = useState(null);
 
     useEffect(() => {
         if (sessionId) {

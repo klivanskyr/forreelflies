@@ -1,5 +1,3 @@
-import { auth } from "@/lib/firebase";
-import { getIdToken, signInWithEmailAndPassword } from "firebase/auth";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest): Promise<NextResponse> {

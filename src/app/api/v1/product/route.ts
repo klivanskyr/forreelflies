@@ -14,7 +14,7 @@ import {
     addDoc,
     setDoc,
 } from "firebase/firestore";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -129,7 +129,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         }
 
         const querySnapshot = await getDocs(paginatedQuery);
-        const products: { [key: string]: any }[] = [];
+        const products: { [key: string]: Object }[] = [];
         querySnapshot.forEach((doc) => {
             products.push({ id: doc.id, ...doc.data() });
         });

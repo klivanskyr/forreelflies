@@ -3,7 +3,6 @@ import { Product, Rate } from "../types/types";
 import NoXRedirect from "@/Components/NoXRedirect";
 import Breadcrumbs from "@/Components/Breadcrumbs";
 import { calculateShipping } from "@/helpers/calculateShipping";
-import Button from "@/Components/buttons/Button";
 import { VendorItem } from "../api/v1/checkout/route";
 import CheckoutButton from "@/Components/CheckoutButton";
 

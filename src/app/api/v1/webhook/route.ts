@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     let event;
     try {
       event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
-    } catch (err) {
+    } catch (_) {
       return NextResponse.json(
         { error: "Webhook verification failed" },
         { status: 400 }
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       let vendorDetails;
       try {
         vendorDetails = JSON.parse(session.metadata.vendorDetails); // Convert string back to an object
-      } catch (parseError) {
+      } catch (_) {
         return NextResponse.json(
           { error: "Failed to parse vendor details from metadata" },
           { status: 400 }

@@ -10,7 +10,7 @@ export default function SigninButtonAndBar() {
     const login = searchParams.has("login");
 
     const setSidebarOpen = (value: boolean) => {
-        let newParams = new URLSearchParams(searchParams);
+        const newParams = new URLSearchParams(searchParams);
         if (value) {
             newParams.set("login", "true");
         } else {

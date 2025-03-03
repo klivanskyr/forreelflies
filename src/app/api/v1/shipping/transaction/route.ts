@@ -1,4 +1,3 @@
-import { metadata } from "framer-motion/client";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
