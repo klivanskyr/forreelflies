@@ -1,5 +1,3 @@
-"use client";
-
 import ProductList from "@/Components/shop/ProductList";
 import { Layout, PageSize, Sort } from "../types/types";
 import ShopHeader from "@/Components/shop/ShopHeader"; 

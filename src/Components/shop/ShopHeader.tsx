@@ -3,6 +3,7 @@
 import { PageSize, Sort } from "@/app/types/types";
 import Dropdown from "../inputs/Dropdown";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { addKVToUrl } from "@/helpers/addKVToUrl";
 
 export default function ShopHeader({ sort, pageSize }: { sort: Sort, pageSize: PageSize }) {
     const router = useRouter();
@@ -25,30 +26,13 @@ export default function ShopHeader({ sort, pageSize }: { sort: Sort, pageSize: P
         { label: "All", value: "-1" } // -1 returns all 
     ]
 
-    const mapToUrlParms = (params: URLSearchParams): string => {
-        return Array.from(params).map(([key, value]) => `${key}=${value}`).join("&");
-    }
-
-    // If the param already exists, replace it, keeping dame order. Otherwise, add it
-    const addKVToUrl = (key: string, value: string): string => {
-        if (currentSearchParams.has(key)) {
-            const newParams = new URLSearchParams(currentSearchParams);
-            newParams.set(key, value);
-            return `${currentUrl}?${mapToUrlParms(newParams)}`;
-        }
-
-        const newParams = new URLSearchParams(currentSearchParams);
-        newParams.append(key, value);
-        return `${currentUrl}?${mapToUrlParms(newParams)}`;
-    }
-
     const setSort = async (newSort: Sort) => {
-        const newUrl = addKVToUrl("sort", newSort);
+        const newUrl = addKVToUrl(currentUrl, currentSearchParams, "sort", newSort);
         router.push(newUrl);
     }
 
     const setPageSize = async (newPageSize: PageSize) => {
-        const newUrl = addKVToUrl("pageSize", newPageSize.toString());
+        const newUrl = addKVToUrl(currentUrl, currentSearchParams, "pageSize", newPageSize.toString());
         router.push(newUrl);
     }
 
