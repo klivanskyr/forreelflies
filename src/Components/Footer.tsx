@@ -9,7 +9,7 @@ export default function Footer() {
                 <div className="flex flex-row w-full justify-around">
                     <div className="flex flex-col gap-2">
                         <Image src={logo.src} alt="ForReelFlies Logo" width={300} height={300} />
-                        <h4>Words are supposed to be here</h4>
+                        {/* <h4>Words are supposed to be here</h4> */}
                     </div>
                     <div className="flex flex-col gap-1.5">
                         <h3 className="footer-header">Important Links</h3>
@@ -30,7 +30,6 @@ export default function Footer() {
                         <h3 className="footer-header">Contact Us</h3>
                         <h4>Email: test@email.com</h4>
                         <h4>Phone: 123 125 1234</h4>
-                        <h4>LOGOS OF STUFF</h4>
                     </div>
                 </div>
 

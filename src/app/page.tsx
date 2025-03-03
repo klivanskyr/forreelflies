@@ -58,7 +58,6 @@ export default function Home() {
             <SlideLink backgroundSrc={placeholder.src}><h2 className="text-2xl font-semibold text-white">Wet Flies</h2></SlideLink>
         </Gallery>
       </div>
-
     </div>
   );
 }
