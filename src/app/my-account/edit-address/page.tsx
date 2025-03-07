@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+'use server';
 
 import DashboardTemplate from "@/Components/dashboardHelpers/dashboardTemplate";
 import AddressPage from "@/Components/my-account/AddressPage";
