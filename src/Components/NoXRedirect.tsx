@@ -7,7 +7,7 @@ export default function NoXRedirect<T>({ children, x, redirectUrl, alertMessage 
 
     if (!x) {
         if (alertMessage) {
-            alert(alertMessage);
+            // alert(alertMessage);
         }
         router.push(redirectUrl);
         return <></>

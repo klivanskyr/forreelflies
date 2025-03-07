@@ -5,7 +5,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
     try {
-        const uid = request.nextUrl.searchParams.get("uid");
+        const { searchParams } = new URL(request.url);
+        const uid = searchParams.get("uid");
 
         if (!uid) {
             console.log("SERVER ERROR: uid param is required");
@@ -207,7 +208,8 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
 
 export async function DELETE(request: NextRequest): Promise<NextResponse> {
     try {
-        const uid = request.nextUrl.searchParams.get("uid");
+        const { searchParams } = new URL(request.url);
+        const uid = searchParams.get("uid");
 
         if (!uid) {
             return NextResponse.json({ error: "uid param is required" }, { status: 400 });

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import DashboardTemplate from "@/Components/dashboardHelpers/dashboardTemplate";
 
 export default async function Page() {

@@ -1,6 +1,7 @@
+export const dynamic = "force-dynamic";
+
 import { Product } from "@/app/types/types"
 import { ProductAdditionalInfo, ProductInfo } from "@/Components/ProductInfo"
-
 
 export default async function Page({ params }: { params: Promise<{ productId: string }>}) {
     const productId = (await params).productId

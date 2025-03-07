@@ -34,7 +34,7 @@ export default function VendorSignupForm({ uid }: { uid: string | null }) {
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!input.name || !input.storeName || !input.storeEmail || !input.storePhone || !input.storeDescription || !input.storeStreetAddress || !input.storeCity || !input.storeZip || !input.storeCountry || !input.storeState) {
-            alert("Please fill out all fields");
+            // alert("Please fill out all fields");
             return;
         }
         try {
@@ -50,7 +50,7 @@ export default function VendorSignupForm({ uid }: { uid: string | null }) {
                 cache: "no-cache",
             });
             if (!response.ok) {
-                alert("Error submitting form");
+                // alert("Error submitting form");
                 return;
             }
 
@@ -66,7 +66,7 @@ export default function VendorSignupForm({ uid }: { uid: string | null }) {
     }
     
     if (!uid) {
-        alert("You must be logged in to access this page");
+        // alert("You must be logged in to access this page");
         router.push("/");
         return <></>;
     }

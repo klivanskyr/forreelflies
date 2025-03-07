@@ -4,7 +4,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
     try {
-        const id = request.nextUrl.searchParams.get("id")
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get("id")
 
         if (!id) {
             return NextResponse.json({ message: "id is required" }, { status: 400 });

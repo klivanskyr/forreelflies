@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { Layout, Product, Sort } from "@/app/types/types";
 import BasicCard from "../cards/BasicCard";
 import Link from "next/link";

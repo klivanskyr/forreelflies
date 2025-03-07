@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import VendorSignupForm from "@/Components/vendorSignupHelpers/VendorSignupForm";
 
 type ApprovalStatus = "approved" | "pending" | "not-submitted";
@@ -7,7 +9,7 @@ export default async function Page() {
     const user = await tokenToUser();
 
     if (!user) {
-        alert("You must be logged in to view this page");
+        // alert("You must be logged in to view this page");
         return <></>
     }
 
