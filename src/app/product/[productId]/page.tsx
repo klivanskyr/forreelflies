@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+'use server';
 
 import { Product } from "@/app/types/types"
 import { ProductAdditionalInfo, ProductInfo } from "@/Components/ProductInfo"

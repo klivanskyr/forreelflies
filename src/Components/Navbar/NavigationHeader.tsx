@@ -1,6 +1,4 @@
-"use server";
-
-export const dynamic = "force-dynamic";
+'use server';
 
 import Underline from "./underline/Underline";
 import HoverPopup from "../hoverComponents/HoverPopup";

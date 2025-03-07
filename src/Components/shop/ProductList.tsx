@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+'use server';
 
 import { Layout, Product, Sort } from "@/app/types/types";
 import BasicCard from "../cards/BasicCard";

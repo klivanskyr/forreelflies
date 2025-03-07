@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+'use server';
 
 import StoreManagerTemplate from "@/Components/storeManagerHelpers/StoreManagerTemplate";
 import { Vendor } from "../types/types";

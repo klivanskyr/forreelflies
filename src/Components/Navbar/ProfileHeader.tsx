@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+'use server';
 
 import { TextLink } from "../Links";
 import { FaFacebook } from "react-icons/fa";

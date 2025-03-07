@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+'use server';
 
 import { Product, Vendor } from "@/app/types/types";
 import NoVendorRedirect from "@/Components/storeManagerHelpers/NoVendorRedirect";

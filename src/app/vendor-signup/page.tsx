@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+'use server';
 
 import VendorSignupForm from "@/Components/vendorSignupHelpers/VendorSignupForm";
 
