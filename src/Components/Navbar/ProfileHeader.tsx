@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { TextLink } from "../Links";
 import { FaFacebook } from "react-icons/fa";
 import { FaInstagram } from "react-icons/fa";

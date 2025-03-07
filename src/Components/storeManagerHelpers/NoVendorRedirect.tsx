@@ -7,7 +7,7 @@ export default function NoVendorRedirect({ children, vendor }: { children: React
     const router = useRouter();
 
     if (!vendor) {
-        alert("Must be a vendor to access this page");
+        // alert("Must be a vendor to access this page");
         router.push('/');
         return <></>
     }

@@ -4,8 +4,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
     try {
-        const vendorId = request.nextUrl.searchParams.get("vendorId");
-        const userId = request.nextUrl.searchParams.get("userId");
+        const { searchParams } = new URL(request.url);
+        const vendorId = searchParams.get("vendorId");
+        const userId = searchParams.get("userId");
 
         if (!vendorId && !userId) {
             console.log("SERVER ERROR: Requires at least of the the following Params: { vendorId: string, userId: string }");

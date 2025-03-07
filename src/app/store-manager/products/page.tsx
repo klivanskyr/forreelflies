@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { Product, Vendor } from "@/app/types/types";
 import NoVendorRedirect from "@/Components/storeManagerHelpers/NoVendorRedirect";
 import StoreManagerProductsTable from "@/Components/storeManagerHelpers/StoreManagerProductsTable";
