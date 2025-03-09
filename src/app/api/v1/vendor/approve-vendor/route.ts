@@ -6,7 +6,8 @@ import Stripe from "stripe";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
     try {
-        const uid = request.nextUrl.searchParams.get("uid");
+        const { searchParams } = new URL(request.url);
+        const uid = searchParams.get("uid");
 
         if (!uid) {
             console.log("SERVER ERROR: Required Params: { uid: string }");
