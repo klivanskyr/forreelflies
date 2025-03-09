@@ -42,12 +42,13 @@ type T = {
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
     try {
-        const id = request.nextUrl.searchParams.get("id");
-        const vendorId = request.nextUrl.searchParams.get("vendorId");
-        const sort = request.nextUrl.searchParams.get("sort");
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get("id");
+        const vendorId = searchParams.get("vendorId");
+        const sort = searchParams.get("sort");
 
-        const tempPage = request.nextUrl.searchParams.get("page");
-        const tempPageSize = request.nextUrl.searchParams.get("pageSize");
+        const tempPage = searchParams.get("page");
+        const tempPageSize = searchParams.get("pageSize");
 
         // Parse the page and pageSize query parameters
         const page = tempPage ? parseInt(tempPage) : null;

@@ -17,7 +17,7 @@ export default function ApproveVendorForm() {
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!input.adminEmail || !input.adminPassword || !input.uid) {
-            alert("Please fill out all fields");
+            // alert("Please fill out all fields");
             return;
         }
 
@@ -30,7 +30,7 @@ export default function ApproveVendorForm() {
         });
 
         if (!response.ok) {
-            alert("Error submitting form");
+            // alert("Error submitting form");
             return;
         }
         
