@@ -1,3 +1,5 @@
+import path from 'path';
+
 const nextConfig = {
   images: {
     remotePatterns: [
@@ -11,6 +13,7 @@ const nextConfig = {
       if (isServer) {
           config.externals = [...config.externals, 'firebase-admin', 'buffer'];
       }
+      config.resolve.alias['@'] = path.resolve(__dirname, 'src');
       return config;
   },
 };
