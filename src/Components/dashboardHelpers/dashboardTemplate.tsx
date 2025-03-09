@@ -1,7 +1,7 @@
 'use client';
 
 import { useUser } from "@/contexts/UserContext";
-import DashboardSidebar from "@/Components/dashboardhelpers/DashboardSidebar";
+import DashboardSidebar from "@/Components/DashboardHelpers/DashboardSidebar";
 
 export default function DashboardTemplate({ children }: { children: React.ReactNode }) {
     const { user } = useUser();
