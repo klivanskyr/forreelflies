@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import Modal from "../modal/Modal";
-import { DbUser } from "@/lib/firebase-admin";
 import Button from "../buttons/Button";
 import Input from "../inputs/Input";
+import { useUser } from "@/contexts/UserContext";
 
 type InputProps = {
     streetAddress: string,
@@ -14,15 +14,18 @@ type InputProps = {
     country: string
 }
 
-export default function AddressPage({ user }: { user: DbUser }) {
+export default function AddressPage() {
+    const { user } = useUser();
     const [open, setOpen] = useState(false);
     const [input, setInput] = useState<InputProps>({
-        streetAddress: user.streetAddress || "",
-        city: user.city || "",
-        state: user.state || "",
-        zipCode: user.zipCode || "",
-        country: user.country || ""
+        streetAddress: user?.streetAddress || "",
+        city: user?.city || "",
+        state: user?.state || "",
+        zipCode: user?.zipCode || "",
+        country: user?.country || ""
     });
+
+    if (!user) return <></>;
 
     const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();

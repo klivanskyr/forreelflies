@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 
 type Section = "login" | "register";
 
-export default function LoginSidebar({ setOpen, open }: { setOpen: (open: boolean) => void, open: boolean }) {
+export default function LoginSidebar({ setOpen, open }: { setOpen: (open: boolean) => void, open: boolean }): JSX.Element {
     const [activeSection, setActiveSection] = useState<Section>("login");
     const [login, setLogin] = useState<{ email: string, password: string, remember: boolean }>({ email: "", password: "", remember: false });
     const [register, setRegister] = useState<{ email: string, password: string, confirmPassword: string }>({ email: "", password: "", confirmPassword: "" });

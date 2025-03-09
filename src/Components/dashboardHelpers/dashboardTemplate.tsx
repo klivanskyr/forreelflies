@@ -1,7 +1,13 @@
+import { useUser } from "@/contexts/UserContext";
 import DashboardSidebar from "./DashboardSidebar";
-import { DbUser } from "@/lib/firebase-admin";
 
-export default function DashboardTemplate({ children, user }: { children: React.ReactNode, user: DbUser }) {
+export default function DashboardTemplate({ children }: { children: React.ReactNode }) {
+    const { user } = useUser();
+
+    if (!user) {
+        return <></>;
+    }
+    
     return (
         <div className="flex flex-col w-full">
             <div className="flex flex-row w-full">

@@ -1,4 +1,4 @@
-'use server';
+"use client";
 
 import Underline from "./underline/Underline";
 import HoverPopup from "../hoverComponents/HoverPopup";
@@ -10,26 +10,32 @@ import NavSearchTopBar from "./NavSearchTopBar";
 import ProfileButtonAndBar from "./ProfileButtonAndBar";
 import Link from "next/link";
 import { FiShoppingCart } from "react-icons/fi";
+import { DbUser } from "@/lib/firebase-admin";
+import { useEffect, useState } from "react";
 
-export default async function NavigationHeader() {
-    const { tokenToUser } = await import("@/lib/firebase-admin");
-    const user = await tokenToUser();
+export default function NavigationHeader({ user }: { user: DbUser | null }) {
+    const [numItemsInCart, setNumItemsInCart] = useState(0);
 
-    // Get number of items in users cart to display on cart icon
-    let numItemsInCart: number | undefined;
-    if (user) {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/cart?id=${user?.uid}`, {
-                method: "GET",
-                headers: {
-                "Content-Type": "application/json",
-                },
+    useEffect(() => {
+        const fetchCartItemsAmount = async () => {
+            if (user !== null) {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/cart?id=${user?.uid}`, {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                });
+            
+                const json = await response.json();
+                const data = json.data;
+                if (data) {
+                    setNumItemsInCart(data.length);
+                }
             }
-        );
-    
-        const json = await response.json();
-        const data = json.data;
-        numItemsInCart = data.length;
-    }
+        };
+
+        fetchCartItemsAmount();
+    }, [user]);
     
     return (
         <div className="flex flex-row items-center justify-between gap-2 md:px-8 lg:px-32">
@@ -74,7 +80,10 @@ export default async function NavigationHeader() {
                         </div>
                     }
                 </Link>
-                {user ? <ProfileButtonAndBar isVendor={user.isVendor} /> : <SigninButtonAndBar />}
+                {user 
+                    ? <ProfileButtonAndBar isVendor={user.isVendor} /> 
+                    : <SigninButtonAndBar />
+                }
             </div>
         </div>
     )

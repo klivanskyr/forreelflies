@@ -7,9 +7,6 @@ import AddToCartButton from "../buttons/AddToCartButton";
 import ProductListButtons from "./ProductListButtons";
 
 export default async function ProductList({ sort, pageSize, page, layout }: { sort: Sort, pageSize: number, page: number, layout: Layout }) {
-    const { tokenToUser } = await import("@/lib/firebase-admin");
-    const user = await tokenToUser();
-    
     const fetchProducts = async () => {
         if (pageSize === -1) { // Get all products
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/product?sort=${sort}`)
@@ -82,7 +79,7 @@ export default async function ProductList({ sort, pageSize, page, layout }: { so
                                     </div>
                                     <div className="flex flex-col gap-1 w-full">
                                         <Link href={`/product/${product.id}`}><button className="nocolorButton w-full border border-gray-100 text-black hover:bg-gray-100">View Item</button></Link>
-                                        <AddToCartButton product={product} quantity={product.quantityOptions.reduce((acc, q) => q < acc ? q : acc)} user={user} /> {/* Opens login sidebar if not logged in.  */}
+                                        <AddToCartButton product={product} quantity={product.quantityOptions.reduce((acc, q) => q < acc ? q : acc)} /> {/* Opens login sidebar if not logged in.  */}
                                     </div>
                                 </div>
                             </div>

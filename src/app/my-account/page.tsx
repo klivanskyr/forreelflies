@@ -1,18 +1,14 @@
-'use server';
+// import { DashboardTemplate } from "@/Components/DashboardHelpers";
 
-import DashboardTemplate from "@/Components/dashboardHelpers/dashboardTemplate";
 
-export default async function Page() {
-    const { tokenToUser } = await import("@/lib/firebase-admin");
-    const user = await tokenToUser();
+// export default function Page() {
+//     return (
+//         <DashboardTemplate>
+//             <h1>Dashboard</h1>
+//         </DashboardTemplate>
+//     )
+// }
 
-    if (!user) {
-        return <></>;
-    }
-
-    return (
-        <DashboardTemplate user={user}>
-            <h1>Dashboard</h1>
-        </DashboardTemplate>
-    )
+export default function Page() {
+    return <></>
 }

@@ -4,6 +4,7 @@ import { PageSize, Sort } from "@/app/types/types";
 import Dropdown from "../inputs/Dropdown";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { addKVToUrl } from "@/helpers/addKVToUrl";
+import { Suspense } from "react";
 
 export default function ShopHeader({ sort, pageSize }: { sort: Sort, pageSize: PageSize }) {
     const router = useRouter();
@@ -37,25 +38,27 @@ export default function ShopHeader({ sort, pageSize }: { sort: Sort, pageSize: P
     }
 
     return (
-        <div className="flex flex-row w-full justify-between px-2 pt-2">
-            <div className="flex flex-row gap-4 items-center">
-                <Dropdown
-                    classNames={{ select: "text-lg mr-36" }}
-                    options={sortOptions}
-                    selected={sortOptions.find(option => option.value === sort) || sortOptions[0]}
-                    setSelected={(newSelected: string) => setSort(newSelected as Sort)}
-                />
-                {/* <Filters /> */}
+        <Suspense fallback={<div className="flex flex-row w-full justify-between px-2 pt-2"><h1>Loading...</h1></div>}>
+            <div className="flex flex-row w-full justify-between px-2 pt-2">
+                <div className="flex flex-row gap-4 items-center">
+                    <Dropdown
+                        classNames={{ select: "text-lg mr-36" }}
+                        options={sortOptions}
+                        selected={sortOptions.find(option => option.value === sort) || sortOptions[0]}
+                        setSelected={(newSelected: string) => setSort(newSelected as Sort)}
+                    />
+                    {/* <Filters /> */}
+                </div>
+                <div className="flex flex-row items-center gap-4">
+                    <h2>Show</h2>
+                    <Dropdown 
+                        classNames={{ select: "text-lg mr-2" }}
+                        options={pageSizeOptions}
+                        selected={pageSizeOptions.find(option => option.value === pageSize.toString()) || pageSizeOptions[0]}
+                        setSelected={(newSelected: string) => setPageSize(parseInt(newSelected) as PageSize)}
+                    />
+                </div>
             </div>
-            <div className="flex flex-row items-center gap-4">
-                <h2>Show</h2>
-                <Dropdown 
-                    classNames={{ select: "text-lg mr-2" }}
-                    options={pageSizeOptions}
-                    selected={pageSizeOptions.find(option => option.value === pageSize.toString()) || pageSizeOptions[0]}
-                    setSelected={(newSelected: string) => setPageSize(parseInt(newSelected) as PageSize)}
-                />
-            </div>
-        </div>
+        </Suspense>
     )
 }

@@ -1,12 +1,13 @@
 'use client';
 
 import { Product } from "@/app/types/types";
-import { DbUser } from "@/lib/firebase-admin";
 import { useRouter } from "next/navigation";
 import Button from "./Button";
 import { useState } from "react";
+import { useUser } from "@/contexts/UserContext";
 
-export default function AddToCartButton({ user, product, quantity }: { user: DbUser | null, product: Product, quantity: number }) {
+export default function AddToCartButton({ product, quantity }: { product: Product, quantity: number }) {
+    const { user } = useUser();
     const router = useRouter();
     const [loading, setLoading] = useState<boolean>(false);
 
