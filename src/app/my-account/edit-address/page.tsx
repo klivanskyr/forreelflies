@@ -1,21 +1,14 @@
-'use server';
+// import DashboardTemplate from "@/Components/DashboardHelpers/DashboardTemplate";
+// import AddressPage from "@/Components/my-account/AddressPage";
 
-import DashboardTemplate from "@/Components/dashboardHelpers/dashboardTemplate";
-import AddressPage from "@/Components/my-account/AddressPage";
+// export default async function Page() {
+//     return (
+//         <DashboardTemplate>
+//             <AddressPage/>
+//         </DashboardTemplate>
+//     )
+// }
 
-export default async function Page() {
-    const { tokenToUser } = await import("@/lib/firebase-admin");
-    const user = await tokenToUser();
-
-    if (!user) {
-        return <></>;
-    }
-
-    return (
-        <>
-            <DashboardTemplate user={user}>
-                <AddressPage user={user} />
-            </DashboardTemplate>
-        </>
-    )
+export default function Page() {
+    return <></>
 }

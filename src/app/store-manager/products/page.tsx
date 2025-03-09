@@ -1,14 +1,60 @@
-'use server';
+'use client';
 
 import { Product, Vendor } from "@/app/types/types";
 import NoVendorRedirect from "@/Components/storeManagerHelpers/NoVendorRedirect";
 import StoreManagerProductsTable from "@/Components/storeManagerHelpers/StoreManagerProductsTable";
 import StoreManagerTemplate from "@/Components/storeManagerHelpers/StoreManagerTemplate";
 import StoreManagerProductsHeader from "@/Components/StoreManagerProductsHeader";
+import { useUser } from "@/contexts/UserContext";
+import { useEffect, useState } from "react";
 
-export default async function Page() {
-    const { tokenToUser } = await import("@/lib/firebase-admin");
-    const user = await tokenToUser();
+export default function Page() {
+    const { user } = useUser();
+    const [vendor, setVendor] = useState<Vendor | undefined>(undefined);
+    const [products, setProducts] = useState<Product[]>([]);
+
+    useEffect(() => {
+        const getVendor = async (userId: string): Promise<Vendor | undefined> => {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor?userId=${userId}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (!response.ok) {
+                return undefined;
+            } else {
+                const data = await response.json();
+                return data.vendor as Vendor;
+            }
+        }
+
+        const getProducts = async (vendor: Vendor): Promise<Product[]> => {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/product?vendorId=${vendor.id}`);
+            const data = await response.json();
+            return data.data as Product[];
+        }
+
+        if (user) {
+            getVendor(user.uid).then((data) => {
+                if (data) {
+                    setVendor(data);
+                    getProducts(data).then((products) => {
+                        setProducts(products);
+                    });
+                }
+            });
+        }
+    })
+
+    if (!vendor  || !vendor.id) {
+        return (
+            <div>
+                <h1>Vendor not found</h1>
+            </div>
+        )
+    }
 
     if (!user || !user?.isVendor ) {
         return (
@@ -17,38 +63,6 @@ export default async function Page() {
             </div>
         )
     }
-
-    const getVendor = async (userId: string): Promise<Vendor | undefined> => {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor?userId=${userId}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        });
-
-        if (!response.ok) {
-            return undefined;
-        } else {
-            const data = await response.json();
-            return data.vendor as Vendor;
-        }
-    }
-
-    const getProducts = async (vendor: Vendor): Promise<Product[]> => {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/product?vendorId=${vendor.id}`);
-        const data = await response.json();
-        return data.data as Product[];
-    }
-
-    const vendor = await getVendor(user.uid);
-    if (!vendor  || !vendor.id) {
-        return (
-            <div>
-                <h1>Vendor not found</h1>
-            </div>
-        )
-    }
-    const products = await getProducts(vendor);
 
     return (
         <NoVendorRedirect vendor={vendor}>

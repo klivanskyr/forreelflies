@@ -14,9 +14,6 @@ export default async function Page({ params }: { params: Promise<{ productId: st
     const data = await response.json()
     const product = data.data as Product
 
-    const { tokenToUser } = await import("@/lib/firebase-admin");
-    const user = await tokenToUser(); //propdrilling bad
-
     return (
         <div className="flex flex-col w-full h-full items-center gap-4">
             <div className="flex flex-row w-full h-full">
@@ -24,7 +21,7 @@ export default async function Page({ params }: { params: Promise<{ productId: st
                     {product.images && <img src={product.images[0]} alt={product.name} className="object-cover" />}
                 </div>
                 <div className="w-full h-full p-8">
-                    <ProductInfo user={user} product={product} />
+                    <ProductInfo product={product} />
                 </div>
             </div>
             <div className="h-[1px] bg-black w-[80%]" />

@@ -1,28 +1,40 @@
-'use server';
+'use client';
 
 import StoreManagerTemplate from "@/Components/storeManagerHelpers/StoreManagerTemplate";
 import { Vendor } from "../types/types";
 import NoXRedirect from "@/Components/NoXRedirect";
+import { useUser } from "@/contexts/UserContext";
+import { useEffect, useState } from "react";
+import { DbUser } from "@/lib/firebase-admin";
 
-export default async function Page() {
-    const { tokenToUser } = await import("@/lib/firebase-admin");
-    const user = await tokenToUser();
+export default function Page() {
+    const { user } = useUser();
+    const [vendor, setVendor] = useState<Vendor | undefined>(undefined);
 
-    const getVendor = async (userId: string) => {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor?userId=${userId}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
+    useEffect(() => {
+        const getVendor = async (user: DbUser) => {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor?userId=${user.uid}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+    
+            if (!response.ok) {
+                return undefined;
+            } else {
+                const data = await response.json();
+                return data.vendor as Vendor;
             }
-        });
-
-        if (!response.ok) {
-            return undefined;
-        } else {
-            const data = await response.json();
-            return data.vendor as Vendor;
         }
-    }
+
+        if (user) {
+            getVendor(user).then((data) => {
+                setVendor(data);
+            });
+        }
+    }, [user]);
+    
 
     if (!user || !user?.isVendor ) {
         return (
@@ -31,8 +43,6 @@ export default async function Page() {
             </div>
         )
     }
-
-    const vendor = await getVendor(user.uid);
 
     if (!vendor) {
         return (

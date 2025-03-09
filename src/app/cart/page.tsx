@@ -1,4 +1,4 @@
-'use server';
+export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { Product, Rate } from "../types/types";

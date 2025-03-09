@@ -5,9 +5,8 @@ import { useState } from "react";
 import { IoHeartCircleOutline } from "react-icons/io5";
 import Dropdown from "../inputs/Dropdown";
 import AddToCartButton from "../buttons/AddToCartButton";
-import { DbUser } from "@/lib/firebase-admin";
 
-export default function ProductInfo({ user, product }: { user: DbUser | null, product: Product }) {
+export default function ProductInfo({ product }: { product: Product }) {
     const dropdownQuantityOptions = product.quantityOptions.map((option) => {
         return {
             value: option.toString(),
@@ -38,7 +37,7 @@ export default function ProductInfo({ user, product }: { user: DbUser | null, pr
                     setSelected={(newSelected) => setSelectedQuantity(newSelected)}
                 />
             </div>
-            <AddToCartButton user={user} product={product} quantity={parseInt(selectedQuantity)} />
+            <AddToCartButton product={product} quantity={parseInt(selectedQuantity)} />
             <button className="w-fit">
                 <div className="flex flex-row gap-2 items-center hover:text-gray-500 transition-all w-fit">
                     <IoHeartCircleOutline className="h-6 w-6" />
