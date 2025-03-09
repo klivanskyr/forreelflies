@@ -1,41 +1,55 @@
+'use client';
+
 import VendorSignupForm from "@/Components/vendorSignupHelpers/VendorSignupForm";
+import { useUser } from "@/contexts/UserContext";
+import { DbUser } from "@/lib/firebase-admin";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 type ApprovalStatus = "approved" | "pending" | "not-submitted";
 
-export default async function Page() {
-    const { tokenToUser } = await import("@/lib/firebase-admin");
-    const user = await tokenToUser();
+export default function Page() {
+    const [status, setStatus] = useState<ApprovalStatus>("not-submitted");
+    const { user } = useUser();
+    const router = useRouter();
 
-    if (!user) {
-        alert("You must be logged in to view this page");
-        return <></>
-    }
+    useEffect(() => {
+        const getApprovalStatus = async (user: DbUser): Promise<ApprovalStatus> => {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/approve-vendor?uid=${user.uid}`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+            });
+    
+            if (response.status === 200) {
+                const data = await response.json();
+    
+                if (data?.vendorRequest?.isApproved) {
+                    console.log("approved");
+                    return "approved";
+                } else {
+                    console.log("pending");
+                    return "pending";
+                }
+            } else {
+                console.log("not-submitted");
+                return "not-submitted";
+            }
+        }
 
-    const getApprovalStatus = async (): Promise<ApprovalStatus> => {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/approve-vendor?uid=${user.uid}`, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json"
-            },
+        if (!user) return
+
+        getApprovalStatus(user).then((status) => {
+            setStatus(status);
         });
 
-        if (response.status === 200) {
-            const data = await response.json();
+    }, [user]);
 
-            if (data?.vendorRequest?.isApproved) {
-                console.log("approved");
-                return "approved";
-            } else {
-                console.log("pending");
-                return "pending";
-            }
-        } else {
-            console.log("not-submitted");
-            return "not-submitted";
-        }
+    if (!user) {
+        router.push("/?login=true");
+        return <></>;
     }
-
-    const status = await getApprovalStatus();
 
     switch (status) {
         case "approved":

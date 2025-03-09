@@ -1,11 +1,9 @@
+import { DbUser } from "@/lib/firebase-admin";
 import { TextLink } from "../Links";
 import { FaFacebook } from "react-icons/fa";
 import { FaInstagram } from "react-icons/fa";
 
-export default async function ProfileHeader() {
-    const { tokenToUser } = await import("@/lib/firebase-admin");
-    const user = await tokenToUser();
-
+export default function ProfileHeader({ user }: { user: DbUser | null }) {
     return (
         <div className="flex flex-row justify-between bg-gray-100 py-2 md:px-8 lg:px-32">
             <div className="px-4 py-1 flex flex-row gap-4">
