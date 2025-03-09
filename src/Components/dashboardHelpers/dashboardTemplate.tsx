@@ -1,3 +1,5 @@
+'use client';
+
 import { useUser } from "@/contexts/UserContext";
 import DashboardSidebar from "./DashboardSidebar";
 
@@ -11,7 +13,6 @@ export default function DashboardTemplate({ children }: { children: React.ReactN
     return (
         <div className="flex flex-col w-full">
             <div className="flex flex-row w-full">
-                
                 <div className="flex flex-col border w-[20%] items-center gap-4">
                     <div className="flex flex-col items-center">
                         <h1 className="text-xl">LOGO</h1>
