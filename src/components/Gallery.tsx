@@ -5,7 +5,7 @@ export default function Gallery({ children }: { children: React.ReactNode }) {
 
     if (childrenArray.length % 2 === 0) {
         return (
-            <div className="flex flex-wrap gap-4 h-[500px] w-full">
+            <div className="flex flex-wrap gap-4 h-[500px] w-full overflow-hidden">
                 {childrenArray.map((child, index) => (
                     <div key={index} className="flex-1">
                         {child}
