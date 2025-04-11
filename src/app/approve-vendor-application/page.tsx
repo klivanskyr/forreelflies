@@ -1,4 +1,4 @@
-import ApproveVendorForm from "@/Components/approveVendorHelpers/ApproveVendorForm";
+import ApproveVendorForm from "@/components/approveVendorHelpers/ApproveVendorForm";
 
 export default async function Page() {
     return (

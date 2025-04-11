@@ -1,4 +1,4 @@
-import StoreManagerTemplate from "@/Components/storeManagerHelpers/StoreManagerTemplate";
+import StoreManagerTemplate from "@/components/storeManagerHelpers/StoreManagerTemplate";
 
 export default function Page() {
     return (

@@ -2,7 +2,7 @@
 
 import { useUser } from "@/contexts/UserContext";
 import NavigationHeader from "./NavigationHeader";
-import ProfileHeader from "@/Components/Navbar/ProfileHeader";
+import ProfileHeader from "@/components/Navbar/ProfileHeader";
 
 export default function Navbar() {
     const { user } = useUser();
