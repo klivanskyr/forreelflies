@@ -1,33 +1,50 @@
 'use client';
 
+import { usePathname, useRouter } from "next/navigation";
 import { MdOutlineSpaceDashboard as DashboardIcon } from "react-icons/md";
 import { LiaShippingFastSolid as OrdersIcon } from "react-icons/lia";
 import { FaRegHeart as WishlistIcon } from "react-icons/fa";
 import { MdOutlinePayment as PaymentIcon } from "react-icons/md";
-import { IoSettingsOutline  as SettingsIcon } from "react-icons/io5";
+import { IoSettingsOutline as SettingsIcon } from "react-icons/io5";
 import { MdLogout as LogoutIcon } from "react-icons/md";
 
 import { TextLink } from "@/components/Links";
 import SignOutButton from "@/components/buttons/SignOutButton";
-import { usePathname, useRouter } from "next/navigation";
-import { Suspense } from "react";
 
 export default function DashboardSidebar(): JSX.Element {
-    // const router = useRouter();
-    // const path = usePathname();
-    
-    // return (
-    //     <Suspense fallback={<div className="flex flex-col gap-1">Loading...</div>}>
-    //         <div className="flex flex-col gap-1">
-    //             <TextLink className={`w-fit ${path === "/my-account" ? "!text-greenPrimary" : ""}`} href="/my-account" text="Dashboard" startingIcon={<DashboardIcon className={`${path === "/my-account" ? "fill-greenPrimary" : ""}`}/>} />
-    //             <TextLink className={`w-fit ${path === "/my-account/orders" ? "!text-greenPrimary" : ""}`} href="/my-account/orders" text="Orders" startingIcon={<OrdersIcon className={`${path === "/my-account/orders" ? "fill-greenPrimary" : ""}`}/>} />
-    //             <TextLink className={`w-fit ${path === "/my-account/wishlist" ? "!text-greenPrimary" : ""}`} href="/my-account/wishlist" text="Wishlist" startingIcon={<WishlistIcon className={`${path === "/my-account/wishlist" ? "fill-greenPrimary" : ""}`}/>} />
-    //             <TextLink className={`w-fit ${path === "/my-account/payment-methods" ? "!text-greenPrimary" : ""}`} href="/my-account/payment-methods" text="Payment Methods" startingIcon={<PaymentIcon className={`${path === "/my-account/payment-methods" ? "fill-greenPrimary" : ""}`}/>} />
-    //             <TextLink className={`w-fit ${path === "/my-account/edit-account" ? "!text-greenPrimary" : ""}`} href="/my-account/edit-account" text="Account Settings" startingIcon={<SettingsIcon className={`${path === "/my-account/account-settings" ? "fill-greenPrimary" : ""}`}/>} />
-    //             <TextLink className={`w-fit ${path === "/my-account/edit-address" ? "!text-greenPrimary" : ""}`} href="/my-account/edit-address" text="Address Book" startingIcon={<SettingsIcon className={`${path === "/my-account/address-book" ? "fill-greenPrimary" : ""}`}/>} />
-    //             <SignOutButton className="w-fit" text="Sign Out" startingIcon={<LogoutIcon />} onSignOut={() => router.refresh()}/>
-    //         </div>
-    //     </Suspense>
-    return <></>;
-    // )
+  const router = useRouter();
+  const path = usePathname();
+
+  const navLinks = [
+    { href: "/my-account", label: "Dashboard", icon: DashboardIcon },
+    { href: "/my-account/orders", label: "Orders", icon: OrdersIcon },
+    { href: "/my-account/wishlist", label: "Wishlist", icon: WishlistIcon },
+    { href: "/my-account/payment-methods", label: "Payment Methods", icon: PaymentIcon },
+    { href: "/my-account/edit-account", label: "Account Settings", icon: SettingsIcon },
+    { href: "/my-account/edit-address", label: "Address Book", icon: SettingsIcon },
+  ];
+
+  return (
+    <div className="flex flex-col gap-1">
+      {navLinks.map(({ href, label, icon: Icon }) => {
+        const isActive = path === href;
+        return (
+          <TextLink
+            key={href}
+            href={href}
+            text={label}
+            className={`w-fit ${isActive ? "text-black" : "text-gray-500"}`}
+            startingIcon={<Icon className={`${isActive ? "fill-black" : "fill-gray-500"}`} />}
+          />
+        );
+      })}
+
+      <SignOutButton
+        className="w-fit"
+        text="Sign Out"
+        startingIcon={<LogoutIcon />}
+        onSignOut={() => router.refresh()}
+      />
+    </div>
+  );
 }
