@@ -1,4 +1,4 @@
-import { DashboardTemplate } from "@/Components/DashboardHelpers";
+import { DashboardTemplate } from "@/components/DashboardHelpers";
 
 export default function Page() {
     return (
