@@ -49,7 +49,7 @@ export default function Slider({ children }: { children: React.ReactNode[] }) {
     const swipePower = (offset: number, velocity: number) => Math.abs(offset) * velocity;
 
     return (
-        <div className="relative w-full h-dvh overflow-hidden">
+        <div className="w-full h-dvh overflow-hidden">
             <AnimatePresence initial={false} custom={direction} onExitComplete={() => setIsAnimating(false)}>
                 <motion.div
                     key={page}
