@@ -51,11 +51,21 @@ export default function Home() {
           <h3 className="text-2xl mb-2 text-black text-opacity-80">Select from our collection expertly tied flies.</h3>
         </div>
         <Gallery>
-            <SlideLink backgroundSrc={placeholder.src}><h2 className="text-2xl font-semibold text-white">Dry Flies</h2></SlideLink>
-            <SlideLink backgroundSrc={placeholder.src}><h2 className="text-2xl font-semibold text-white">Nymphs</h2></SlideLink>
-            <SlideLink backgroundSrc={placeholder.src}><h2 className="text-2xl font-semibold text-white">Streamers</h2></SlideLink>
-            <SlideLink backgroundSrc={placeholder.src}><h2 className="text-2xl font-semibold text-white">Saltwater Flies</h2></SlideLink>
-            <SlideLink backgroundSrc={placeholder.src}><h2 className="text-2xl font-semibold text-white">Wet Flies</h2></SlideLink>
+            <SlideLink backgroundSrc={placeholder.src}>
+              <h2 className="text-2xl font-semibold text-white">Dry Flies</h2>
+            </SlideLink>
+            <SlideLink backgroundSrc={placeholder.src}>
+              <h2 className="text-2xl font-semibold text-white">Nymphs</h2>
+            </SlideLink>
+            <SlideLink backgroundSrc={placeholder.src}>
+              <h2 className="text-2xl font-semibold text-white">Streamers</h2>
+            </SlideLink>
+            <SlideLink backgroundSrc={placeholder.src}>
+              <h2 className="text-2xl font-semibold text-white">Saltwater Flies</h2>
+            </SlideLink>
+            <SlideLink backgroundSrc={placeholder.src}>
+              <h2 className="text-2xl font-semibold text-white">Wet Flies</h2>
+            </SlideLink>
         </Gallery>
       </div>
     </div>
