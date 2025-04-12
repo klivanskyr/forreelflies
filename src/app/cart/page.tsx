@@ -2,11 +2,11 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { Product, Rate } from "../types/types";
-import NoXRedirect from "@/components/NoXRedirect";
-import Breadcrumbs from "@/components/Breadcrumbs";
+import NoXRedirect from "@/Components/NoXRedirect";
+import Breadcrumbs from "@/Components/Breadcrumbs";
 import { calculateShipping } from "@/helpers/calculateShipping";
 import { VendorItem } from "../api/v1/checkout/route";
-import CheckoutButton from "@/components/CheckoutButton";
+import CheckoutButton from "@/Components/CheckoutButton";
 
 export type CartId = {
     id: string,

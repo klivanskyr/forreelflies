@@ -1,10 +1,10 @@
 'use client';
 
 import { Product, Vendor } from "@/app/types/types";
-import NoVendorRedirect from "@/components/storeManagerHelpers/NoVendorRedirect";
-import StoreManagerProductsTable from "@/components/storeManagerHelpers/StoreManagerProductsTable";
-import StoreManagerTemplate from "@/components/storeManagerHelpers/StoreManagerTemplate";
-import StoreManagerProductsHeader from "@/components/StoreManagerProductsHeader";
+import NoVendorRedirect from "@/Components/storeManagerHelpers/NoVendorRedirect";
+import StoreManagerProductsTable from "@/Components/storeManagerHelpers/StoreManagerProductsTable";
+import StoreManagerTemplate from "@/Components/storeManagerHelpers/StoreManagerTemplate";
+import StoreManagerProductsHeader from "@/Components/StoreManagerProductsHeader";
 import { useUser } from "@/contexts/UserContext";
 import { useEffect, useState } from "react";
 

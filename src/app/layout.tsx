@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Navbar } from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import { Navbar } from "@/Components/Navbar";
+import Footer from "@/Components/Footer";
 import UserProvider from "@/contexts/UserContext";
-import IntializeUser from "@/components/InitalizeUser";
+import IntializeUser from "@/Components/InitalizeUser";
 
 export const metadata: Metadata = {
   title: "ForReelFlies",
