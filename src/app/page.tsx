@@ -35,14 +35,14 @@ export default function Home() {
           <h2 className="text-3xl font-medium">TOP SELLING FLIES</h2>
           <h3 className="text-2xl mb-2 text-black text-opacity-80">These are our top selling flies chosen by you.</h3>
         </div>
-        {/* <PaginatedCardList>
+        <PaginatedCardList>
           <Card title="Fly 1" rating={3} vendorName="Billy Bob" price="10.00" />
           <Card title="Fly 2" rating={2} vendorName="Joe" price="5.00" />
           <Card title="Fly 3" rating={1} vendorName="Phil" price="2.00" />
           <Card title="Fly 4" rating={5} vendorName="Matt" price="1.50" />
           <Card title="Fly 5" rating={4} vendorName="Ryan" price="0.05" />
           <Card title="Fly 6" rating={3} vendorName="Tomas" price="0.99" />
-        </PaginatedCardList> */}
+        </PaginatedCardList>
       </div>
 
       <div className="flex flex-col gap-4 p-8">
