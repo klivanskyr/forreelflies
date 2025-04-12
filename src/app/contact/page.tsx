@@ -1,6 +1,6 @@
-import Button from "@/Components/buttons/Button"
-import Input from "@/Components/inputs/Input"
-import Textarea from "@/Components/Textarea"
+import Button from "@/components/buttons/Button"
+import Input from "@/components/inputs/Input"
+import Textarea from "@/components/Textarea"
 
 function Card({ symbol, title, content }: { symbol: string, title: string, content: string }) {
     return (
