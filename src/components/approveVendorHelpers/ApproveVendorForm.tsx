@@ -1,7 +1,7 @@
 'use client';
 
-import Button from "@/components/buttons/Button";
-import Input from "@/components/inputs/Input";
+import Button from "@/Components/buttons/Button";
+import Input from "@/Components/inputs/Input";
 import { useState } from "react";
 
 type InputProps = {

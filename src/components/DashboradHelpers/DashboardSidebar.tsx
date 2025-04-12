@@ -8,8 +8,8 @@ import { MdOutlinePayment as PaymentIcon } from "react-icons/md";
 import { IoSettingsOutline as SettingsIcon } from "react-icons/io5";
 import { MdLogout as LogoutIcon } from "react-icons/md";
 
-import { TextLink } from "@/components/Links";
-import SignOutButton from "@/components/buttons/SignOutButton";
+import { TextLink } from "@/Components/Links";
+import SignOutButton from "@/Components/buttons/SignOutButton";
 
 export default function DashboardSidebar(): JSX.Element {
   const router = useRouter();

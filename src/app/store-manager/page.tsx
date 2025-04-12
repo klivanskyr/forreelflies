@@ -1,8 +1,8 @@
 'use client';
 
-import StoreManagerTemplate from "@/components/storeManagerHelpers/StoreManagerTemplate";
+import StoreManagerTemplate from "@/Components/storeManagerHelpers/StoreManagerTemplate";
 import { Vendor } from "../types/types";
-import NoXRedirect from "@/components/NoXRedirect";
+import NoXRedirect from "@/Components/NoXRedirect";
 import { useUser } from "@/contexts/UserContext";
 import { useEffect, useState } from "react";
 import { DbUser } from "@/lib/firebase-admin";

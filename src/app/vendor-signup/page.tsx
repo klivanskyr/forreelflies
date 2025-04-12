@@ -1,6 +1,6 @@
 'use client';
 
-import VendorSignupForm from "@/components/vendorSignupHelpers/VendorSignupForm";
+import VendorSignupForm from "@/Components/vendorSignupHelpers/VendorSignupForm";
 import { useUser } from "@/contexts/UserContext";
 import { DbUser } from "@/lib/firebase-admin";
 import { useRouter } from "next/navigation";
