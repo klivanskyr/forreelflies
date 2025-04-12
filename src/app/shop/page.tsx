@@ -1,6 +1,6 @@
-import ProductList from "@/Components/shop/ProductList";
+import ProductList from "@/components/shop/ProductList";
 import { Layout, PageSize, Sort } from "../types/types";
-import ShopHeader from "@/Components/shop/ShopHeader"; 
+import ShopHeader from "@/components/shop/ShopHeader"; 
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }>}) {
     const params = await searchParams;

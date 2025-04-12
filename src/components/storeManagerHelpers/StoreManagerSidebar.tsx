@@ -1,6 +1,6 @@
 'use client';
 
-import SignOutButton from "@/Components/buttons/SignOutButton";
+import SignOutButton from "@/components/buttons/SignOutButton";
 import { FaHome as HomeIcon } from "react-icons/fa";
 import { FaImage as MediaIcon } from "react-icons/fa";
 import { FaBoxOpen as ProductsIcon } from "react-icons/fa";

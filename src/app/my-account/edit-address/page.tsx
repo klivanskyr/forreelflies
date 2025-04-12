@@ -1,5 +1,5 @@
-import DashboardTemplate from "@/Components/DashboradHelpers/DashboardTemplate";
-import AddressPage from "@/Components/my-account/AddressPage";
+import DashboardTemplate from "@/components/DashboradHelpers/DashboardTemplate";
+import AddressPage from "@/components/my-account/AddressPage";
 
 export default function Page() {
     return (
