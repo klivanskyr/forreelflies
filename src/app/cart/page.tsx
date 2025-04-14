@@ -237,7 +237,7 @@ export default async function Page() {
                                 {rates.length > 0 && rates.map((rate, i) => (
                                     <div key={i}>{rate.sellerName} --- {rate.provider}, Estimated Days: {rate.estimatedDays}: <span className="font-semibold">${rate.amount}</span></div>
                                 ))}
-                                {rates.length === 0 && <Link href="/" className="text-blue-500">Add shipping information to calculate shipping cost</Link>}
+                                {rates.length === 0 && <Link href="/my-account/edit-address" className="text-blue-500">Add shipping information to calculate shipping cost</Link>}
                             </div>
                         </div>
 
