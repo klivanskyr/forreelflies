@@ -18,7 +18,7 @@ export default function UserProvider({ initialUser, loading, children }: { initi
 
   const refreshUser = async () => {
     setIsLoading(true);
-    console.log('refreshing user');
+    // console.log('refreshing user');
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/validateToken`, {
       method: 'POST',
       headers: {
@@ -27,7 +27,7 @@ export default function UserProvider({ initialUser, loading, children }: { initi
     });
     const data = await response.json();
     setUser(data.user);
-    console.log('user refreshed', data.user);
+    // console.log('user refreshed', data.user);
     setIsLoading(false);
   };
 
