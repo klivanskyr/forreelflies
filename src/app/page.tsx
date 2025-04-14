@@ -1,7 +1,6 @@
 import { ButtonLink } from "@/components/Links";
 import { Slider } from "@/components/Slider";
 import Slide from "@/components/Slider/Slide";
-import placeholder from "@/../public/placeholder.png";
 import PaginatedCardList from "@/components/cards/PaginatedCardList";
 import Card from "@/components/cards/RatingCard";
 import Gallery from "@/components/Gallery";
@@ -14,37 +13,40 @@ import streamerflyimage from "@/../public/flies/streamer.webp";
 import saltwaterflyimage from "@/../public/flies/saltwaterfly.webp";
 
 import castingimage from "@/../public/main_page/how-to-cast-a-fly-rod.jpg";
+import flytying from "@/../public/main_page/flytying.jpg";
+import flytyingmaterials from "@/../public/main_page/flytyingmaterials.jpg";
+import hatchtable from "@/../public/main_page/hatchtable.jpg"
 
 export default function Home() {
   return (
     <div className="flex flex-col gap-8 mb-2">
       <Slider>
-        <Slide backgroundSrc={placeholder.src}>
+        <Slide className="text-white" backgroundSrc={flytying.src}>
           <div className="flex flex-col justify-center items-center text-center gap-4 h-full">
-            <h2 className="text-[4rem]">Fly Tying Lessions</h2>
-            <p className="text-[1.25rem]">We hold private and small group fly tying sessions</p>
-            <ButtonLink className="max-w-[200px]" href="/" text="Contact Us" />
+            <h2 className="text-[5rem] font-semibold">Fly Tying Lessions</h2>
+            <p className="text-[1.5rem] font-semibold">We hold private and small group fly tying sessions</p>
+            <ButtonLink className="max-w-[200px] my-2" href="/" text="Contact Us" />
           </div>
         </Slide>
-        <Slide backgroundSrc={placeholder.src}>
+        <Slide className="text-white" backgroundSrc={flytyingmaterials.src}>
           <div className="flex flex-col justify-center items-center text-center gap-4 px-16 h-full">
-            <h2 className="text-[4rem]">OUR TIERS USE THE BEST MATERIALS</h2>
-            <p className="text-[1.25rem]">We select the best tiers with the best materials, so your files last.</p>
-            <ButtonLink className="max-w-[200px]" href="/" text="Shop now" />
+            <h2 className="text-[5rem] font-semibold">OUR TIERS USE THE BEST MATERIALS</h2>
+            <p className="text-[1.5rem] font-semibold">We select the best tiers with the best materials, so your files last.</p>
+            <ButtonLink className="max-w-[200px] my-2" href="/" text="Shop now" />
           </div>
         </Slide>
-        <Slide backgroundSrc={placeholder.src}>
+        <Slide className="text-white" backgroundSrc={hatchtable.src}>
           <div className="flex flex-col justify-center items-center text-center gap-4 px-16 h-full">
-            <h2 className="text-[4rem]">MATCH THE HATCH</h2>
-            <p className="text-[1.25rem]">Make sure you have the right fly for the water you are fishing. Our tiers specialize across the United States, giving you the best advice on patterns for your next fishing adventure.</p>
-            <ButtonLink className="max-w-[200px]" href="/" text="Contact Us" />
+            <h2 className="text-[5rem] font-semibold">MATCH THE HATCH</h2>
+            <p className="text-[1.5rem] font-semibold">Make sure you have the right fly for the water you are fishing. Our tiers specialize across the United States, giving you the best advice on patterns for your next fishing adventure.</p>
+            <ButtonLink className="max-w-[200px] my-2" href="/" text="Contact Us" />
           </div>
         </Slide>
         <Slide className="text-white" backgroundSrc={castingimage.src}>
           <div className="flex flex-col justify-center items-center text-center gap-4 px-16 h-full z-5">
-            <h2 className="text-[4rem]">CASTING LESSONS</h2>
-            <p className="text-[1.25rem]">Contact us if you want casting instructions or are interested in learning anything fly fishing related!</p>
-            <ButtonLink className="max-w-[200px]" href="/" text="Contact Us" />
+            <h2 className="text-[5rem] font-semibold">CASTING LESSONS</h2>
+            <p className="text-[1.5rem] font-semibold">Contact us if you want casting instructions or are interested in learning anything fly fishing related!</p>
+            <ButtonLink className="max-w-[200px] my-2" href="/" text="Contact Us" />
           </div>
         </Slide>
       </Slider>

@@ -89,8 +89,8 @@ export default function Slider({ children }: { children: React.ReactNode[] }) {
                     {children[imageIndex]}
                 </motion.div>
             </AnimatePresence>
-            <button className="z-40" onClick={() => paginate(-1)} style={{ position: 'absolute', left: '10px', top: '50%' }}><FaChevronLeft /></button>
-            <button className="z-40" onClick={() => paginate(1)} style={{ position: 'absolute', right: '10px', top: '50%' }}><FaChevronRight /></button>
+            <button className="z-40" onClick={() => paginate(-1)} style={{ position: 'absolute', left: '15px', top: '50%' }}><FaChevronLeft className="fill-white w-[35px] h-[35px]"/></button>
+            <button className="z-40" onClick={() => paginate(1)} style={{ position: 'absolute', right: '15px', top: '50%' }}><FaChevronRight className="fill-white w-[35px] h-[35px]" /></button>
         </div>
     );
 }
