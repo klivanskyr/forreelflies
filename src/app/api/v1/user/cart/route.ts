@@ -59,3 +59,34 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         }
     }
 }
+
+export async function PUT(request: NextRequest): Promise<NextResponse> {
+    try {
+        const { userId, productId, quantity } = await request.json();
+
+        if (!userId) {
+            return NextResponse.json({ message: "User ID is required" }, { status: 400 });
+        }
+
+        if (!productId) {
+            return NextResponse.json({ message: "Product ID is required" }, { status: 400 });
+        }
+
+        const userCartItemDoc = await getDoc(doc(db, "users", userId, "cart", productId));
+
+        if (!userCartItemDoc.exists()) {
+            return NextResponse.json({ message: "Product not in cart" }, { status: 400 });
+        }
+
+        setDoc(doc(db, "users", userId, "cart", productId), { quantity: quantity }, { merge: true });
+
+        return NextResponse.json({ message: "Product quantity updated" }, { status: 200 });
+    } catch (error) {
+        if (error instanceof Error) {
+            return NextResponse.json({ message: error.message}, { status: 400 });
+        } else {
+            return NextResponse.json({ message: `An unknown error occurred: ${error}`} , { status: 400 });
+        }
+    }
+}
+
