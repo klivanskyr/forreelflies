@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import logo from "@/../public/logo_noback.png";
+import { FaFacebook, FaInstagram, FaTwitter, FaYoutube } from "react-icons/fa";
 
 export default function Footer() {
     return (
@@ -35,8 +36,12 @@ export default function Footer() {
 
                 <div className="flex flex-col px-6 py-2">
                     <h3 className="footer-header">Follow Us</h3>
-                    <h4>FACEBOOK LOGO</h4>
-                    <h4>INSTAGRAM LOGO</h4>
+                    <div className="my-3 flex flex-row gap-4">
+                        <Link href="https://www.facebook.com/"><FaFacebook className="text-2xl hover:fill-gray-700 transition-all" /></Link>
+                        <Link href="https://twitter.com/"><FaTwitter className="text-2xl hover:fill-gray-700 transition-all" /></Link>
+                        <Link href="https://www.youtube.com/"><FaYoutube className="text-2xl hover:fill-gray-700 transition-all" /></Link>
+                        <Link href="https://www.instagram.com/"><FaInstagram className="text-2xl hover:fill-gray-700 transition-all" /></Link>
+                    </div>
                 </div>
             </div>
 
