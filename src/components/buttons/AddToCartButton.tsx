@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useUser } from "@/contexts/UserContext";
 
 export default function AddToCartButton({ product, quantity }: { product: Product, quantity: number }) {
-    const { user } = useUser();
+    const { user, refreshUser } = useUser();
     const router = useRouter();
     const [loading, setLoading] = useState<boolean>(false);
 
@@ -44,6 +44,7 @@ export default function AddToCartButton({ product, quantity }: { product: Produc
 
             if (response.ok) {
                 console.log("Added to cart");
+                refreshUser();
                 setLoading(false);
                 return;
             } else {
