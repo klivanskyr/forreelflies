@@ -70,6 +70,8 @@ export async function POST(request: NextRequest) {
           console.error(`Tried to transfer ${vendorAmount}. Transfer failed for vendor`, vendorId, transferError);
         }
       }
+    } else {
+      console.log(`Unhandled event type: ${event.type}`);
     }
 
     return NextResponse.json({ received: true }, { status: 200 });
