@@ -7,6 +7,7 @@ import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 export default function Slider({ children }: { children: React.ReactNode[] }) {
     const [[page, direction], setPage] = useState([0, 0]);
+    const [dragging, setDragging] = useState<boolean>(false);
     const [isAnimating, setIsAnimating] = useState(false);
     const imageIndex = wrap(0, children.length, page); 
 
@@ -49,7 +50,7 @@ export default function Slider({ children }: { children: React.ReactNode[] }) {
     const swipePower = (offset: number, velocity: number) => Math.abs(offset) * velocity;
 
     return (
-        <div className="relative w-full h-dvh overflow-hidden">
+        <div className={`relative w-full h-dvh overflow-hidden ${dragging ? "cursor-grabbing" : "cursor-grab"}`}>
             <AnimatePresence initial={false} custom={direction} onExitComplete={() => setIsAnimating(false)}>
                 <motion.div
                     key={page}
@@ -65,6 +66,8 @@ export default function Slider({ children }: { children: React.ReactNode[] }) {
                     drag={!isAnimating ? "x" : false}
                     dragConstraints={{ left: 0, right: 0 }}
                     dragElastic={1}
+                    onMouseDown={() => setDragging(true)}
+                    onMouseUp={() => setDragging(false)}
                     onDragEnd={(e, { offset, velocity }) => {
                         const swipe = swipePower(offset.x, velocity.x);
                         if (swipe < -swipeConfidenceThreshold) {
