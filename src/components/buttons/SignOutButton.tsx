@@ -1,6 +1,10 @@
 'use client';
 
+import { useUser } from "@/contexts/UserContext"
+
 export default function SignOutButton({ text, startingIcon, onSignOut=() => {}, className="" }: { text: string, startingIcon?: JSX.Element, onSignOut?: () => void, className?: string }) {
+    const { refreshUser } = useUser();
+    
     const signOut = async () => {
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/signout`, {
@@ -10,6 +14,7 @@ export default function SignOutButton({ text, startingIcon, onSignOut=() => {}, 
 
             if (response.ok) {
                 onSignOut();
+                refreshUser();
             } else {
                 console.error("Failed to log out");
             }

@@ -3,7 +3,6 @@ import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import UserProvider from "@/contexts/UserContext";
-import IntializeUser from "@/components/InitalizeUser";
 
 export const metadata: Metadata = {
   title: "ForReelFlies",
@@ -19,7 +18,6 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <UserProvider initialUser={null} loading={true}>
-          <IntializeUser />
           <Navbar />
           {children}
           <Footer />

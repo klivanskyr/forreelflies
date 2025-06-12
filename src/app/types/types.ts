@@ -54,3 +54,15 @@ export type Rate = {
     provider: string,
     estimatedDays: number,
 }
+
+export type Suggestion = {
+    country: string,
+    state: string,
+    city: string,
+    zip: string,
+    street: string,
+    houseNumber: string,
+    formatted: string,
+    longitude: number,
+    latitude: number
+}

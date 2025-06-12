@@ -19,7 +19,10 @@ export default async function ProductList({ sort, pageSize, page, layout }: { so
             return { data: json.data, meta: json.meta }
         }
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/product?sort=${sort}&page=${page}&pageSize=${pageSize}`)
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/product?sort=${sort}&page=${page}&pageSize=${pageSize}`, {
+            method: "GET",
+            cache: "no-cache"
+        })
         if (!response.ok) {
             console.error("Error fetching products")
             return { data: [], meta: {} }

@@ -46,7 +46,7 @@ export default function Page() {
                 }
             });
         }
-    })
+    }, [user])
 
     if (!vendor  || !vendor.id) {
         return (

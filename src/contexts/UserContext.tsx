@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { DbUser } from '@/lib/firebase-admin';
 
 interface UserContextType {
@@ -16,18 +16,41 @@ export default function UserProvider({ initialUser, loading, children }: { initi
   const [user, setUser] = useState<DbUser | null>(initialUser);
   const [isLoading, setIsLoading] = useState(loading);
 
+  // Check if user is logged in on mount
+  useEffect(() => {
+    const checkToken = async () => {
+      setIsLoading(true);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/validateToken`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+      const data = await response.json();
+      if (response.ok && data.user) {
+        setUser(data.user);
+      } else {
+        setUser(null);
+      }
+      setIsLoading(false);
+    };
+
+    checkToken();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const refreshUser = async () => {
     setIsLoading(true);
-    // console.log('refreshing user');
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/validateToken`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
     });
     const data = await response.json();
     setUser(data.user);
-    // console.log('user refreshed', data.user);
     setIsLoading(false);
   };
 

@@ -3,8 +3,10 @@
 import { useState } from "react";
 import Button from "./buttons/Button";
 import StoreManagerProductModal, { ProductInput } from "./storeManagerHelpers/StoreManagerProductModal";
+import { useUser } from "@/contexts/UserContext";
 
 export default function StoreManagerProductsHeader({ vendorId }: { vendorId: string }) {
+    const { refreshUser } = useUser();
     const [modalOpen, setModalOpen] = useState<boolean>(false);
     const [message, setMessage] = useState<string>("");
     const [input, setInput] = useState<ProductInput>({
@@ -81,6 +83,7 @@ export default function StoreManagerProductsHeader({ vendorId }: { vendorId: str
             if (response.ok) {
                 setMessage("Product added successfully");
                 setTimeout(() => {
+                    refreshUser();
                     setModalOpen(false);
                     setMessage("");
                 }, 1000);
@@ -103,7 +106,7 @@ export default function StoreManagerProductsHeader({ vendorId }: { vendorId: str
     return (
         <div className="flex flex-row w-full justify-between py-2 pr-4 pl-2">
             <h1 className="text-2xl font-semibold">Products</h1>
-            <Button text="Add Product" onClick={() => { setModalOpen(true); setInput({ name: "", shortDescription: "", longDescription: "", isDraft: false, price: "", stockStatus: "unknown", tags: [], catagories: [], images: [], quantityOptions: [], shippingHeight: "", shippingLength: "", shippingWeight: "", shippingWidth: "" }) }} />
+            <Button className="w-[400px]" text="Add Product" onClick={() => { setModalOpen(true); setInput({ name: "", shortDescription: "", longDescription: "", isDraft: false, price: "", stockStatus: "unknown", tags: [], catagories: [], images: [], quantityOptions: [], shippingHeight: "", shippingLength: "", shippingWeight: "", shippingWidth: "" }) }} />
             <StoreManagerProductModal handleSubmit={handleSubmit} errorMessage={message} input={input} modalOpen={modalOpen} setModalOpen={setModalOpen} setInput={setInput} vendorId={vendorId} />
         </div>
     )
