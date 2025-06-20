@@ -2,6 +2,7 @@ import { initializeApp, getApps, ServiceAccount } from 'firebase-admin/app';
 import admin from 'firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
 import { cookies } from 'next/headers';
+import { VendorSignUpStatus } from '@/app/types/types';
 
 const serviceAccount = {
     type: process.env.FIREBASE_ADMIN_TYPE,
@@ -36,6 +37,7 @@ export type DbUser = {
     uid: string;
     email: string;
     username: string;
+    vendorSignUpStatus: VendorSignUpStatus;
     phoneNumber?: string;
     streetAddress?: string;
     city?: string;
@@ -43,7 +45,6 @@ export type DbUser = {
     zipCode?: string;
     country?: string;
     photoURL?: string;
-    isVendor: boolean;
     isAdmin?: boolean;
 }
 

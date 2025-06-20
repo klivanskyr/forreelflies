@@ -35,6 +35,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                 storeState,
             });
 
+            // Update user vendorSignUpStatus to 'submittedApprovalForm'
+            const userDocRef = doc(db, "users", uid);
+            await setDoc(userDocRef, { vendorSignUpStatus: "submittedApprovalForm" }, { merge: true });
+            console.log("Vendor request submitted successfully");
+
             return NextResponse.json({ message: "Successfully submitted vendor request" }, { status: 200 });
         } catch (error) {
             if (error instanceof Error) {

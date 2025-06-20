@@ -34,15 +34,6 @@ export default function Page() {
             });
         }
     }, [user]);
-    
-
-    if (!user || !user?.isVendor ) {
-        return (
-            <div>
-                <h1>Not a vendor</h1>
-            </div>
-        )
-    }
 
     if (!vendor) {
         return (

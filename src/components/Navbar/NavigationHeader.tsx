@@ -81,7 +81,7 @@ export default function NavigationHeader({ user }: { user: DbUser | null }) {
                     }
                 </Link>
                 {user 
-                    ? <ProfileButtonAndBar isVendor={user.isVendor} /> 
+                    ? <ProfileButtonAndBar isVendor={user.vendorSignUpStatus === "onboardingCompleted"} /> 
                     : <SigninButtonAndBar />
                 }
             </div>

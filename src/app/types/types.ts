@@ -54,3 +54,5 @@ export type Rate = {
     provider: string,
     estimatedDays: number,
 }
+
+export type VendorSignUpStatus = "notStarted" | "submittedApprovalForm" | "approvalFormApproved" | "approvalFormRejected" | "onboardingStarted" | "onboardingCompleted";
