@@ -11,7 +11,7 @@ export default function ProfileHeader({ user }: { user: DbUser | null }) {
                 <FaInstagram size={30} />
             </div>
             <div>
-                {user?.isVendor 
+                {user?.vendorSignUpStatus === "onboardingCompleted" 
                     ? <TextLink className="bg-greenPrimary px-4 py-1 rounded-full !text-white" text="Store Manager" href="/store-manager" />
                     : <TextLink className="bg-greenPrimary px-4 py-1 rounded-full !text-white" text="Become A Vendor" href="/vendor-signup" />
                 }

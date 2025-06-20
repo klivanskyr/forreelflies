@@ -56,14 +56,6 @@ export default function Page() {
         )
     }
 
-    if (!user || !user?.isVendor ) {
-        return (
-            <div>
-                <h1>Not a vendor</h1>
-            </div>
-        )
-    }
-
     return (
         <NoVendorRedirect vendor={vendor}>
             <StoreManagerTemplate>

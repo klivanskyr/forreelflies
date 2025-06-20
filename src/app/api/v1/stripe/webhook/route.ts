@@ -1,3 +1,5 @@
+import { db } from "@/lib/firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 
@@ -72,31 +74,44 @@ export async function POST(request: NextRequest) {
       }
     } else if (event.type === "account.updated") {
       const account = event.data.object as Stripe.Account;
+      console.log("Account updated:", account.capabilities);
 
-      const accountId = account.id;
-      const accountEmail = account.email;
-      const accountPayoutsEnabled = account.payouts_enabled;
-      const accountCurrentlyDue = account.requirements?.currently_due || [];
-      const accountMetadata = account.metadata; // userId
-      const accountName = account.business_profile?.name || "Unknown";
-      const accountCapabilities = account.capabilities || {};
+      const userId = account?.metadata?.userId;
+      if (!userId) {
+        console.error("User ID not found in account metadata");
+        return NextResponse.json(
+          { error: "User ID not found in account metadata" },
+          { status: 400 }
+        );
+      }
 
+      if (account.capabilities && account.capabilities.transfers === "active") {
+        // Update the vendor's account status in Firestore
+        await setDoc(doc(db, "users", userId), { vendorSignUpStatus: "onboardingCompleted" }, { merge: true });
+        const vendorRequestDoc = await getDoc(doc(db, "vendorRequests", userId));
 
+        await setDoc(doc(db, "vendors", userId), {
+          stripeAccountId: account.id,
+          ownerName: vendorRequestDoc.data()?.name || "",
+          ownerId: userId,
+          products: [],
+          storeCity: vendorRequestDoc.data()?.storeCity || "",
+          storeCountry: vendorRequestDoc.data()?.storeCountry || "",
+          storeDescription: vendorRequestDoc.data()?.storeDescription || "",
+          storeEmail: vendorRequestDoc.data()?.storeEmail || "",
+          storeName: vendorRequestDoc.data()?.storeName || "",
+          storePhone: vendorRequestDoc.data()?.storePhone || "",
+          storeSlug: vendorRequestDoc.data()?.storeSlug || "",
+          storeState: vendorRequestDoc.data()?.storeState || "",
+          storeStreetAddress: vendorRequestDoc.data()?.storeStreetAddress || "",
+          storeZip: vendorRequestDoc.data()?.storeZip || ""
+        }, { merge: true });
 
-      console.log("Account updated:", account);
-
-    } else if (event.type === "account.application.authorized") {
-      console.log("Application authorized:", event.data.object);
-    } else if (event.type === "account.application.deauthorized") {
-      console.log("Application deauthorized:", event.data.object);
-    } else if (event.type === "account.external_account.created") {
-      console.log("External account created:", event.data.object);
-    } else if (event.type === "account.external_account.updated") {
-      console.log("External account updated:", event.data.object);
+        console.log(`Vendor account for user ${userId} is now active and updated`);
+      }
     } else {
       console.log(`Unhandled event type: ${event.type}`);
-    }
-
+    } 
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (error) {
     console.error("Webhook error:", error);

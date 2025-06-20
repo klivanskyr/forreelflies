@@ -66,7 +66,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                 await setDoc(doc(db, "users", userRecord.uid), {
                     username: email.split("@")[0],
                     email,
-                    isVendor: false
+                    vendorSignUpStatus: "notStarted", // Default status
                 });
             } catch (error) {
                 // Delete user from Firebase Auth if Firestore fails
