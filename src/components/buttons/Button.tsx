@@ -14,7 +14,6 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 export default function Button({ className="", text, color="green", loading, ...props }: ButtonProps ) {
     return (
         <motion.div
-            className="w-full h-full"
             initial={{ scale: 1 }}
             animate={{ scale: 1}}
             whileTap={{ scale: 0.95 }}

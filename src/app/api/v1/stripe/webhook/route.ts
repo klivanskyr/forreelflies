@@ -70,6 +70,29 @@ export async function POST(request: NextRequest) {
           console.error(`Tried to transfer ${vendorAmount}. Transfer failed for vendor`, vendorId, transferError);
         }
       }
+    } else if (event.type === "account.updated") {
+      const account = event.data.object as Stripe.Account;
+
+      const accountId = account.id;
+      const accountEmail = account.email;
+      const accountPayoutsEnabled = account.payouts_enabled;
+      const accountCurrentlyDue = account.requirements?.currently_due || [];
+      const accountMetadata = account.metadata; // userId
+      const accountName = account.business_profile?.name || "Unknown";
+      const accountCapabilities = account.capabilities || {};
+
+
+
+      console.log("Account updated:", account);
+
+    } else if (event.type === "account.application.authorized") {
+      console.log("Application authorized:", event.data.object);
+    } else if (event.type === "account.application.deauthorized") {
+      console.log("Application deauthorized:", event.data.object);
+    } else if (event.type === "account.external_account.created") {
+      console.log("External account created:", event.data.object);
+    } else if (event.type === "account.external_account.updated") {
+      console.log("External account updated:", event.data.object);
     } else {
       console.log(`Unhandled event type: ${event.type}`);
     }
