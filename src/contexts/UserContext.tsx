@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { DbUser } from '@/lib/firebase-admin';
 
 interface UserContextType {
@@ -30,6 +30,12 @@ export default function UserProvider({ initialUser, loading, children }: { initi
     // console.log('user refreshed', data.user);
     setIsLoading(false);
   };
+
+  useEffect(() => {
+      if (!user) {
+          refreshUser();
+      }
+  });
 
   return (
     <UserContext.Provider value={{ user, refreshUser, isLoading, setIsLoading }}>

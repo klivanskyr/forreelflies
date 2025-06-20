@@ -49,26 +49,26 @@ export async function POST(request: NextRequest) {
         // THEN WE CREATE THE ACCOUNT LINK
         const accountLink = await stripe.accountLinks.create({
             account: account.id,
-            refresh_url: `${process.env.NEXT_PUBLIC_APP_URL}/vendor-signup?refresh=true`,
-            return_url: `${process.env.NEXT_PUBLIC_APP_URL}/vendor-signup?success=true`,
+            refresh_url: `${process.env.NEXT_PUBLIC_API_URL}/vendor-signup?refresh=true`,
+            return_url: `${process.env.NEXT_PUBLIC_API_URL}/vendor-signup?success=true`,
             type: "account_onboarding",
         });
 
-        // create vendor doc
-        const vendor = await addDoc(collection(db, "vendors"), {
-            ownerUid: uid,
-            stripeAccountId: account.id,
-            status: "pending", 
-            onboardingLink: accountLink.url, 
-            email: email,
-            createdAt: new Date(),
-        });
+        // // create vendor doc
+        // const vendor = await addDoc(collection(db, "vendors"), {
+        //     ownerUid: uid,
+        //     stripeAccountId: account.id,
+        //     status: "pending", 
+        //     onboardingLink: accountLink.url, 
+        //     email: email,
+        //     createdAt: new Date(),
+        // });
 
-        // Update the user document to mark them as a vendor
-        await setDoc(doc(db, "users", uid), {
-            isVendor: true,
-            vendorId: vendor.id, // Store the vendor ID in the user document
-        }, { merge: true });
+        // // Update the user document to mark them as a vendor
+        // await setDoc(doc(db, "users", uid), {
+        //     isVendor: true,
+        //     vendorId: vendor.id, // Store the vendor ID in the user document
+        // }, { merge: true });
         
 
         return NextResponse.json({ onboardingLink: accountLink.url }, { status: 200 });
