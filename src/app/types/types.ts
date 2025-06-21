@@ -56,3 +56,38 @@ export type Rate = {
 }
 
 export type VendorSignUpStatus = "notStarted" | "submittedApprovalForm" | "approvalFormApproved" | "approvalFormRejected" | "onboardingStarted" | "onboardingCompleted";
+
+export type OrderProduct = {
+  productId: string;
+  productName: string;
+  productImage?: string;
+  quantity: number;
+  price: number; // per unit
+};
+
+export type Order = {
+  id: string; // Firestore doc ID
+  vendorId: string;
+  vendorName: string;
+  products: OrderProduct[];
+  amount: number;
+  currency: string;
+  purchaseDate: Date;
+  customerId: string;
+  customerEmail: string;
+  payoutStatus: 'pending' | 'available' | 'withdrawn';
+  withdrawAvailableDate: Date;
+  stripeTransferId?: string;
+  shippoLabelUrl?: string;
+  shippingStatus?: 'pending' | 'shipped' | 'delivered';
+  refundStatus?: 'none' | 'requested' | 'completed';
+  shippingAddress: {
+    name: string;
+    street: string;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+  };
+  trackingNumber?: string;
+};
