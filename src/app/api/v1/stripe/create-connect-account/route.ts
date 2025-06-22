@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { addDoc, collection, doc, getDoc, getDocs, query, setDoc, where } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
+import { requireRole } from "@/app/api/utils/withRole";
 
 // THERE IS NO AUTH ON THIS RIGHT NOW.
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 
 export async function POST(request: NextRequest) {
+    const user = await requireRole(request, "user");
+    if (user instanceof NextResponse) return user;
+
     try {
         const body = await request.json();
         const { uid } = body;
