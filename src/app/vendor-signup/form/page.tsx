@@ -8,7 +8,7 @@ import NoXRedirect from "@/components/NoXRedirect";
 import emailjs from "@emailjs/browser";
 
 export default function Form() {
-    const { user } = useUser();
+    const { user, isLoading } = useUser();
     const [formData, setFormData] = useState({
         name: "",
         email: "",
@@ -25,6 +25,13 @@ export default function Form() {
     const router = useRouter();
     const [loading, setLoading] = useState<boolean>(false);
 
+    if (isLoading) {
+        return <div className="flex justify-center items-center h-96 text-xl">Loading user...</div>;
+    }
+    if (!user || !user.uid) {
+        return <div className="flex justify-center items-center h-96 text-xl text-red-600">You must be logged in to access this page.</div>;
+    }
+
     const handleNext = () => {
         setStep((prev) => prev + 1);
     };
@@ -38,8 +45,13 @@ export default function Form() {
     }
 
     const handleSubmit = async () => {
-        if (!user) return;
+        console.log('user:', user);
+        if (!user || !user.uid) {
+            alert("You must be logged in to submit a vendor application.");
+            return;
+        }
         if (!complete()) {
+            alert("Please fill out all fields.");
             return;
         }
 
@@ -66,7 +78,7 @@ export default function Form() {
         }
         
         const data = {
-            uid: user?.uid,
+            uid: user.uid,
             name: formData.name,
             storeName: formData.storeName,
             storeSlug: formData.storeName.toLowerCase().replace(/\s+/g, '-'),
@@ -80,6 +92,8 @@ export default function Form() {
             storeState: formData.state,
             approveLink: process.env.NEXT_PUBLIC_APPROVE_VENDOR_REQUEST_URL,
         }
+
+        console.log('Submitting vendor request:', data);
 
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/request-vendor`, {
             method: "POST",

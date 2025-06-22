@@ -18,24 +18,36 @@ export default function UserProvider({ initialUser, loading, children }: { initi
 
   const refreshUser = async () => {
     setIsLoading(true);
-    // console.log('refreshing user');
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/validateToken`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
     });
     const data = await response.json();
     setUser(data.user);
-    // console.log('user refreshed', data.user);
     setIsLoading(false);
   };
+
+  // Listen for changes in the token cookie and refresh user context
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Check for token cookie
+      if (document.cookie.includes('token=')) {
+        if (!user) refreshUser();
+      } else {
+        if (user) setUser(null);
+      }
+    }, 2000); // Poll every 2 seconds
+    return () => clearInterval(interval);
+  }, [user]);
 
   useEffect(() => {
       if (!user) {
           refreshUser();
       }
-  });
+  }, []);
 
   return (
     <UserContext.Provider value={{ user, refreshUser, isLoading, setIsLoading }}>
@@ -50,4 +62,9 @@ export const useUser = () => {
     throw new Error('useUser must be used within a UserProviderClient');
   }
   return context;
+};
+
+// Helper to force refresh from anywhere
+export const forceUserRefresh = (refreshUser: () => Promise<void>) => {
+  refreshUser();
 };

@@ -8,6 +8,7 @@ import Sidebar from "./Sidebar";
 import Checkbox from "../Checkbox";
 import { TextLink } from "../Links";
 import { useRouter } from "next/navigation";
+import { useUser } from "@/contexts/UserContext";
 
 type Section = "login" | "register";
 
@@ -17,6 +18,7 @@ export default function LoginSidebar({ setOpen, open }: { setOpen: (open: boolea
     const [register, setRegister] = useState<{ email: string, password: string, confirmPassword: string }>({ email: "", password: "", confirmPassword: "" });
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
+    const { refreshUser } = useUser();
 
     useEffect(() => {
         if (error) {
@@ -40,7 +42,8 @@ export default function LoginSidebar({ setOpen, open }: { setOpen: (open: boolea
                 },
                 body: JSON.stringify({
                     email: login.email,
-                    password: login.password
+                    password: login.password,
+                    remember: login.remember
                 })
             });
 
@@ -48,10 +51,10 @@ export default function LoginSidebar({ setOpen, open }: { setOpen: (open: boolea
                 setError("Try Again: Invalid Credentials");
                 return;
             } else {
+                await refreshUser();
                 setOpen(false);
                 setLogin({ email: "", password: "", remember: false });
                 router.refresh();
-
             }
         } catch (error) {
             console.error(error);

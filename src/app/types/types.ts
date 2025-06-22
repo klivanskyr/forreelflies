@@ -91,3 +91,33 @@ export type Order = {
   };
   trackingNumber?: string;
 };
+
+export type VendorProfile = {
+  id: string;
+  storeName: string;
+  bannerImageUrl?: string;
+  profileImageUrl?: string;
+  bio?: string;
+  socialLinks?: { type: string; url: string }[];
+  // Add any other fields you want to display
+};
+
+export type ProductGalleryProps = {
+  images: string[];
+};
+
+export type ProductWithVendor = {
+  id: string;
+  name: string;
+  price: number;
+  images: string[];
+  vendorId: string;
+  vendorName: string;
+  // Add other product fields as needed
+};
+
+export type AdminImageAssignment = {
+  section: string; // e.g., 'slider', 'about-us', etc.
+  imageUrl: string;
+  label?: string;
+};

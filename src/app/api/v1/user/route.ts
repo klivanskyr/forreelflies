@@ -28,7 +28,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
             const userDb = userDoc.data();
             console.log("SERVER SUCCESS: Successfully fetched user");
-            return NextResponse.json({ user: { uid, ...userDb } }, { status: 200 });
+            return NextResponse.json({ user: { uid, ...userDb, vendorSignUpStatus: userDb?.vendorSignUpStatus ?? "notStarted" } }, { status: 200 });
         } catch (error) {
             if (error instanceof Error) {
                 console.log(`SERVER ERROR: ${error.message}`);

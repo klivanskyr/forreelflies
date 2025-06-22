@@ -20,19 +20,22 @@ export default function ProductListButtons({ page, totalPages }: { page: number,
         router.push(newUrl);
     }
 
+    const isNoPages = totalPages === 0;
     return (
         <Suspense fallback={<div className="flex justify-center items-center gap-1"><h1>Loading...</h1></div>}>
             <div className="flex justify-center items-center gap-1">
-                {(page - 1 < 1) 
-                    ? <IconButton disabled icon={<FaChevronLeft className="fill-gray-500"/>} /> 
+                {isNoPages || (page - 1 < 1)
+                    ? <IconButton disabled icon={<FaChevronLeft className="fill-gray-500"/>} />
                     : <IconButton onClick={() => changePage(page - 1)} icon={<FaChevronLeft />} />
                 }
                 <div className="flex flex-row items-baseline">
-                    <form onSubmit={(e) => { e.preventDefault(); changePage(parseInt(input))}} ><Input className="!w-[25px] !h-[25px] !p-0 !pb-0.5 text-center" value={input} onChange={(e) => setInput(e.target.value)} /></form>
+                    <form onSubmit={(e) => { e.preventDefault(); if (!isNoPages) changePage(parseInt(input))}} >
+                        <Input className="!w-[25px] !h-[25px] !p-0 !pb-0.5 text-center" value={isNoPages ? '0' : input} onChange={(e) => setInput(e.target.value)} disabled={isNoPages} />
+                    </form>
                     <p className="w-[50px] text-center">of {totalPages}</p>
                 </div>
-                {(page + 1 > totalPages)
-                    ? <IconButton disabled icon={<FaChevronRight className="fill-gray-500"/>} /> 
+                {isNoPages || (page + 1 > totalPages)
+                    ? <IconButton disabled icon={<FaChevronRight className="fill-gray-500"/>} />
                     : <IconButton onClick={() => changePage(page + 1)} icon={<FaChevronRight />} />
                 }
             </div>
