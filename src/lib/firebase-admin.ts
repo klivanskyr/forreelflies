@@ -79,7 +79,10 @@ export const tokenToUser = async (): Promise<DbUser | null> => {
 
         const { user } = await responseUser.json();
 
-        return user as DbUser;
+        return {
+            ...user,
+            isVendor: user.vendorSignUpStatus === 'onboardingCompleted',
+        };
     } catch (error) {
         console.error(error);
         return null;

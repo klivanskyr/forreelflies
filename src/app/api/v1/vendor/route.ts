@@ -3,6 +3,7 @@ import { collection, doc, getDoc, getDocs, query, where, updateDoc } from "fireb
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { Order } from "@/app/types/types";
+import { requireRole } from "@/app/api/utils/withRole";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 
@@ -72,10 +73,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 export async function POST(request: NextRequest) {
   const { pathname } = new URL(request.url);
   if (pathname.endsWith("/withdraw")) {
+    const user = await requireRole(request, "vendor");
+    if (user instanceof NextResponse) return user;
     try {
       const { vendorId } = await request.json();
-      if (!vendorId) {
-        return NextResponse.json({ error: "vendorId required" }, { status: 400 });
+      if (!vendorId || vendorId !== user.uid) {
+        return NextResponse.json({ error: "vendorId required and must match authenticated user" }, { status: 400 });
       }
       // Find eligible orders
       const now = new Date();
