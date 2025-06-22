@@ -1,5 +1,5 @@
 import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, collection, addDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, addDoc, updateDoc, query, where, getDocs } from "firebase/firestore";
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { Order } from "@/app/types/types";
@@ -79,7 +79,80 @@ export async function POST(request: NextRequest) {
           },
           refundStatus: 'none',
         };
-        await addDoc(collection(db, "orders"), order);
+        const orderRef = await addDoc(collection(db, "orders"), order);
+
+        // --- Shippo Integration ---
+        try {
+          // 1. Prepare addresses
+          // Sender: vendor info (fetch from vendors collection)
+          const vendorDoc = await getDoc(doc(db, "vendors", vendor.vendorId));
+          const vendorData = vendorDoc.data();
+          const address_from = {
+            name: vendorData?.storeName || '',
+            street1: vendorData?.storeStreetAddress || '',
+            city: vendorData?.storeCity || '',
+            state: vendorData?.storeState || '',
+            zip: vendorData?.storeZip || '',
+            country: vendorData?.storeCountry || '',
+          };
+          // Recipient: order shipping address
+          const address_to = {
+            name: order.shippingAddress.name,
+            street1: order.shippingAddress.street,
+            city: order.shippingAddress.city,
+            state: order.shippingAddress.state,
+            zip: order.shippingAddress.zip,
+            country: order.shippingAddress.country,
+          };
+          // 2. Prepare parcels (combine all products for this vendor)
+          // For simplicity, sum weights and use max dimensions
+          const totalWeight = products.reduce((sum: number, p: any) => sum + (p.quantity * (vendor.cartItems.find((i: any) => i.product.id === p.productId)?.product.shippingWeight || 1)), 0);
+          const maxLength = Math.max(...products.map((p: any) => vendor.cartItems.find((i: any) => i.product.id === p.productId)?.product.shippingLength || 1));
+          const maxWidth = Math.max(...products.map((p: any) => vendor.cartItems.find((i: any) => i.product.id === p.productId)?.product.shippingWidth || 1));
+          const maxHeight = Math.max(...products.map((p: any) => vendor.cartItems.find((i: any) => i.product.id === p.productId)?.product.shippingHeight || 1));
+          const parcels = [{
+            length: maxLength.toString(),
+            width: maxWidth.toString(),
+            height: maxHeight.toString(),
+            distance_unit: "in",
+            weight: totalWeight.toString(),
+            mass_unit: "lb",
+          }];
+          // 3. Create shipment (get rates)
+          const shipmentRes = await fetch("https://api.goshippo.com/shipments/", {
+            method: "POST",
+            headers: {
+              "Authorization": `ShippoToken ${process.env.SHIPPO_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ address_from, address_to, parcels, async: false }),
+          });
+          if (!shipmentRes.ok) throw new Error("Failed to create Shippo shipment");
+          const shipmentData = await shipmentRes.json();
+          const rates = shipmentData.rates;
+          if (!rates || !rates.length) throw new Error("No Shippo rates found");
+          // Pick the cheapest rate
+          const cheapestRate = rates.reduce((min: any, r: any) => parseFloat(r.amount) < parseFloat(min.amount) ? r : min, rates[0]);
+          // 4. Purchase label (create transaction)
+          const transactionRes = await fetch("https://api.goshippo.com/transactions", {
+            method: "POST",
+            headers: {
+              "Authorization": `ShippoToken ${process.env.SHIPPO_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ rate: cheapestRate.object_id, label_file_type: "PDF", async: false }),
+          });
+          if (!transactionRes.ok) throw new Error("Failed to purchase Shippo label");
+          const transactionData = await transactionRes.json();
+          // 5. Update order with label URL and tracking
+          await updateDoc(orderRef, {
+            shippoLabelUrl: transactionData.label_url,
+            trackingNumber: transactionData.tracking_number,
+            shippingStatus: "pending",
+          });
+        } catch (err) {
+          console.error("Shippo label creation failed for order", orderRef.id, err);
+        }
       }
 
       // Iterate through all vendors and distribute funds
@@ -157,5 +230,23 @@ export async function POST(request: NextRequest) {
       { error: error instanceof Error ? error.message : "Unknown error" },
       { status: 400 }
     );
+  }
+}
+
+// Add a GET endpoint to fetch orders for a vendor
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  try {
+    const { searchParams } = new URL(request.url);
+    const vendorId = searchParams.get("vendorId");
+    if (!vendorId) {
+      return NextResponse.json({ error: "vendorId required" }, { status: 400 });
+    }
+    const ordersQuery = query(collection(db, "orders"), where("vendorId", "==", vendorId));
+    const snapshot = await getDocs(ordersQuery);
+    const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return NextResponse.json({ orders });
+  } catch (err) {
+    console.error("Failed to fetch vendor orders", err);
+    return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 });
   }
 }
