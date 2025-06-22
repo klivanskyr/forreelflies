@@ -1,10 +1,10 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { DbUser } from '@/lib/firebase-admin';
+import { createContext, useContext, ReactNode } from 'react';
+import { SessionProvider, useSession } from 'next-auth/react';
 
 interface UserContextType {
-  user: DbUser | null;
+  user: any;
   isLoading: boolean;
   setIsLoading: (isLoading: boolean) => void;
   refreshUser: () => Promise<void>;
@@ -12,54 +12,41 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-export default function UserProvider({ initialUser, loading, children }: { initialUser: DbUser | null, loading: boolean, children: ReactNode }) {
-  const [user, setUser] = useState<DbUser | null>(initialUser);
-  const [isLoading, setIsLoading] = useState(loading);
+function UserContextProvider({ children }: { children: ReactNode }) {
+  const { data: session, status, update } = useSession();
 
   const refreshUser = async () => {
-    setIsLoading(true);
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/validateToken`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-    });
-    const data = await response.json();
-    setUser(data.user);
-    setIsLoading(false);
+    await update();
   };
 
-  // Listen for changes in the token cookie and refresh user context
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // Check for token cookie
-      if (document.cookie.includes('token=')) {
-        if (!user) refreshUser();
-      } else {
-        if (user) setUser(null);
-      }
-    }, 2000); // Poll every 2 seconds
-    return () => clearInterval(interval);
-  }, [user]);
-
-  useEffect(() => {
-      if (!user) {
-          refreshUser();
-      }
-  }, []);
+  const contextValue: UserContextType = {
+    user: session?.user || null,
+    isLoading: status === 'loading',
+    setIsLoading: () => {}, // No-op since NextAuth handles loading state
+    refreshUser,
+  };
 
   return (
-    <UserContext.Provider value={{ user, refreshUser, isLoading, setIsLoading }}>
+    <UserContext.Provider value={contextValue}>
       {children}
     </UserContext.Provider>
+  );
+}
+
+export default function UserProvider({ children }: { children: ReactNode }) {
+  return (
+    <SessionProvider>
+      <UserContextProvider>
+        {children}
+      </UserContextProvider>
+    </SessionProvider>
   );
 }
 
 export const useUser = () => {
   const context = useContext(UserContext);
   if (!context) {
-    throw new Error('useUser must be used within a UserProviderClient');
+    throw new Error('useUser must be used within a UserProvider');
   }
   return context;
 };

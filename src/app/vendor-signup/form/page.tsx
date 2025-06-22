@@ -2,13 +2,15 @@
 
 import Button from "@/components/buttons/Button";
 import { useUser } from "@/contexts/UserContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import NoXRedirect from "@/components/NoXRedirect";
 import emailjs from "@emailjs/browser";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export default function Form() {
-    const { user, isLoading } = useUser();
+    const { user, isLoading, refreshUser } = useUser();
     const [formData, setFormData] = useState({
         name: "",
         email: "",
@@ -25,11 +27,29 @@ export default function Form() {
     const router = useRouter();
     const [loading, setLoading] = useState<boolean>(false);
 
+    // Check if user should have access to the form
+    useEffect(() => {
+        if (user) {
+            console.log('Form page - User vendorSignUpStatus:', user.vendorSignUpStatus);
+            // Only allow access if status is explicitly 'notStarted' or undefined (treating as not started)
+            if (user.vendorSignUpStatus && user.vendorSignUpStatus !== 'notStarted') {
+                // User has already progressed beyond the initial form stage, redirect to vendor-signup
+                console.log('Redirecting user from form to vendor-signup');
+                router.push("/vendor-signup");
+            }
+        }
+    }, [user, router]);
+
     if (isLoading) {
-        return <div className="flex justify-center items-center h-96 text-xl">Loading user...</div>;
+        return <div className="flex justify-center items-center h-96 text-xl">Loading...</div>;
     }
     if (!user || !user.uid) {
         return <div className="flex justify-center items-center h-96 text-xl text-red-600">You must be logged in to access this page.</div>;
+    }
+
+    // Only allow access to users who haven't started the vendor signup process
+    if (user.vendorSignUpStatus && user.vendorSignUpStatus !== 'notStarted') {
+        return <div className="flex justify-center items-center h-96 text-xl">Redirecting...</div>;
     }
 
     const handleNext = () => {
@@ -95,6 +115,8 @@ export default function Form() {
 
         console.log('Submitting vendor request:', data);
 
+        setLoading(true);
+        
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor/request-vendor`, {
             method: "POST",
             headers: {
@@ -105,17 +127,63 @@ export default function Form() {
 
         if (!response.ok) {
             console.error("Failed to submit vendor application");
+            setLoading(false);
             return;
         }
 
-        // time out for 5 seconds to allow the backend to process the request
-        setLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 5000));
-
-        await emailjs.send("service_67miukk", "template_2je91rh", {
-            ...data,
-        }, "gWJ3uFncMXWrKUMgw");
+        console.log("Vendor request submitted successfully, verifying database update...");
         
+        // Verify that the database was actually updated before proceeding
+        let retries = 0;
+        const maxRetries = 10;
+        let dbUpdated = false;
+        
+        while (retries < maxRetries && !dbUpdated) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            try {
+                // Check the user document directly in Firebase
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                const userData = userDoc.data();
+                
+                console.log(`Retry ${retries + 1}: Database vendor status:`, userData?.vendorSignUpStatus);
+                
+                if (userData?.vendorSignUpStatus === 'submittedApprovalForm') {
+                    dbUpdated = true;
+                    console.log("Database successfully updated!");
+                } else {
+                    retries++;
+                    console.log(`Database not yet updated, retrying... (${retries}/${maxRetries})`);
+                }
+            } catch (error) {
+                console.error("Error checking database:", error);
+                retries++;
+            }
+        }
+        
+        if (!dbUpdated) {
+            console.warn("Database may not be fully updated, but proceeding...");
+        }
+        
+        // Now refresh the user session
+        console.log("Refreshing user session...");
+        await refreshUser();
+        
+        // Send confirmation email
+        try {
+            await emailjs.send("service_67miukk", "template_2je91rh", {
+                ...data,
+            }, "gWJ3uFncMXWrKUMgw");
+            console.log("Confirmation email sent successfully");
+        } catch (emailError) {
+            console.error("Failed to send confirmation email:", emailError);
+            // Don't block the redirect if email fails
+        }
+        
+        // Refresh session one more time before redirect to ensure we have the latest data
+        await refreshUser();
+        
+        console.log("Redirecting to vendor-signup page...");
         router.push("/vendor-signup");
     };
 

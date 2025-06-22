@@ -8,7 +8,7 @@ import Sidebar from "./Sidebar";
 import Checkbox from "../Checkbox";
 import { TextLink } from "../Links";
 import { useRouter } from "next/navigation";
-import { useUser } from "@/contexts/UserContext";
+import { signIn } from "next-auth/react";
 
 type Section = "login" | "register";
 
@@ -18,7 +18,7 @@ export default function LoginSidebar({ setOpen, open }: { setOpen: (open: boolea
     const [register, setRegister] = useState<{ email: string, password: string, confirmPassword: string }>({ email: "", password: "", confirmPassword: "" });
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
-    const { refreshUser } = useUser();
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         if (error) {
@@ -28,37 +28,37 @@ export default function LoginSidebar({ setOpen, open }: { setOpen: (open: boolea
 
     const handleLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+        
         if (login.email === "" || login.password === "") {
             setError("Please fill in all fields");
+            setIsSubmitting(false);
             return;
         }
-
+        
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/signin`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    email: login.email,
-                    password: login.password,
-                    remember: login.remember
-                })
+            const result = await signIn('credentials', {
+                email: login.email,
+                password: login.password,
+                redirect: false,
             });
 
-            if (!response.ok) {
+            if (result?.error) {
                 setError("Try Again: Invalid Credentials");
+                setIsSubmitting(false);
                 return;
-            } else {
-                await refreshUser();
-                setOpen(false);
-                setLogin({ email: "", password: "", remember: false });
-                router.refresh();
             }
+
+            // Success - close sidebar and refresh
+            setOpen(false);
+            setLogin({ email: "", password: "", remember: false });
+            router.refresh();
+            setIsSubmitting(false);
         } catch (error) {
             console.error(error);
             setError("An error occurred, please try again");
+            setIsSubmitting(false);
         }
     }
 
@@ -96,7 +96,7 @@ export default function LoginSidebar({ setOpen, open }: { setOpen: (open: boolea
         }
     }
 
-    return (    
+    return (
         <Sidebar open={open} setOpen={setOpen}>
             <div className="flex flex-col items-center gap-8">
                 <div className="flex flex-col items-center text-3xl">
@@ -133,7 +133,7 @@ export default function LoginSidebar({ setOpen, open }: { setOpen: (open: boolea
                                 <TextLink className="text-sm !text-blue-500 hover:!text-blue-700" text="Forgot password?" href="/forgot-password" />
                             </div>
                             <div className="flex flex-row w-full justify-center mt-3">
-                                <Button name="submit" text="Submit" type="submit" />
+                                <Button name="submit" text={isSubmitting ? "Signing in..." : "Submit"} type="submit" disabled={isSubmitting} />
                             </div>
                             <AnimatePresence>
                                 {error && <motion.p className="text-red-500 text-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>{error}</motion.p>}

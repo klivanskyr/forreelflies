@@ -1,6 +1,7 @@
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, getDocs, collection } from "firebase/firestore";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/app/api/utils/adminAuth";
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
     try {
@@ -33,6 +34,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                 storeZip,
                 storeCountry,
                 storeState,
+                createdAt: new Date().toISOString(),
             });
 
             // Update user vendorSignUpStatus to 'submittedApprovalForm'
@@ -64,9 +66,50 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
     try {
+        // Check if user is authenticated as admin for viewing vendor requests
+        const adminAuth = await requireAdmin(request);
+        if (adminAuth instanceof NextResponse) return adminAuth;
+
+        const { searchParams } = new URL(request.url);
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '10');
+        const nameSearch = searchParams.get('name') || '';
+        const storeNameSearch = searchParams.get('storeName') || '';
+
+        // Get all documents first
         const snapshot = await getDocs(collection(db, "vendorRequests"));
-        const requests = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
-        return NextResponse.json({ requests }, { status: 200 });
+        let allRequests = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() })) as any[];
+
+        // Apply search filters
+        if (nameSearch) {
+            allRequests = allRequests.filter(req => 
+                req.name?.toLowerCase().includes(nameSearch.toLowerCase())
+            );
+        }
+
+        if (storeNameSearch) {
+            allRequests = allRequests.filter(req => 
+                req.storeName?.toLowerCase().includes(storeNameSearch.toLowerCase())
+            );
+        }
+
+        // Calculate pagination
+        const totalCount = allRequests.length;
+        const totalPages = Math.ceil(totalCount / limit);
+        const startIndex = (page - 1) * limit;
+        const endIndex = startIndex + limit;
+        const paginatedRequests = allRequests.slice(startIndex, endIndex);
+
+        return NextResponse.json({ 
+            requests: paginatedRequests,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                totalCount,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1
+            }
+        }, { status: 200 });
     } catch (error) {
         if (error instanceof Error) {
             return NextResponse.json({ error: error.message }, { status: 400 });
@@ -78,6 +121,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 export async function PATCH(request: NextRequest): Promise<NextResponse> {
     try {
+        // Check if user is authenticated as admin for denying vendor requests
+        const adminAuth = await requireAdmin(request);
+        if (adminAuth instanceof NextResponse) return adminAuth;
+
         const { uid } = await request.json();
         if (!uid) {
             return NextResponse.json({ error: "uid required" }, { status: 400 });

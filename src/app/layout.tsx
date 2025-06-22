@@ -1,12 +1,12 @@
+import Footer from "@/components/Footer";
+import { Navbar } from "@/components/Navbar";
+import UserProvider from "@/contexts/UserContext";
 import type { Metadata } from "next";
 import "./globals.css";
-import { Navbar } from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import UserProvider from "@/contexts/UserContext";
 
 export const metadata: Metadata = {
-  title: "ForReelFlies",
-  description: "",
+  title: "For Reel Flies",
+  description: "Fly fishing marketplace",
 };
 
 export default function RootLayout({
@@ -17,7 +17,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-[98vh] flex flex-col w-full items-center">
-        <UserProvider initialUser={null} loading={true}>
+        <UserProvider>
           <Navbar />
           {children}
           <Footer />
