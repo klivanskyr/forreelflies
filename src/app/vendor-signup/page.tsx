@@ -39,6 +39,7 @@ export default function Page() {
     }
 
     function DisplayVendorStatusMessage({ user }: { user: DbUser }) {
+        console.log('Vendor signup page - User vendorSignUpStatus:', user.vendorSignUpStatus);
         switch (user.vendorSignUpStatus) {
             case "notStarted":
                 return (
@@ -98,6 +99,19 @@ export default function Page() {
                 return (
                     <div>
                         
+                    </div>
+                )
+            
+            default:
+                // Handle undefined, null, or unexpected statuses
+                console.log('Unknown or undefined vendorSignUpStatus, treating as notStarted');
+                return (
+                    <div className="w-full h-full flex flex-col flex-1 justify-center items-center text-center">
+                        <h1 className="text-3xl text-gray-800 font-bold mb-8">Welcome to ForReelFlies Vendor Sign Up!</h1>
+                        <h2 className="text-xl font-semibold mb-2">To start selling your products, please fill out the vendor application form.</h2>
+                        <p className="text-sm text-gray-600">Once you submit the form, we will review your application.</p>
+                        <p className="text-sm text-gray-600">If approved, you will be able to start selling your products on For Reel Flies.</p>
+                        <Button className="mt-3 w-[400px]" text="Start Vendor Application" onClick={handleSubmitReviewApplication}/>
                     </div>
                 )
         }   

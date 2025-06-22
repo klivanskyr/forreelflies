@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { uploadFileAndGetUrl } from "@/lib/firebase";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, getDocs, query, where, deleteDoc, doc } from "firebase/firestore";
+import VendorRequestModal from "@/components/VendorRequestModal";
 
 const SECTIONS = [
   { value: "slider", label: "Homepage Slider" },
@@ -36,19 +37,51 @@ export default function AdminPage() {
   const [vendorRequests, setVendorRequests] = useState<any[]>([]);
   const [vendorMessage, setVendorMessage] = useState("");
   const [vendorTab, setVendorTab] = useState<'pending' | 'accepted'>("pending");
+  
+  // Search and pagination states
+  const [searchName, setSearchName] = useState("");
+  const [searchStoreName, setSearchStoreName] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    hasNextPage: false,
+    hasPrevPage: false
+  });
+  
+  // Modal states
+  const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError("");
-    const res = await fetch("/api/v1/auth/admin", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
-    if (res.ok) {
-      setLoggedIn(true);
-    } else {
-      setLoginError("Invalid credentials");
+    
+    console.log("Attempting login with:", { username, password });
+    
+    try {
+      const res = await fetch("/api/v1/auth/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // Important for cookies
+        body: JSON.stringify({ username, password }),
+      });
+      
+      console.log("Login response status:", res.status);
+      
+      if (res.ok) {
+        const data = await res.json();
+        console.log("Login successful:", data);
+        setLoggedIn(true);
+      } else {
+        const errorData = await res.json();
+        console.log("Login failed:", errorData);
+        setLoginError(errorData.error || "Invalid credentials");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      setLoginError("Network error occurred");
     }
   };
 
@@ -84,25 +117,51 @@ export default function AdminPage() {
     setUploading(false);
   };
 
-  // Fetch vendor requests
-  useEffect(() => {
-    if (loggedIn && view === "vendor-requests") {
-      fetch("/api/v1/vendor/request-vendor")
-        .then(res => res.json())
-        .then(data => setVendorRequests(data.requests || []));
+  // Fetch vendor requests with search and pagination
+  const fetchVendorRequests = async () => {
+    if (!loggedIn || view !== "vendor-requests") return;
+    
+    const params = new URLSearchParams({
+      page: currentPage.toString(),
+      limit: '10',
+      ...(searchName && { name: searchName }),
+      ...(searchStoreName && { storeName: searchStoreName })
+    });
+    
+    try {
+      const res = await fetch(`/api/v1/vendor/request-vendor?${params}`, {
+        credentials: "include"
+      });
+      const data = await res.json();
+      setVendorRequests(data.requests || []);
+      setPagination(data.pagination || {
+        currentPage: 1,
+        totalPages: 1,
+        totalCount: 0,
+        hasNextPage: false,
+        hasPrevPage: false
+      });
+    } catch (error) {
+      console.error("Failed to fetch vendor requests:", error);
     }
-  }, [loggedIn, view]);
+  };
+
+  useEffect(() => {
+    fetchVendorRequests();
+  }, [loggedIn, view, currentPage, searchName, searchStoreName]);
 
   const handleApprove = async (uid: string) => {
     setVendorMessage("");
     const res = await fetch(`/api/v1/vendor/approve-vendor`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include", // Include cookies for admin authentication
       body: JSON.stringify({ uid }),
     });
     if (res.ok) {
       setVendorMessage("Vendor approved!");
-      setVendorRequests(vendorRequests.filter(r => r.uid !== uid));
+      // Refresh the vendor requests list to show updated status
+      fetchVendorRequests();
     } else {
       setVendorMessage("Failed to approve vendor");
     }
@@ -113,17 +172,40 @@ export default function AdminPage() {
     const res = await fetch(`/api/v1/vendor/request-vendor`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
+      credentials: "include", // Include cookies for admin authentication
       body: JSON.stringify({ uid }),
     });
     if (res.ok) {
-      setVendorRequests(vendorRequests.filter(r => r.uid !== uid));
       setVendorMessage("Vendor denied and status updated.");
+      // Refresh the vendor requests list to show updated status
+      fetchVendorRequests();
     } else {
       setVendorMessage("Failed to deny vendor");
     }
   };
 
-  // Filter vendor requests by tab
+  // Helper functions
+  const handleSearch = () => {
+    setCurrentPage(1); // Reset to first page when searching
+    fetchVendorRequests();
+  };
+
+  const handleClearSearch = () => {
+    setSearchName("");
+    setSearchStoreName("");
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
+
+  const handleViewDetails = (request: any) => {
+    setSelectedRequest(request);
+    setIsModalOpen(true);
+  };
+
+  // Filter vendor requests by tab (client-side filtering)
   const filteredVendorRequests = vendorRequests.filter(r => {
     if (vendorTab === "pending") {
       return r.vendorSignUpStatus === "submittedApprovalForm" || (!r.isApproved && !r.denied);
@@ -216,6 +298,49 @@ export default function AdminPage() {
         {view === "vendor-requests" && (
           <div className="p-6">
             <h1 className="text-2xl font-bold mb-4">Vendor Requests</h1>
+            
+            {/* Search Controls */}
+            <div className="bg-gray-50 p-4 rounded-lg mb-6">
+              <h3 className="text-lg font-semibold mb-3">Search Vendor Requests</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Search by Name</label>
+                  <input
+                    type="text"
+                    className="w-full border rounded p-2"
+                    placeholder="Enter applicant name..."
+                    value={searchName}
+                    onChange={(e) => setSearchName(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Search by Store Name</label>
+                  <input
+                    type="text"
+                    className="w-full border rounded p-2"
+                    placeholder="Enter store name..."
+                    value={searchStoreName}
+                    onChange={(e) => setSearchStoreName(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-end gap-2">
+                  <button
+                    onClick={handleSearch}
+                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                  >
+                    Search
+                  </button>
+                  <button
+                    onClick={handleClearSearch}
+                    className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Tab Controls */}
             <div className="flex gap-4 mb-4">
               {VENDOR_TABS.map(tab => (
                 <button
@@ -227,34 +352,165 @@ export default function AdminPage() {
                 </button>
               ))}
             </div>
-            {vendorMessage && <div className="mb-2 text-green-700">{vendorMessage}</div>}
+
+            {/* Results Info */}
+            <div className="mb-4 text-sm text-gray-600">
+              Showing {filteredVendorRequests.length} of {pagination.totalCount} total requests
+              {(searchName || searchStoreName) && (
+                <span className="ml-2">
+                  (filtered by: {[searchName && `name: "${searchName}"`, searchStoreName && `store: "${searchStoreName}"`].filter(Boolean).join(', ')})
+                </span>
+              )}
+            </div>
+
+            {vendorMessage && <div className="mb-4 p-3 bg-green-100 text-green-700 rounded">{vendorMessage}</div>}
+            
+            {/* Vendor Requests List */}
             {filteredVendorRequests.length === 0 ? (
-              <div>No vendor requests found.</div>
+              <div className="text-center py-8 text-gray-500">
+                {(searchName || searchStoreName) ? "No vendor requests found matching your search criteria." : "No vendor requests found."}
+              </div>
             ) : (
-              <ul className="space-y-4">
+              <div className="space-y-4">
                 {filteredVendorRequests.map((req, i) => (
-                  <li key={i} className="border rounded p-4 flex flex-col gap-2">
-                    <div><span className="font-semibold">Name:</span> {req.name}</div>
-                    <div><span className="font-semibold">Email:</span> {req.email}</div>
-                    <div><span className="font-semibold">Store Name:</span> {req.storeName}</div>
-                    <div><span className="font-semibold">Description:</span> {req.storeDescription}</div>
-                    <div className="flex gap-8 mt-2 text-sm text-gray-600">
-                      <span><span className="font-semibold">Created At:</span> {formatDate(req.createdAt)}</span>
-                      <span><span className="font-semibold">Accepted At:</span> {formatDate(req.acceptedAt)}</span>
-                    </div>
-                    {vendorTab === "pending" && (
-                      <div className="flex gap-2 mt-2">
-                        <button className="bg-green-600 text-white px-3 py-1 rounded" onClick={() => handleApprove(req.uid)}>Approve</button>
-                        <button className="bg-red-600 text-white px-3 py-1 rounded" onClick={() => handleDeny(req.uid)}>Deny</button>
+                  <div key={i} className="border rounded-lg p-4 bg-white shadow-sm">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                      <div>
+                        <span className="font-semibold text-gray-700">Name:</span>
+                        <span className="ml-2">{req.name}</span>
                       </div>
-                    )}
-                  </li>
+                      <div>
+                        <span className="font-semibold text-gray-700">Store Name:</span>
+                        <span className="ml-2">{req.storeName}</span>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-gray-700">Email:</span>
+                        <span className="ml-2">{req.storeEmail}</span>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-gray-700">Phone:</span>
+                        <span className="ml-2">{req.storePhone}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="mb-3">
+                      <span className="font-semibold text-gray-700">Description:</span>
+                      <p className="mt-1 text-gray-600 text-sm">{req.storeDescription?.substring(0, 150)}...</p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-4 mb-3 text-sm text-gray-600">
+                      <span>
+                        <span className="font-semibold">Created:</span> {formatDate(req.createdAt)}
+                      </span>
+                      {req.approvedAt && (
+                        <span>
+                          <span className="font-semibold">Approved:</span> {formatDate(req.approvedAt)}
+                        </span>
+                      )}
+                      <span>
+                        <span className="font-semibold">Status:</span>
+                        <span className={`ml-1 px-2 py-1 rounded text-xs ${
+                          req.isApproved ? 'bg-green-100 text-green-800' :
+                          req.denied ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {req.isApproved ? 'Approved' : req.denied ? 'Denied' : 'Pending'}
+                        </span>
+                      </span>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleViewDetails(req)}
+                        className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                      >
+                        View Details
+                      </button>
+                      {vendorTab === "pending" && (
+                        <>
+                          <button
+                            onClick={() => handleApprove(req.uid)}
+                            className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => handleDeny(req.uid)}
+                            className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
+                          >
+                            Deny
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
+            )}
+
+            {/* Pagination Controls */}
+            {pagination.totalPages > 1 && (
+              <div className="mt-6 flex justify-center items-center gap-2">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={!pagination.hasPrevPage}
+                  className={`px-3 py-2 rounded ${
+                    pagination.hasPrevPage 
+                      ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' 
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  Previous
+                </button>
+                
+                {/* Page Numbers */}
+                {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                  const pageNumber = Math.max(1, Math.min(
+                    pagination.currentPage - 2 + i,
+                    pagination.totalPages - 4 + i
+                  ));
+                  return (
+                    <button
+                      key={pageNumber}
+                      onClick={() => handlePageChange(pageNumber)}
+                      className={`px-3 py-2 rounded ${
+                        pageNumber === pagination.currentPage
+                          ? 'bg-green-600 text-white'
+                          : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                      }`}
+                    >
+                      {pageNumber}
+                    </button>
+                  );
+                })}
+                
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={!pagination.hasNextPage}
+                  className={`px-3 py-2 rounded ${
+                    pagination.hasNextPage 
+                      ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' 
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  Next
+                </button>
+                
+                <span className="ml-4 text-sm text-gray-600">
+                  Page {pagination.currentPage} of {pagination.totalPages}
+                </span>
+              </div>
             )}
           </div>
         )}
       </div>
+      
+      {/* Vendor Request Details Modal */}
+      <VendorRequestModal
+        request={selectedRequest}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </div>
   );
 } 

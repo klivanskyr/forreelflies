@@ -1,40 +1,23 @@
 import { VendorSignUpStatus } from "@/app/types/types";
-import { db, auth } from "@/lib/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { db } from "@/lib/firebase";
 import { collection, doc, getDoc, getDocs, query, setDoc, where } from "firebase/firestore";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdmin } from "@/app/api/utils/adminAuth";
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
     try {
-        const { adminEmail, adminPassword, uid } = await request.json();
+        // Check if user is authenticated as admin
+        const adminAuth = await requireAdmin(request);
+        if (adminAuth instanceof NextResponse) return adminAuth;
 
-        if (!adminEmail || !adminPassword || !uid) {
-            console.log("SERVER ERROR: Required Fields: { adminUsername: string, adminPassword: string, userId: string }");
-            return NextResponse.json({ message: "Required Fields: { adminUsername: string, adminPassword: string, userId: string }" }, { status: 400 });
+        const { uid } = await request.json();
+
+        if (!uid) {
+            console.log("SERVER ERROR: Required Fields: { uid: string }");
+            return NextResponse.json({ message: "Required Fields: { uid: string }" }, { status: 400 });
         }
 
         try {
-            // Check if user is admin
-            // Check if user and password is correct
-            const adminAuthUser = await signInWithEmailAndPassword(auth, adminEmail, adminPassword)
-
-            if (!adminAuthUser) {
-                console.log("SERVER ERROR: Invalid credentials");
-                return NextResponse.json({ message: "Invalid credentials" }, { status: 401 });
-            }
-            
-            // Check if isAdmin is true
-            const adminUserDoc = await getDoc(doc(db, "users", adminAuthUser.user.uid));
-            if (!adminUserDoc.exists()) {
-                console.log("SERVER ERROR: Admin User not found");
-                return NextResponse.json({ message: "Admin User not found" }, { status: 404 });
-            }
-
-            const adminUser = adminUserDoc.data();
-            if (adminUser.isAdmin !== true) {
-                console.log("SERVER ERROR: User is not an admin");
-                return NextResponse.json({ message: "User is not an admin" }, { status: 403 });
-            }
 
             // CHECK TO SEE IF USER IS ALREADY A VENDOR
             const q = await getDocs(query(collection(db, "vendors"), where("ownerUid", "==", uid)));
@@ -52,7 +35,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             }
             await setDoc(doc(db, "vendorRequests", uid), {
                 isApproved: true,
-                approvedBy: adminAuthUser.user.uid 
+                approvedBy: "admin",
+                approvedAt: new Date().toISOString(),
             }, { merge: true });
 
             // update user doc
