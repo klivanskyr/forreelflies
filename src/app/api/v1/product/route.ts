@@ -16,6 +16,7 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { NextRequest, NextResponse } from "next/server";
+import { requireRole } from "@/app/api/utils/withRole";
 
 type T = {
     name: string;
@@ -181,6 +182,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
+    const user = await requireRole(request, "vendor");
+    if (user instanceof NextResponse) return user;
     try {
         const formData = await request.formData(); // Handle multipart/form-data
         const name = formData.get("name")?.toString();

@@ -2,8 +2,12 @@ import { db } from "@/lib/firebase";
 import { adminAuth } from "@/lib/firebase-admin";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { NextRequest, NextResponse } from "next/server";
+import { requireRole } from "@/app/api/utils/withRole";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
+    const user = await requireRole(request, "user");
+    if (user instanceof NextResponse) return user;
+
     try {
         const { searchParams } = new URL(request.url);
         const uid = searchParams.get("uid");
@@ -121,6 +125,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 }
 
 export async function PUT(request: NextRequest): Promise<NextResponse> {
+    const user = await requireRole(request, "user");
+    if (user instanceof NextResponse) return user;
+
     try {
         const { uid, streetAddress, city, state, zipCode, country } = await request.json();
 
@@ -207,6 +214,9 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
 }
 
 export async function DELETE(request: NextRequest): Promise<NextResponse> {
+    const user = await requireRole(request, "user");
+    if (user instanceof NextResponse) return user;
+
     try {
         const { searchParams } = new URL(request.url);
         const uid = searchParams.get("uid");

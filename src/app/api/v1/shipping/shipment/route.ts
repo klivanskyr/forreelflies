@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireRole } from "@/app/api/utils/withRole";
 /**
  * Expected request format:
  * 
@@ -33,6 +34,8 @@ import { NextRequest, NextResponse } from "next/server";
  * }
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
+    const user = await requireRole(request, "user");
+    if (user instanceof NextResponse) return user;
     try {
         const body = await request.json();
 

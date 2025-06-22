@@ -1,5 +1,6 @@
 import { CartItem } from "@/app/cart/page";
 import { NextRequest, NextResponse } from "next/server";
+import { requireRole } from "@/app/api/utils/withRole";
 
 import Stripe from "stripe";
 
@@ -30,6 +31,9 @@ type VendorDetails = {
 };
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
+    const user = await requireRole(request, "user");
+    if (user instanceof NextResponse) return user;
+
     try {
         const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 

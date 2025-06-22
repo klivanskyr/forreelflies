@@ -1,8 +1,11 @@
 import { db } from "@/lib/firebase";
 import { collection, doc, getDoc, getDocs, setDoc } from "firebase/firestore";
 import { NextRequest, NextResponse } from "next/server";
+import { requireRole } from "@/app/api/utils/withRole";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
+    const user = await requireRole(request, "user");
+    if (user instanceof NextResponse) return user;
     try {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get("id")
@@ -27,6 +30,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
+    const user = await requireRole(request, "user");
+    if (user instanceof NextResponse) return user;
     try {
         const { userId, productId, quantity } = await request.json();
 
@@ -40,6 +45,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
         if (!quantity) {
             return NextResponse.json({ message: "Quantity is required" }, { status: 400 });
+        }
+
+        if (userId !== user.uid) {
+            return NextResponse.json({ message: "Unauthorized: userId does not match authenticated user" }, { status: 403 });
         }
 
         const userCartItemDoc = await getDoc(doc(db, "users", userId, "cart", productId));
@@ -61,6 +70,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 }
 
 export async function PUT(request: NextRequest): Promise<NextResponse> {
+    const user = await requireRole(request, "user");
+    if (user instanceof NextResponse) return user;
     try {
         const { userId, productId, quantity } = await request.json();
 
@@ -70,6 +81,10 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
 
         if (!productId) {
             return NextResponse.json({ message: "Product ID is required" }, { status: 400 });
+        }
+
+        if (userId !== user.uid) {
+            return NextResponse.json({ message: "Unauthorized: userId does not match authenticated user" }, { status: 403 });
         }
 
         const userCartItemDoc = await getDoc(doc(db, "users", userId, "cart", productId));
