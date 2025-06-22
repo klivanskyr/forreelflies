@@ -1,3 +1,5 @@
+'use client';
+
 import { ButtonLink } from "@/components/Links";
 import { Slider } from "@/components/Slider";
 import Slide from "@/components/Slider/Slide";
@@ -5,6 +7,7 @@ import PaginatedCardList from "@/components/cards/PaginatedCardList";
 import Card from "@/components/cards/RatingCard";
 import Gallery from "@/components/Gallery";
 import SlideLink from "@/components/Links/SlideLink";
+import { useEffect, useState } from "react";
 
 import dryflyimage from "@/../public/flies/dryfly.webp";
 import nymphflyimage from "@/../public/flies/nymph.webp";
@@ -18,6 +21,21 @@ import flytyingmaterials from "@/../public/main_page/flytyingmaterials.jpg";
 import hatchtable from "@/../public/main_page/hatchtable.jpg"
 
 export default function Home() {
+  const [topProducts, setTopProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    fetch("/api/v1/product/top-selling")
+      .then(res => res.json())
+      .then(data => {
+        setTopProducts(data.data || []);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError("Failed to load top selling flies.");
+        setLoading(false);
+      });
+  }, []);
   return (
     <div className="flex flex-col gap-8 mb-2">
       <Slider>
@@ -56,14 +74,26 @@ export default function Home() {
           <h2 className="text-3xl font-medium">TOP SELLING FLIES</h2>
           <h3 className="text-2xl mb-2 text-black text-opacity-80">These are our top selling flies chosen by you.</h3>
         </div>
-        <PaginatedCardList>
-          <Card title="Fly 1" rating={3} vendorName="Billy Bob" price="10.00" />
-          <Card title="Fly 2" rating={2} vendorName="Joe" price="5.00" />
-          <Card title="Fly 3" rating={1} vendorName="Phil" price="2.00" />
-          <Card title="Fly 4" rating={5} vendorName="Matt" price="1.50" />
-          <Card title="Fly 5" rating={4} vendorName="Ryan" price="0.05" />
-          <Card title="Fly 6" rating={3} vendorName="Tomas" price="0.99" />
-        </PaginatedCardList>
+        {loading ? (
+          <div>Loading...</div>
+        ) : error ? (
+          <div>{error}</div>
+        ) : topProducts.length === 0 ? (
+          <div className="text-2xl mb-2 text-black text-opacity-80 text-center py-8">Products coming soon!</div>
+        ) : (
+          <PaginatedCardList>
+            {topProducts.map((product) => (
+              <Card
+                key={product.id}
+                title={product.name}
+                rating={product.rating || 0}
+                vendorName={product.vendorName}
+                price={product.price?.toFixed(2) || "0.00"}
+                image={product.images?.[0]}
+              />
+            ))}
+          </PaginatedCardList>
+        )}
       </div>
 
       <div className="flex flex-col gap-4 p-8">

@@ -1,12 +1,34 @@
+"use client";
+import { useEffect, useState } from "react";
 import placeholder from "@/../public/placeholder.png";
 import Slide from "@/components/Slider/Slide";
 import Link from "next/link";
 import { ButtonLink } from "@/components/Links";
+import { db } from "@/lib/firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
 
 export default function Page() {
+    const [aboutImage, setAboutImage] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        (async () => {
+            const q = query(collection(db, "adminImageAssignments"), where("section", "==", "about-us"));
+            const snapshot = await getDocs(q);
+            if (!snapshot.empty) {
+                // Use the most recent image if multiple
+                const sorted = snapshot.docs
+                    .map(doc => doc.data())
+                    .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+                setAboutImage(sorted[0].imageUrl);
+            }
+            setLoading(false);
+        })();
+    }, []);
+
     return (
         <div className="flex flex-col mb-2">
-            <Slide className="mb-2" backgroundSrc={placeholder.src}>
+            <Slide className="mb-2" backgroundSrc={aboutImage || placeholder.src}>
                 <div className="h-[500px] 2xl:h-[750px] flex flex-col px-16 py-32 w-1/2 justify-center">
                     <div className="flex flex-col gap-8">
                         <h1 className="text-6xl font-semibold">ABOUT US</h1>

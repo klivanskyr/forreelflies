@@ -2,11 +2,11 @@ import Image from 'next/image'
 import placeholder from '@/../public/placeholder.png'
 import Stars from './Stars'
 
-export default function Card({ className="", title, rating, vendorName, price }: { className?: string, title: string, rating: number, vendorName: string, price: string }) {
+export default function Card({ className="", title, rating, vendorName, price, image }: { className?: string, title: string, rating: number, vendorName: string, price: string, image?: string }) {
     return (
         <div className={`${className} flex flex-col items-center p-5 gap-3 border rounded-md`}>
             <div className='relative w-[250px] h-[200px]'>
-                <Image src={placeholder.src} alt="placeholder" fill /> 
+                <Image src={image || placeholder.src} alt="product" fill /> 
             </div>
             <h3 className='font-semibold text-xl'>{title}</h3>
             <div className='flex flex-col gap-1 items-center w-full'>

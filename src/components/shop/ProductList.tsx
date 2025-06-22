@@ -59,9 +59,12 @@ export default async function ProductList({ sort, pageSize, page, layout }: { so
     }
 
     return (
-        <div className="mb-2">
+        <div className="mb-2 min-h-[70vh] flex flex-col justify-between">
             <div className={divClassName()}>
-                {products.map((product: Product) => (
+                {products.length === 0 ? (
+                    <div className="text-2xl text-black text-opacity-80 text-center py-8 w-full col-span-full">No products found.</div>
+                ) : (
+                    products.map((product: Product) => (
                         <BasicCard className={`w-full ${cardClassName()}`} key={product.id}>
                             <div className="h-full flex flex-col items-center w-full">
                                 {product?.images && <Link className="w-full flex items-center justify-center overflow-hidden"href={`/product/${product.id}`}><img className="h-full object-contain" src={product.images[0]} alt={product.name} /></Link>}
@@ -84,10 +87,10 @@ export default async function ProductList({ sort, pageSize, page, layout }: { so
                                 </div>
                             </div>
                         </BasicCard>
-                ))}
+                    ))
+                )}
             </div>
-
-            <ProductListButtons page={page} totalPages={response?.meta?.totalPages}/>
+            <ProductListButtons page={products.length === 0 ? 0 : page} totalPages={products.length === 0 ? 0 : response?.meta?.totalPages || 0}/>
         </div>
     )
 }

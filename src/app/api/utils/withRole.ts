@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { tokenToUser } from "@/lib/firebase-admin";
 
 export async function requireRole(request: NextRequest, role: "admin" | "vendor" | "user") {
-  const user: any = await tokenToUser();
+  const user: any = await tokenToUser(request);
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

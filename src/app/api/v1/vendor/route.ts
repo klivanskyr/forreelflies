@@ -125,3 +125,24 @@ export async function POST(request: NextRequest) {
   }
   // ... existing POST logic ...
 }
+
+export async function PUT(request: NextRequest): Promise<NextResponse> {
+  const user = await requireRole(request, "vendor");
+  if (user instanceof NextResponse) return user;
+  try {
+    const { vendorId, bannerImageUrl, profileImageUrl, bio, socialLinks } = await request.json();
+    if (!vendorId || vendorId !== user.uid) {
+      return NextResponse.json({ error: "vendorId required and must match authenticated user" }, { status: 400 });
+    }
+    const updateData: any = {};
+    if (bannerImageUrl !== undefined) updateData.bannerImageUrl = bannerImageUrl;
+    if (profileImageUrl !== undefined) updateData.profileImageUrl = profileImageUrl;
+    if (bio !== undefined) updateData.bio = bio;
+    if (socialLinks !== undefined) updateData.socialLinks = socialLinks;
+    await updateDoc(doc(db, "vendors", vendorId), updateData);
+    return NextResponse.json({ message: "Vendor profile updated" }, { status: 200 });
+  } catch (err) {
+    console.error("Vendor profile update error", err);
+    return NextResponse.json({ error: "Vendor profile update failed" }, { status: 500 });
+  }
+}

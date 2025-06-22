@@ -1,6 +1,7 @@
 'use client';
 
 import StoreManagerTemplate from "@/components/storeManagerHelpers/StoreManagerTemplate";
+import StoreManagerVendorProfileEditor from "@/components/storeManagerHelpers/StoreManagerVendorProfileEditor";
 import { Vendor } from "../types/types";
 import NoXRedirect from "@/components/NoXRedirect";
 import { useUser } from "@/contexts/UserContext";
@@ -46,6 +47,7 @@ export default function Page() {
     return (
         <NoXRedirect<Vendor> x={vendor} redirectUrl="/?login=true" alertMessage="You must be logged in as a vendor to access the store manager">
             <StoreManagerTemplate>
+                <StoreManagerVendorProfileEditor vendor={vendor} onSave={() => {/* Optionally refetch vendor info */}} />
                 <div className="flex flex-col p-2">
                     <div className="flex flex-row items-center shadow-lg border py-3 px-4">
                         <h1 className="min-w-[6rem] my-10 mx-12">STORE ICON</h1>
