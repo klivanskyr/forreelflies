@@ -34,8 +34,16 @@ import { requireRole } from "@/app/api/utils/withRole";
  * }
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
+    console.log("POST /api/v1/shipping/shipment called");
+    
     const user = await requireRole(request, "user");
-    if (user instanceof NextResponse) return user;
+    if (user instanceof NextResponse) {
+        console.log("Authentication failed in shipping endpoint");
+        return user;
+    }
+    
+    console.log("User authenticated for shipping:", { uid: user.uid, email: user.email });
+    
     try {
         const body = await request.json();
 
@@ -72,19 +80,30 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         }
 
         // Fetch Shippo API
+        const shippoKey = process.env.SHIPPO_KEY;
+        console.log("Shippo key exists for shipping:", !!shippoKey);
+        
+        if (!shippoKey) {
+            console.error("SHIPPO_KEY not found for shipping endpoint");
+            return NextResponse.json({ error: "Shipping service not configured" }, { status: 500 });
+        }
+
         const response = await fetch("https://api.goshippo.com/shipments/", {
             method: "POST",
             headers: {
-                "Authorization": `ShippoToken ${process.env.SHIPPO_KEY}`,
+                "Authorization": `ShippoToken ${shippoKey}`,
                 "Content-Type": "application/json",
             },
             body: JSON.stringify(body),
         });
 
+        console.log("Shippo API response status:", response.status);
+
         if (!response.ok) {
             const error = await response.json();
+            console.error("Shippo API error:", error);
             return NextResponse.json(
-                { error: "Failed fetching from goshippo shipments" + error },
+                { error: "Failed fetching from goshippo shipments", details: error },
                 { status: response.status }
             );
         }

@@ -8,34 +8,11 @@ import Image from "next/image";
 import SigninButtonAndBar from "./SigninButtonAndBar";
 import NavSearchTopBar from "./NavSearchTopBar";
 import ProfileButtonAndBar from "./ProfileButtonAndBar";
-import Link from "next/link";
-import { FiShoppingCart } from "react-icons/fi";
-import { DbUser } from "@/lib/firebase-admin";
-import { useEffect, useState } from "react";
+import CartIcon from "./CartIcon";
+import { useSession } from "next-auth/react";
 
-export default function NavigationHeader({ user }: { user: DbUser | null }) {
-    const [numItemsInCart, setNumItemsInCart] = useState(0);
-
-    useEffect(() => {
-        const fetchCartItemsAmount = async () => {
-            if (user !== null) {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/cart?id=${user?.uid}`, {
-                    method: "GET",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                });
-            
-                const json = await response.json();
-                const data = json.data;
-                if (data) {
-                    setNumItemsInCart(data.length);
-                }
-            }
-        };
-
-        fetchCartItemsAmount();
-    }, [user]);
+export default function NavigationHeader() {
+    const { data: session } = useSession();
     
     return (
         <div className="flex flex-row items-center justify-between gap-2 md:px-8 lg:px-32">
@@ -72,16 +49,9 @@ export default function NavigationHeader({ user }: { user: DbUser | null }) {
             </div>
             <div className="flex flex-row gap-2 items-center justify-center">
                 <NavSearchTopBar />
-                <Link href="/cart" className="relative">
-                    <FiShoppingCart className="h-6 w-6" />
-                    {user && 
-                        <div className="absolute top-0 right-0 translate-x-[70%] -translate-y-[60%]">
-                            <div className="bg-blue-400 rounded-full w-[17px] h-[17px] text-center content-center"><p className="text-xs font-medium">{numItemsInCart}</p></div>
-                        </div>
-                    }
-                </Link>
-                {user 
-                    ? <ProfileButtonAndBar isVendor={user.vendorSignUpStatus === "onboardingCompleted"} /> 
+                <CartIcon />
+                {session?.user 
+                    ? <ProfileButtonAndBar isVendor={session.user.isVendor || false} /> 
                     : <SigninButtonAndBar />
                 }
             </div>

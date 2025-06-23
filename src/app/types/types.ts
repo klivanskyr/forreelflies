@@ -8,8 +8,13 @@ export type Product = {
     tags?: string[],
     catagories?: string[],
     price: number,
+    originalPrice?: number, // Original price before discount (if any)
+    discountPercentage?: number, // Percentage discount (0-100)
     quantityOptions: number[],
     stockStatus?: StockStatus,
+    stockQuantity?: number, // Actual inventory count
+    lowStockThreshold?: number, // Alert when stock is low
+    trackQuantity?: boolean, // Whether to track inventory
     vendorId: string,
     vendorName: string,
     shippingWeight: number,
@@ -21,6 +26,18 @@ export type Product = {
     crossSells?: Product[],
     isDraft?: boolean,
     images?: string[],
+    
+    // Ratings & Reviews
+    averageRating?: number,
+    reviewCount?: number,
+    
+    // Timestamps
+    createdAt?: Date,
+    updatedAt?: Date,
+    
+    // Additional metadata
+    customFields?: { [key: string]: string }, // For flexible additional data
+    reviewSummary?: ReviewSummary,
 }
 
 export type Vendor = {
@@ -41,8 +58,8 @@ export type Vendor = {
 }
 
 export type Sort = "latest" | "oldest" | "priceLowToHigh" | "priceHighToLow";
-export type PageSize = 5 | 10 | 20 | 50 | 100 | -1;
-export type Layout = "column" | "grid2" | "grid3" | "grid4";
+export type PageSize = 12 | 24 | 48 | -1;
+export type Layout = "column" | "grid2" | "grid3" | "grid4" | "list";
 
 export type Rate = {
     products: Product[],
@@ -70,7 +87,9 @@ export type Order = {
   vendorId: string;
   vendorName: string;
   products: OrderProduct[];
-  amount: number;
+  subtotal: number; // Items total before shipping
+  shippingCost: number; // Shipping fee for this vendor
+  amount: number; // Total amount (subtotal + shipping)
   currency: string;
   purchaseDate: Date;
   customerId: string;
@@ -100,6 +119,7 @@ export type VendorProfile = {
   bio?: string;
   socialLinks?: { type: string; url: string }[];
   // Add any other fields you want to display
+  reviewSummary?: ReviewSummary,
 };
 
 export type ProductGalleryProps = {
@@ -120,4 +140,41 @@ export type AdminImageAssignment = {
   section: string; // e.g., 'slider', 'about-us', etc.
   imageUrl: string;
   label?: string;
+};
+
+export type Review = {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  rating: number; // 1-5
+  title: string;
+  comment: string;
+  createdAt: Date;
+  updatedAt: Date;
+  verified: boolean; // true if user purchased the product/used the vendor
+  helpful: number; // number of users who found this review helpful
+  images?: string[]; // optional review images
+};
+
+export type ProductReview = Review & {
+  productId: string;
+  productName: string;
+};
+
+export type VendorReview = Review & {
+  vendorId: string;
+  vendorName: string;
+};
+
+export type ReviewSummary = {
+  averageRating: number;
+  totalReviews: number;
+  ratingDistribution: {
+    1: number;
+    2: number;
+    3: number;
+    4: number;
+    5: number;
+  };
 };

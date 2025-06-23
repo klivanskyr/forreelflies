@@ -26,21 +26,43 @@ export async function POST(request: NextRequest) {
       const session = event.data.object as Stripe.Checkout.Session;
 
       console.log("Payment successful:", session);
+      console.log("Customer details:", session.customer_details);
+      console.log("Shipping details:", session.shipping_details);
+      console.log("Customer email:", session.customer_email);
+      console.log("Customer ID:", session.customer);
 
-      // Ensure vendorDetails metadata exists
-      if (!session.metadata || !session.metadata.vendorDetails) {
+      // Ensure checkout session ID exists in metadata
+      if (!session.metadata || !session.metadata.checkoutSessionId) {
         return NextResponse.json(
-          { error: "Vendor details are missing from metadata" },
+          { error: "Checkout session ID is missing from metadata" },
           { status: 400 }
         );
       }
 
+      // Retrieve full cart data from Firestore
       let vendorDetails;
       try {
-        vendorDetails = JSON.parse(session.metadata.vendorDetails); // Convert string back to an object
-      } catch (_) {
+        const checkoutDoc = await getDoc(doc(db, "checkoutSessions", session.metadata.checkoutSessionId));
+        if (!checkoutDoc.exists()) {
+          return NextResponse.json(
+            { error: "Checkout session data not found" },
+            { status: 400 }
+          );
+        }
+        
+        const checkoutData = checkoutDoc.data();
+        vendorDetails = checkoutData.vendorDetails;
+        
+        if (!vendorDetails || vendorDetails.length === 0) {
+          return NextResponse.json(
+            { error: "No vendor details found in checkout session" },
+            { status: 400 }
+          );
+        }
+      } catch (error) {
+        console.error("Failed to retrieve checkout session data:", error);
         return NextResponse.json(
-          { error: "Failed to parse vendor details from metadata" },
+          { error: "Failed to retrieve checkout session data" },
           { status: 400 }
         );
       }
@@ -57,25 +79,49 @@ export async function POST(request: NextRequest) {
           quantity: item.quantity,
           price: item.product.price,
         }));
+        // Calculate subtotal (items only) and total (items + shipping)
+        const subtotal = vendor.amount / 100; // Convert cents to dollars
+        const shippingCost = (vendor.shippingFee || 0) / 100; // Convert cents to dollars
+        const totalAmount = subtotal + shippingCost;
+        
+        // Get customer information - try multiple sources
+        let customerEmail = session.customer_details?.email || session.customer_email || '';
+        let customerName = session.customer_details?.name || '';
+        
+        // If we have a customer ID, fetch more details from Stripe
+        if (session.customer && !customerEmail) {
+          try {
+            const customer = await stripe.customers.retrieve(session.customer as string);
+            if (customer && !customer.deleted) {
+              customerEmail = customer.email || customerEmail;
+              customerName = customer.name || customerName;
+            }
+          } catch (err) {
+            console.log('Could not fetch customer details:', err);
+          }
+        }
+
         const order: Order = {
           id: '', // Firestore will generate this
           vendorId: vendor.vendorId,
           vendorName: vendor.vendorName || '',
           products,
-          amount: vendor.amount / 100, // Convert cents to dollars if needed
+          subtotal: subtotal,
+          shippingCost: shippingCost,
+          amount: totalAmount, // Total amount including shipping
           currency: session.currency || 'usd',
           purchaseDate,
-          customerId: session.customer as string || '',
-          customerEmail: session.customer_email || '',
+          customerId: session.metadata?.userId || session.customer as string || '',
+          customerEmail: customerEmail,
           payoutStatus: 'pending',
           withdrawAvailableDate,
           shippingAddress: {
-            name: session.customer_details?.name || '',
-            street: session.customer_details?.address?.line1 || '',
-            city: session.customer_details?.address?.city || '',
-            state: session.customer_details?.address?.state || '',
-            zip: session.customer_details?.address?.postal_code || '',
-            country: session.customer_details?.address?.country || '',
+            name: session.shipping_details?.name || session.customer_details?.name || customerName || '',
+            street: session.shipping_details?.address?.line1 || session.customer_details?.address?.line1 || '',
+            city: session.shipping_details?.address?.city || session.customer_details?.address?.city || '',
+            state: session.shipping_details?.address?.state || session.customer_details?.address?.state || '',
+            zip: session.shipping_details?.address?.postal_code || session.customer_details?.address?.postal_code || '',
+            country: session.shipping_details?.address?.country || session.customer_details?.address?.country || '',
           },
           refundStatus: 'none',
         };
@@ -83,10 +129,14 @@ export async function POST(request: NextRequest) {
 
         // --- Shippo Integration ---
         try {
+          console.log("Starting Shippo integration for order:", orderRef.id);
+          
           // 1. Prepare addresses
           // Sender: vendor info (fetch from vendors collection)
           const vendorDoc = await getDoc(doc(db, "vendors", vendor.vendorId));
           const vendorData = vendorDoc.data();
+          console.log("Vendor data for shipping:", vendorData);
+          
           const address_from = {
             name: vendorData?.storeName || '',
             street1: vendorData?.storeStreetAddress || '',
@@ -95,6 +145,7 @@ export async function POST(request: NextRequest) {
             zip: vendorData?.storeZip || '',
             country: vendorData?.storeCountry || '',
           };
+          
           // Recipient: order shipping address
           const address_to = {
             name: order.shippingAddress.name,
@@ -104,6 +155,8 @@ export async function POST(request: NextRequest) {
             zip: order.shippingAddress.zip,
             country: order.shippingAddress.country,
           };
+          
+          console.log("Shippo addresses:", { address_from, address_to });
           // 2. Prepare parcels (combine all products for this vendor)
           // For simplicity, sum weights and use max dimensions
           const totalWeight = products.reduce((sum: number, p: any) => sum + (p.quantity * (vendor.cartItems.find((i: any) => i.product.id === p.productId)?.product.shippingWeight || 1)), 0);
@@ -185,40 +238,71 @@ export async function POST(request: NextRequest) {
       }
     } else if (event.type === "account.updated") {
       const account = event.data.object as Stripe.Account;
-      console.log("Account updated:", account.capabilities);
+      console.log("=== ACCOUNT.UPDATED WEBHOOK RECEIVED ===");
+      console.log("Account ID:", account.id);
+      console.log("Account capabilities:", account.capabilities);
+      console.log("Account metadata:", account.metadata);
 
       const userId = account?.metadata?.userId;
       if (!userId) {
-        console.error("User ID not found in account metadata");
+        console.error("❌ User ID not found in account metadata");
+        console.error("Available metadata keys:", Object.keys(account.metadata || {}));
         return NextResponse.json(
           { error: "User ID not found in account metadata" },
           { status: 400 }
         );
       }
 
+      console.log("✅ Found userId in metadata:", userId);
+
       if (account.capabilities && account.capabilities.transfers === "active") {
-        // Update the vendor's account status in Firestore
-        await setDoc(doc(db, "users", userId), { vendorSignUpStatus: "onboardingCompleted" }, { merge: true });
-        const vendorRequestDoc = await getDoc(doc(db, "vendorRequests", userId));
+        console.log("✅ Transfer capability is active, updating vendor status...");
+        
+        try {
+          // Update the vendor's account status in Firestore
+          console.log("Updating user vendorSignUpStatus to 'onboardingCompleted'...");
+          await setDoc(doc(db, "users", userId), { vendorSignUpStatus: "onboardingCompleted" }, { merge: true });
+          
+          console.log("Fetching vendor request document...");
+          const vendorRequestDoc = await getDoc(doc(db, "vendorRequests", userId));
+          
+          if (!vendorRequestDoc.exists()) {
+            console.error("❌ Vendor request document not found for userId:", userId);
+            return NextResponse.json(
+              { error: "Vendor request document not found" },
+              { status: 400 }
+            );
+          }
+          
+          console.log("✅ Found vendor request document");
+          const vendorData = vendorRequestDoc.data();
+          console.log("Vendor request data keys:", Object.keys(vendorData || {}));
 
-        await setDoc(doc(db, "vendors", userId), {
-          stripeAccountId: account.id,
-          ownerName: vendorRequestDoc.data()?.name || "",
-          ownerId: userId,
-          products: [],
-          storeCity: vendorRequestDoc.data()?.storeCity || "",
-          storeCountry: vendorRequestDoc.data()?.storeCountry || "",
-          storeDescription: vendorRequestDoc.data()?.storeDescription || "",
-          storeEmail: vendorRequestDoc.data()?.storeEmail || "",
-          storeName: vendorRequestDoc.data()?.storeName || "",
-          storePhone: vendorRequestDoc.data()?.storePhone || "",
-          storeSlug: vendorRequestDoc.data()?.storeSlug || "",
-          storeState: vendorRequestDoc.data()?.storeState || "",
-          storeStreetAddress: vendorRequestDoc.data()?.storeStreetAddress || "",
-          storeZip: vendorRequestDoc.data()?.storeZip || ""
-        }, { merge: true });
+          console.log("Creating/updating vendor document...");
+          await setDoc(doc(db, "vendors", userId), {
+            stripeAccountId: account.id,
+            ownerName: vendorData?.name || "",
+            products: [],
+            storeCity: vendorData?.storeCity || "",
+            storeCountry: vendorData?.storeCountry || "",
+            storeDescription: vendorData?.storeDescription || "",
+            storeEmail: vendorData?.storeEmail || "",
+            storeName: vendorData?.storeName || "",
+            storePhone: vendorData?.storePhone || "",
+            storeSlug: vendorData?.storeSlug || "",
+            storeState: vendorData?.storeState || "",
+            storeStreetAddress: vendorData?.storeStreetAddress || "",
+            storeZip: vendorData?.storeZip || ""
+          }, { merge: true });
 
-        console.log(`Vendor account for user ${userId} is now active and updated`);
+          console.log(`✅ Vendor account for user ${userId} is now active and updated`);
+        } catch (error) {
+          console.error("❌ Error updating vendor status:", error);
+          throw error;
+        }
+      } else {
+        console.log("❌ Transfer capability not active yet. Current capabilities:", account.capabilities);
+        console.log("Capability status:", account.capabilities?.transfers);
       }
     } else {
       console.log(`Unhandled event type: ${event.type}`);

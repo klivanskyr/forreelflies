@@ -1,6 +1,8 @@
 import { CartItem } from "@/app/cart/page";
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/app/api/utils/withRole";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 import Stripe from "stripe";
 
@@ -24,10 +26,23 @@ type LineItem = {
     quantity: number;
 };
 
+// Minimal vendor details for Stripe metadata (under 500 chars)
+type VendorMetadata = {
+    vendorId: string;
+    stripeAccountId: string;
+    amount: number;
+    shippingFee: number;
+    vendorName: string;
+};
+
+// Full vendor details for Firestore storage
 type VendorDetails = {
     vendorId: string;
     stripeAccountId: string;
     amount: number;
+    shippingFee: number;
+    cartItems: CartItem[];
+    vendorName: string;
 };
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -44,16 +59,40 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             return NextResponse.json({ error: "Required field: vendorItems (array)" }, { status: 400 });
         }
 
-        // verify the vendorItems array follows the correct structure
+        // verify the vendorItems array follows the correct structure and fetch missing stripeAccountIds
         for (const vendor of vendorItems) {
-            if (!vendor.vendorId || !vendor.stripeAccountId || !vendor.cartItems || !vendor.shippingFee) {
-                return NextResponse.json({ error: "Each vendor item must have: vendorId, stripeAccountId, cartItems, shippingFee" }, { status: 400 });
+            if (!vendor.vendorId || !vendor.cartItems || vendor.shippingFee === undefined) {
+                return NextResponse.json({ error: "Each vendor item must have: vendorId, cartItems, shippingFee" }, { status: 400 });
+            }
+            
+            // If stripeAccountId is missing, fetch it from the vendors collection
+            if (!vendor.stripeAccountId) {
+                try {
+                    const vendorDoc = await getDoc(doc(db, "vendors", vendor.vendorId));
+                    if (!vendorDoc.exists()) {
+                        return NextResponse.json({ error: `Vendor ${vendor.vendorId} not found` }, { status: 400 });
+                    }
+                    
+                    const vendorData = vendorDoc.data();
+                    if (!vendorData.stripeAccountId) {
+                        return NextResponse.json({ error: `Vendor ${vendor.vendorId} has not completed Stripe onboarding` }, { status: 400 });
+                    }
+                    
+                    vendor.stripeAccountId = vendorData.stripeAccountId;
+                } catch (error) {
+                    console.error(`Error fetching vendor ${vendor.vendorId}:`, error);
+                    return NextResponse.json({ error: `Failed to fetch vendor ${vendor.vendorId} information` }, { status: 500 });
+                }
             }
         }
 
+        // Generate a unique checkout session ID for storing cart data
+        const checkoutSessionId = `checkout_${Date.now()}_${user.uid}`;
+        
         let totalShippingfeeCents = 0;
         const lineItems: LineItem[] = [];
         const vendorDetails: VendorDetails[] = [];
+        const vendorMetadata: VendorMetadata[] = [];
 
         // Process each vendor's items
         for (const vendor of vendorItems) {
@@ -89,13 +128,35 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             // Add shipping fee to totalShippingfee
             totalShippingfeeCents += vendor.shippingFee * 100; //Convert to cents
 
-            // Store vendor details for transfer processing
+            const vendorName = vendor.cartItems[0]?.product?.vendorName || '';
+
+            // Store full vendor details for Firestore
             vendorDetails.push({
                 vendorId: vendor.vendorId,
                 stripeAccountId: vendor.stripeAccountId,
                 amount: vendorTotal,
+                shippingFee: vendor.shippingFee * 100, // Convert to cents for consistency
+                cartItems: vendor.cartItems, // Include cart items for order creation
+                vendorName: vendorName,
+            });
+
+            // Store minimal vendor metadata for Stripe (to fit in 500 char limit)
+            vendorMetadata.push({
+                vendorId: vendor.vendorId,
+                stripeAccountId: vendor.stripeAccountId,
+                amount: vendorTotal,
+                shippingFee: vendor.shippingFee * 100,
+                vendorName: vendorName,
             });
         }
+
+        // Store full cart data in Firestore temporarily (expires in 1 hour)
+        await setDoc(doc(db, "checkoutSessions", checkoutSessionId), {
+            vendorDetails: vendorDetails,
+            userId: user.uid,
+            createdAt: new Date(),
+            expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour from now
+        });
 
         // Calculate platform fee (10% of total)
         // const applicationFeeAmount = Math.round(totalAmountCents * 0.1);
@@ -103,14 +164,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         // Create a single Stripe Checkout Session
         const session = await stripe.checkout.sessions.create({
             line_items: lineItems,
-            // payment_intent_data: {
-            //     application_fee_amount: applicationFeeAmount, // Platform fee Application fee is now in the transfor stage
-            //     metadata: {
-            //         vendorDetails: JSON.stringify(vendorDetails), // Store vendor details for transfers
-            //     },
-            // },
             metadata: {
-                vendorDetails: JSON.stringify(vendorDetails), // Store vendor details for transfers
+                vendorMetadata: JSON.stringify(vendorMetadata), // Minimal vendor data (under 500 chars)
+                checkoutSessionId: checkoutSessionId, // Reference to full cart data in Firestore
+                userId: user.uid, // Store the user ID for order tracking
+            },
+            // Collect customer information
+            customer_creation: 'always',
+            billing_address_collection: 'required',
+            shipping_address_collection: {
+                allowed_countries: ['US', 'CA'], // Add more countries as needed
+            },
+            phone_number_collection: {
+                enabled: true,
             },
             shipping_options: [
                 {
@@ -123,7 +189,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             ],
             mode: "payment",
             ui_mode: "hosted",
-            success_url: `${process.env.URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+            success_url: `${process.env.URL}/cart/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${process.env.URL}/checkout/cancel`,
         });
 

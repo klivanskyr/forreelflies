@@ -12,56 +12,76 @@ export default function Page() {
     const { user } = useUser();
     const [vendor, setVendor] = useState<Vendor | undefined>(undefined);
     const [products, setProducts] = useState<Product[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const getVendor = async (userId: string): Promise<Vendor | undefined> => {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor?userId=${userId}`, {
+    const fetchVendorAndProducts = async () => {
+        if (!user) return;
+        
+        setLoading(true);
+        try {
+            // Fetch vendor
+            const vendorResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor?userId=${user.uid}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
                 }
             });
 
-            if (!response.ok) {
-                return undefined;
-            } else {
-                const data = await response.json();
-                return data.vendor as Vendor;
-            }
-        }
+            if (vendorResponse.ok) {
+                const vendorData = await vendorResponse.json();
+                const vendorInfo = vendorData.vendor as Vendor;
+                setVendor(vendorInfo);
 
-        const getProducts = async (vendor: Vendor): Promise<Product[]> => {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/product?vendorId=${vendor.id}`);
-            const data = await response.json();
-            return data.data as Product[];
-        }
-
-        if (user) {
-            getVendor(user.uid).then((data) => {
-                if (data) {
-                    setVendor(data);
-                    getProducts(data).then((products) => {
-                        setProducts(products);
-                    });
+                // Fetch products for this vendor
+                const productsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/product?vendorId=${vendorInfo.id}`);
+                if (productsResponse.ok) {
+                    const productsData = await productsResponse.json();
+                    setProducts(productsData.data as Product[]);
                 }
-            });
+            }
+        } catch (error) {
+            console.error('Error fetching data:', error);
+        } finally {
+            setLoading(false);
         }
-    })
+    };
 
-    if (!vendor  || !vendor.id) {
+    useEffect(() => {
+        fetchVendorAndProducts();
+    }, [user]);
+
+    if (loading) {
         return (
-            <div>
-                <h1>Vendor not found</h1>
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="flex flex-col items-center space-y-4">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-greenPrimary"></div>
+                    <p className="text-gray-600">Loading products...</p>
+                </div>
             </div>
-        )
+        );
+    }
+
+    if (!vendor || !vendor.id) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2">Vendor not found</h1>
+                    <p className="text-gray-600">Unable to load vendor information. Please try again later.</p>
+                </div>
+            </div>
+        );
     }
 
     return (
         <NoVendorRedirect vendor={vendor}>
             <StoreManagerTemplate>
-                <StoreManagerProductsHeader vendorId={vendor.id} />
-                <StoreManagerProductsTable products={products} />
+                <StoreManagerProductsHeader vendorId={vendor.id} onProductAdded={fetchVendorAndProducts} />
+                <StoreManagerProductsTable 
+                    products={products} 
+                    onProductUpdated={fetchVendorAndProducts}
+                    vendorId={vendor.id}
+                />
             </StoreManagerTemplate>
         </NoVendorRedirect>
-    )
+    );
 }

@@ -17,6 +17,84 @@ const VENDOR_TABS = [
   { value: "accepted", label: "Accepted" },
 ];
 
+// Sample review data for testing
+const SAMPLE_REVIEWS = [
+  {
+    rating: 5,
+    title: "Excellent quality flies!",
+    comment: "These flies are absolutely fantastic. The craftsmanship is top-notch and they've been incredibly effective on the water. Highly recommend!",
+    userName: "John Fisher",
+    userEmail: "john.fisher@example.com"
+  },
+  {
+    rating: 4,
+    title: "Great flies, fast shipping",
+    comment: "Really happy with these flies. They arrived quickly and are exactly as described. Good quality materials and construction.",
+    userName: "Sarah Angler",
+    userEmail: "sarah.angler@example.com"
+  },
+  {
+    rating: 5,
+    title: "Perfect for trout fishing",
+    comment: "Used these on my last trip and caught several nice trout. The flies are well-tied and durable. Will definitely order more.",
+    userName: "Mike Rivers",
+    userEmail: "mike.rivers@example.com"
+  },
+  {
+    rating: 3,
+    title: "Good flies but pricey",
+    comment: "The quality is good and they work well, but I think they're a bit overpriced compared to similar flies elsewhere.",
+    userName: "Tom Stream",
+    userEmail: "tom.stream@example.com"
+  },
+  {
+    rating: 4,
+    title: "Beautiful craftsmanship",
+    comment: "These flies are works of art! Very detailed and well-made. They've been effective on the water too.",
+    userName: "Lisa Wade",
+    userEmail: "lisa.wade@example.com"
+  }
+];
+
+// Sample vendor review data for testing
+const SAMPLE_VENDOR_REVIEWS = [
+  {
+    rating: 5,
+    title: "Outstanding vendor experience!",
+    comment: "This vendor consistently delivers high-quality flies with excellent customer service. Fast shipping and great communication throughout the process.",
+    userName: "Alex Thompson",
+    userEmail: "alex.thompson@example.com"
+  },
+  {
+    rating: 4,
+    title: "Reliable and professional",
+    comment: "Great selection of flies and very professional service. Orders are processed quickly and packaged well. Will definitely order again.",
+    userName: "Maria Rodriguez",
+    userEmail: "maria.rodriguez@example.com"
+  },
+  {
+    rating: 5,
+    title: "Top-notch fly tying skills",
+    comment: "The attention to detail in their flies is incredible. You can tell they really know what they're doing. These flies have been very effective.",
+    userName: "David Chen",
+    userEmail: "david.chen@example.com"
+  },
+  {
+    rating: 4,
+    title: "Good variety and quality",
+    comment: "Nice selection of different fly patterns. Quality is consistently good and prices are fair. Customer service is responsive.",
+    userName: "Jennifer Park",
+    userEmail: "jennifer.park@example.com"
+  },
+  {
+    rating: 3,
+    title: "Decent vendor, slow shipping",
+    comment: "The flies are good quality but shipping took longer than expected. Communication could be better but the products are solid.",
+    userName: "Robert Johnson",
+    userEmail: "robert.johnson@example.com"
+  }
+];
+
 function formatDate(date: any) {
   if (!date) return "-";
   const d = typeof date === 'string' ? new Date(date) : date.toDate ? date.toDate() : date;
@@ -33,7 +111,7 @@ export default function AdminPage() {
   const [uploading, setUploading] = useState(false);
   const [assignments, setAssignments] = useState<{ section: string; imageUrl: string }[]>([]);
   const [message, setMessage] = useState("");
-  const [view, setView] = useState<'images' | 'vendor-requests'>("images");
+  const [view, setView] = useState<'images' | 'vendor-requests' | 'review-testing'>("images");
   const [vendorRequests, setVendorRequests] = useState<any[]>([]);
   const [vendorMessage, setVendorMessage] = useState("");
   const [vendorTab, setVendorTab] = useState<'pending' | 'accepted'>("pending");
@@ -53,6 +131,22 @@ export default function AdminPage() {
   // Modal states
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Review testing states
+  const [products, setProducts] = useState<any[]>([]);
+  const [vendors, setVendors] = useState<any[]>([]);
+  const [reviewType, setReviewType] = useState<'product' | 'vendor'>('product');
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [selectedVendor, setSelectedVendor] = useState<any>(null);
+  const [reviewData, setReviewData] = useState({
+    rating: 5,
+    title: "",
+    comment: "",
+    userName: "",
+    userEmail: ""
+  });
+  const [reviewMessage, setReviewMessage] = useState("");
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -220,6 +314,145 @@ export default function AdminPage() {
   const ourFliesImages = assignments.filter(a => a.section === "our-flies");
   const aboutUsImages = assignments.filter(a => a.section === "about-us");
 
+  // Review testing functions
+  const fetchProducts = async () => {
+    if (!loggedIn || view !== "review-testing") return;
+    
+    try {
+      const res = await fetch('/api/v1/product?pageSize=50', {
+        credentials: "include"
+      });
+      const data = await res.json();
+      setProducts(data.data || []);
+    } catch (error) {
+      console.error("Failed to fetch products:", error);
+    }
+  };
+
+  const fetchVendors = async () => {
+    if (!loggedIn || view !== "review-testing") return;
+    
+    try {
+      console.log('Fetching vendors for admin...');
+      const res = await fetch('/api/v1/vendor?pageSize=50', {
+        credentials: "include"
+      });
+      console.log('Vendor API response status:', res.status);
+      const data = await res.json();
+      console.log('Vendor API response data:', data);
+      setVendors(data.data || []);
+    } catch (error) {
+      console.error("Failed to fetch vendors:", error);
+    }
+  };
+
+  const handleProductSelect = (product: any) => {
+    setSelectedProduct(product);
+    setSelectedVendor(null);
+    setReviewMessage("");
+  };
+
+  const handleVendorSelect = (vendor: any) => {
+    setSelectedVendor(vendor);
+    setSelectedProduct(null);
+    setReviewMessage("");
+  };
+
+  const handleReviewTypeChange = (type: 'product' | 'vendor') => {
+    setReviewType(type);
+    setSelectedProduct(null);
+    setSelectedVendor(null);
+    setReviewMessage("");
+    setReviewData({
+      rating: 5,
+      title: "",
+      comment: "",
+      userName: "",
+      userEmail: ""
+    });
+  };
+
+  const handleSampleReviewSelect = (sampleReview: any) => {
+    setReviewData({
+      ...sampleReview,
+      userName: sampleReview.userName,
+      userEmail: sampleReview.userEmail
+    });
+  };
+
+  const handleSubmitReview = async () => {
+    const currentTarget = reviewType === 'product' ? selectedProduct : selectedVendor;
+    if (!currentTarget || !reviewData.title || !reviewData.comment || !reviewData.userName || !reviewData.userEmail) {
+      setReviewMessage("Please fill in all required fields");
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    setReviewMessage("");
+
+    try {
+      const endpoint = reviewType === 'product' 
+        ? '/api/v1/product/reviews'
+        : '/api/v1/vendor/reviews';
+
+      const requestBody = reviewType === 'product' 
+        ? {
+            productId: selectedProduct.id,
+            userId: `admin-test-${Date.now()}`,
+            userName: reviewData.userName,
+            userEmail: reviewData.userEmail,
+            rating: reviewData.rating,
+            title: reviewData.title,
+            comment: reviewData.comment,
+            images: []
+          }
+        : {
+            vendorId: selectedVendor.id,
+            userId: `admin-test-${Date.now()}`,
+            userName: reviewData.userName,
+            userEmail: reviewData.userEmail,
+            rating: reviewData.rating,
+            title: reviewData.title,
+            comment: reviewData.comment,
+            images: []
+          };
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: "include",
+        body: JSON.stringify(requestBody),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setReviewMessage(`✅ ${reviewType === 'product' ? 'Product' : 'Vendor'} review added successfully! Review ID: ${data.reviewId}`);
+        // Reset form
+        setReviewData({
+          rating: 5,
+          title: "",
+          comment: "",
+          userName: "",
+          userEmail: ""
+        });
+      } else {
+        const errorData = await res.json();
+        setReviewMessage(`❌ Failed to add ${reviewType} review: ${errorData.error}`);
+      }
+    } catch (error) {
+      setReviewMessage(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProducts();
+    fetchVendors();
+  }, [loggedIn, view]);
+
   if (!loggedIn) {
     return (
       <div className="min-h-screen flex flex-col justify-center items-center">
@@ -242,6 +475,7 @@ export default function AdminPage() {
         <div className="flex flex-row gap-4 border-b mb-6 pt-8">
           <button className={`px-4 py-2 rounded-t ${view === "images" ? "bg-green-600 text-white" : "bg-gray-100 text-gray-700"}`} onClick={() => setView("images")}>Image Assignment</button>
           <button className={`px-4 py-2 rounded-t ${view === "vendor-requests" ? "bg-green-600 text-white" : "bg-gray-100 text-gray-700"}`} onClick={() => setView("vendor-requests")}>Vendor Requests</button>
+          <button className={`px-4 py-2 rounded-t ${view === "review-testing" ? "bg-green-600 text-white" : "bg-gray-100 text-gray-700"}`} onClick={() => setView("review-testing")}>Review Testing</button>
         </div>
         {view === "images" && (
           <div className="p-6">
@@ -499,6 +733,275 @@ export default function AdminPage() {
                 <span className="ml-4 text-sm text-gray-600">
                   Page {pagination.currentPage} of {pagination.totalPages}
                 </span>
+              </div>
+            )}
+          </div>
+        )}
+        {view === "review-testing" && (
+          <div className="p-6">
+            <h1 className="text-2xl font-bold mb-4">Review Testing</h1>
+            <p className="text-gray-600 mb-6">Add test reviews to products or vendors to verify the review system is working correctly.</p>
+            
+            {/* Review Type Selection */}
+            <div className="bg-gray-50 p-4 rounded-lg mb-6">
+              <h3 className="text-lg font-semibold mb-3">1. Select Review Type</h3>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => handleReviewTypeChange('product')}
+                  className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                    reviewType === 'product'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  Product Reviews
+                </button>
+                <button
+                  onClick={() => handleReviewTypeChange('vendor')}
+                  className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                    reviewType === 'vendor'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  Vendor Reviews
+                </button>
+              </div>
+            </div>
+
+            {/* Product Selection */}
+            {reviewType === 'product' && (
+              <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                <h3 className="text-lg font-semibold mb-3">2. Select a Product</h3>
+                {products.length === 0 ? (
+                  <p className="text-gray-500">Loading products...</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {products.slice(0, 12).map((product) => (
+                      <div
+                        key={product.id}
+                        onClick={() => handleProductSelect(product)}
+                        className={`border rounded-lg p-3 cursor-pointer transition-colors ${
+                          selectedProduct?.id === product.id 
+                            ? 'border-green-500 bg-green-50' 
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex gap-3">
+                          {product.images?.[0] && (
+                            <img 
+                              src={product.images[0]} 
+                              alt={product.name}
+                              className="w-16 h-16 object-cover rounded"
+                            />
+                          )}
+                          <div className="flex-1">
+                            <h4 className="font-medium text-sm mb-1">{product.name}</h4>
+                            <p className="text-xs text-gray-600 mb-1">by {product.vendorName}</p>
+                            <p className="text-sm font-semibold">${product.price}</p>
+                            {product.reviewSummary?.totalReviews > 0 && (
+                              <p className="text-xs text-gray-500">
+                                {product.reviewSummary.totalReviews} review{product.reviewSummary.totalReviews !== 1 ? 's' : ''}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {products.length > 12 && (
+                  <p className="text-sm text-gray-500 mt-2">Showing first 12 products. Select one to continue.</p>
+                )}
+              </div>
+            )}
+
+            {/* Vendor Selection */}
+            {reviewType === 'vendor' && (
+              <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                <h3 className="text-lg font-semibold mb-3">2. Select a Vendor</h3>
+                {vendors.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500 mb-2">No vendors available for testing.</p>
+                    <p className="text-sm text-gray-400">
+                      This could mean:
+                      <br />• No vendors have been approved yet
+                      <br />• No vendor applications have been submitted
+                      <br />• Admin authentication issue
+                    </p>
+                    <p className="text-sm text-blue-600 mt-2">
+                      Check the browser console for more details.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {vendors.slice(0, 12).map((vendor) => (
+                      <div
+                        key={vendor.id}
+                        onClick={() => handleVendorSelect(vendor)}
+                        className={`border rounded-lg p-3 cursor-pointer transition-colors ${
+                          selectedVendor?.id === vendor.id 
+                            ? 'border-green-500 bg-green-50' 
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex gap-3">
+                          {vendor.profileImage && (
+                            <img 
+                              src={vendor.profileImage} 
+                              alt={vendor.storeName}
+                              className="w-16 h-16 object-cover rounded"
+                            />
+                          )}
+                          <div className="flex-1">
+                            <h4 className="font-medium text-sm mb-1">{vendor.storeName}</h4>
+                            <p className="text-xs text-gray-600 mb-1">by {vendor.ownerName}</p>
+                            <p className="text-xs text-gray-500">{vendor.storeCity}, {vendor.storeState}</p>
+                            {vendor.reviewSummary?.totalReviews > 0 && (
+                              <p className="text-xs text-gray-500">
+                                {vendor.reviewSummary.totalReviews} review{vendor.reviewSummary.totalReviews !== 1 ? 's' : ''}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {vendors.length > 12 && (
+                  <p className="text-sm text-gray-500 mt-2">Showing first 12 vendors. Select one to continue.</p>
+                )}
+              </div>
+            )}
+
+            {/* Sample Reviews */}
+            {(selectedProduct || selectedVendor) && (
+              <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                <h3 className="text-lg font-semibold mb-3">3. Choose a Sample Review (Optional)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {(reviewType === 'product' ? SAMPLE_REVIEWS : SAMPLE_VENDOR_REVIEWS).map((sample, index) => (
+                    <div
+                      key={index}
+                      onClick={() => handleSampleReviewSelect(sample)}
+                      className="border border-gray-200 rounded p-3 cursor-pointer hover:border-gray-300 transition-colors"
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="flex">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <span key={star} className={star <= sample.rating ? 'text-yellow-400' : 'text-gray-300'}>
+                              ★
+                            </span>
+                          ))}
+                        </div>
+                        <span className="text-sm font-medium">{sample.title}</span>
+                      </div>
+                      <p className="text-xs text-gray-600 mb-2">{sample.comment.substring(0, 100)}...</p>
+                      <p className="text-xs text-gray-500">by {sample.userName}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Review Form */}
+            {(selectedProduct || selectedVendor) && (
+              <div className="bg-white border rounded-lg p-6">
+                <h3 className="text-lg font-semibold mb-4">
+                  4. Review Details for "{reviewType === 'product' ? selectedProduct?.name : selectedVendor?.storeName}"
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Rating *</label>
+                    <div className="flex gap-1 mb-4">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setReviewData({...reviewData, rating: star})}
+                          className={`text-2xl transition-colors ${
+                            star <= reviewData.rating ? 'text-yellow-400' : 'text-gray-300'
+                          }`}
+                        >
+                          ★
+                        </button>
+                      ))}
+                      <span className="ml-2 text-sm text-gray-600">
+                        {reviewData.rating} star{reviewData.rating !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Review Title *</label>
+                    <input
+                      type="text"
+                      value={reviewData.title}
+                      onChange={(e) => setReviewData({...reviewData, title: e.target.value})}
+                      placeholder="Enter review title..."
+                      className="w-full border rounded p-2 mb-4"
+                      maxLength={100}
+                    />
+
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Reviewer Name *</label>
+                    <input
+                      type="text"
+                      value={reviewData.userName}
+                      onChange={(e) => setReviewData({...reviewData, userName: e.target.value})}
+                      placeholder="Enter reviewer name..."
+                      className="w-full border rounded p-2 mb-4"
+                    />
+
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Reviewer Email *</label>
+                    <input
+                      type="email"
+                      value={reviewData.userEmail}
+                      onChange={(e) => setReviewData({...reviewData, userEmail: e.target.value})}
+                      placeholder="Enter reviewer email..."
+                      className="w-full border rounded p-2"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Review Comment *</label>
+                    <textarea
+                      value={reviewData.comment}
+                      onChange={(e) => setReviewData({...reviewData, comment: e.target.value})}
+                      placeholder="Enter detailed review comment..."
+                      rows={8}
+                      className="w-full border rounded p-2 resize-none"
+                      maxLength={1000}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">{reviewData.comment.length}/1000 characters</p>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex gap-4">
+                  <button
+                    onClick={handleSubmitReview}
+                    disabled={isSubmittingReview || !reviewData.title || !reviewData.comment || !reviewData.userName || !reviewData.userEmail}
+                    className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    {isSubmittingReview ? `Adding ${reviewType} Review...` : `Add ${reviewType} Review`}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setReviewData({rating: 5, title: "", comment: "", userName: "", userEmail: ""});
+                      setReviewMessage("");
+                    }}
+                    className="bg-gray-600 text-white px-6 py-2 rounded hover:bg-gray-700"
+                  >
+                    Clear Form
+                  </button>
+                </div>
+
+                {reviewMessage && (
+                  <div className={`mt-4 p-3 rounded ${
+                    reviewMessage.includes('✅') 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-red-100 text-red-700'
+                  }`}>
+                    {reviewMessage}
+                  </div>
+                )}
               </div>
             )}
           </div>
