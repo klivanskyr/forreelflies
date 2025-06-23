@@ -1,7 +1,6 @@
 'use client';
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import IconButton from "../buttons/IconButton";
 import { addKVToUrl } from "@/helpers/addKVToUrl";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import Input from "../inputs/Input";
@@ -21,23 +20,42 @@ export default function ProductListButtons({ page, totalPages }: { page: number,
     }
 
     const isNoPages = totalPages === 0;
+    
+    // Don't render pagination if there are no pages
+    if (isNoPages) {
+        return null;
+    }
+
     return (
         <Suspense fallback={<div className="flex justify-center items-center gap-1"><h1>Loading...</h1></div>}>
-            <div className="flex justify-center items-center gap-1">
-                {isNoPages || (page - 1 < 1)
-                    ? <IconButton disabled icon={<FaChevronLeft className="fill-gray-500"/>} />
-                    : <IconButton onClick={() => changePage(page - 1)} icon={<FaChevronLeft />} />
-                }
-                <div className="flex flex-row items-baseline">
-                    <form onSubmit={(e) => { e.preventDefault(); if (!isNoPages) changePage(parseInt(input))}} >
-                        <Input className="!w-[25px] !h-[25px] !p-0 !pb-0.5 text-center" value={isNoPages ? '0' : input} onChange={(e) => setInput(e.target.value)} disabled={isNoPages} />
+            <div className="flex justify-center items-center gap-4 py-4">
+                <button
+                    onClick={() => changePage(page - 1)}
+                    disabled={page - 1 < 1}
+                    className="flex items-center justify-center p-2 rounded-lg hover:bg-gray-100 disabled:hover:bg-transparent transition-colors disabled:cursor-not-allowed"
+                >
+                    <FaChevronLeft className={`w-[20px] h-[20px] ${page - 1 < 1 ? "text-gray-400" : "text-gray-700 hover:text-gray-900"}`} />
+                </button>
+                
+                <div className="flex flex-row items-center gap-2">
+                    <span className="text-sm text-gray-600">Page</span>
+                    <form onSubmit={(e) => { e.preventDefault(); changePage(parseInt(input))}} >
+                        <Input 
+                            className="!w-[60px] !h-[32px] !p-2 text-center text-sm" 
+                            value={input} 
+                            onChange={(e) => setInput(e.target.value)} 
+                        />
                     </form>
-                    <p className="w-[50px] text-center">of {totalPages}</p>
+                    <span className="text-sm text-gray-600">of {totalPages}</span>
                 </div>
-                {isNoPages || (page + 1 > totalPages)
-                    ? <IconButton disabled icon={<FaChevronRight className="fill-gray-500"/>} />
-                    : <IconButton onClick={() => changePage(page + 1)} icon={<FaChevronRight />} />
-                }
+                
+                <button
+                    onClick={() => changePage(page + 1)}
+                    disabled={page + 1 > totalPages}
+                    className="flex items-center justify-center p-2 rounded-lg hover:bg-gray-100 disabled:hover:bg-transparent transition-colors disabled:cursor-not-allowed"
+                >
+                    <FaChevronRight className={`w-[20px] h-[20px] ${page + 1 > totalPages ? "text-gray-400" : "text-gray-700 hover:text-gray-900"}`} />
+                </button>
             </div>
         </Suspense>
     )

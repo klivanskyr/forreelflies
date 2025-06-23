@@ -10,7 +10,7 @@ export default function Navbar() {
     return (
         <div className="flex w-full flex-col justify-center border-b-[1px] border-gray-200">
             <ProfileHeader user={user} />
-            <NavigationHeader user={user} />
+            <NavigationHeader />
         </div>
     )
 }

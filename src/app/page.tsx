@@ -90,6 +90,7 @@ export default function Home() {
                 vendorName={product.vendorName}
                 price={product.price?.toFixed(2) || "0.00"}
                 image={product.images?.[0]}
+                product={product}
               />
             ))}
           </PaginatedCardList>

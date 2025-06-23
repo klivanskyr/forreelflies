@@ -125,8 +125,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 }
 
 export async function PUT(request: NextRequest): Promise<NextResponse> {
+    console.log("PUT /api/v1/user called");
+    console.log("Request cookies:", request.cookies.getAll().map(c => `${c.name}=${c.value.substring(0, 20)}...`));
+    
     const user = await requireRole(request, "user");
-    if (user instanceof NextResponse) return user;
+    if (user instanceof NextResponse) {
+        console.log("requireRole returned NextResponse (auth failed)");
+        return user;
+    }
+
+    console.log("User authenticated:", { uid: user.uid, email: user.email });
 
     try {
         const { uid, streetAddress, city, state, zipCode, country } = await request.json();
@@ -135,24 +143,26 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
             return NextResponse.json({ error: "uid is required" }, { status: 400 });
         }
 
-        // Check auth by seeing if the user calling this function is the same as the uid provided
-        const cookies = request.cookies;
-        const auth = cookies.get("token")?.value;
-
-        // check auth with adminAuth
-        try {
-            await adminAuth.verifyIdToken(auth as string);
-        } catch (_) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        // Verify that the authenticated user matches the uid being updated
+        if (user.uid !== uid) {
+            return NextResponse.json({ error: "Unauthorized: Cannot update another user's data" }, { status: 401 });
         }
         
         // Verify address
         async function validateAddress(streetAddress: string, city: string, state: string, zipCode: string, country: string) {
+            const shippoKey = process.env.SHIPPO_KEY;
+            console.log("Shippo key exists:", !!shippoKey);
+            
+            if (!shippoKey) {
+                console.error("SHIPPO_KEY environment variable is not set");
+                throw new Error("Shipping validation service not configured");
+            }
+
             const response = await fetch(`https://api.goshippo.com/addresses/`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `ShippoToken ${process.env.SHIPPO_KEY}`,
+                    "Authorization": `ShippoToken ${shippoKey}`,
                 },
                 body: JSON.stringify({
                     "street1": streetAddress,
@@ -165,26 +175,41 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
             });
         
             const data = await response.json();
-            console.log(data);
-            if (data.validation_results.is_valid) {
+            console.log("Shippo validation response:", data);
+            
+            if (data.validation_results && data.validation_results.is_valid) {
                 return data; // Validated address
             } else {
-                console.log("Invalid Address", data.validation_results);
+                console.log("Invalid Address", data.validation_results || data);
                 return null;
             }
         }
 
-        // Validate address
-        const validatedData = await validateAddress(streetAddress, city, state, zipCode, country);
-        if (!validatedData) {
-            return NextResponse.json({ error: "Invalid address" }, { status: 400 });
-        }
+        // Validate address (optional - fallback to user input if validation fails)
+        let validateStreetAddress = streetAddress;
+        let validateCity = city;
+        let validateState = state;
+        let validateZipCode = zipCode;
+        let validateCountry = country;
 
-        const validateStreetAddress = validatedData.street1;
-        const validateCity = validatedData.city;
-        const validateState = validatedData.state;
-        const validateZipCode = validatedData.zip;
-        const validateCountry = validatedData.country;
+        try {
+            const validatedData = await validateAddress(streetAddress, city, state, zipCode, country);
+            if (validatedData) {
+                // Use validated address if available
+                validateStreetAddress = validatedData.street1;
+                validateCity = validatedData.city;
+                validateState = validatedData.state;
+                validateZipCode = validatedData.zip;
+                validateCountry = validatedData.country;
+                console.log("Using validated address from Shippo");
+            } else {
+                console.log("Shippo validation failed, using user input");
+            }
+        } catch (error) {
+            console.error("Address validation error:", error);
+            console.log("Falling back to user input address");
+            // Continue with user input - don't block the save
+        }
 
         try {
             // Update user in Firestore
