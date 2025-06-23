@@ -6,6 +6,33 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 
 import Stripe from "stripe";
 
+// Function to validate Shippo connectivity
+async function validateShippoConnectivity(): Promise<{ success: boolean; error?: string }> {
+    try {
+        if (!process.env.SHIPPO_KEY) {
+            return { success: false, error: "Shippo API key not configured" };
+        }
+
+        // Test Shippo API with a simple request to verify connectivity
+        const response = await fetch("https://api.goshippo.com/addresses/", {
+            method: "GET",
+            headers: {
+                "Authorization": `ShippoToken ${process.env.SHIPPO_KEY}`,
+                "Content-Type": "application/json",
+            },
+        });
+
+        if (!response.ok) {
+            return { success: false, error: `Shippo API error: ${response.status}` };
+        }
+
+        return { success: true };
+    } catch (error) {
+        console.error("Shippo connectivity test failed:", error);
+        return { success: false, error: "Failed to connect to shipping service" };
+    }
+}
+
 export type VendorItem = {
     vendorId: string;
     stripeAccountId: string;
@@ -59,10 +86,43 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             return NextResponse.json({ error: "Required field: vendorItems (array)" }, { status: 400 });
         }
 
+        // Validate that user has required information for shipping calculation
+        // Note: Stripe will collect shipping address, but we need to ensure shipping was calculated properly
+        console.log("Validating checkout request for user:", user.uid);
+
+        // Test Shippo connectivity before allowing checkout
+        const shippoValidation = await validateShippoConnectivity();
+        if (!shippoValidation.success) {
+            return NextResponse.json({ 
+                error: `Shipping service is currently unavailable: ${shippoValidation.error}. Please try again later.` 
+            }, { status: 503 });
+        }
+
         // verify the vendorItems array follows the correct structure and fetch missing stripeAccountIds
         for (const vendor of vendorItems) {
             if (!vendor.vendorId || !vendor.cartItems || vendor.shippingFee === undefined) {
                 return NextResponse.json({ error: "Each vendor item must have: vendorId, cartItems, shippingFee" }, { status: 400 });
+            }
+
+            // Validate that shipping fee is not zero (indicates shipping calculation failed or wasn't performed)
+            if (vendor.shippingFee <= 0) {
+                return NextResponse.json({ 
+                    error: `Shipping calculation required. Please ensure shipping rates are calculated before checkout for vendor ${vendor.vendorId}` 
+                }, { status: 400 });
+            }
+
+            // Validate that cartItems have required shipping dimensions for Shippo integration
+            for (const item of vendor.cartItems) {
+                if (!item.product.shippingWeight || item.product.shippingWeight <= 0) {
+                    return NextResponse.json({ 
+                        error: `Product "${item.product.name}" is missing shipping weight. Please contact the vendor to update product shipping information.` 
+                    }, { status: 400 });
+                }
+                
+                // Check for basic shipping dimensions (use defaults if missing)
+                if (!item.product.shippingLength) item.product.shippingLength = 6;
+                if (!item.product.shippingWidth) item.product.shippingWidth = 4;  
+                if (!item.product.shippingHeight) item.product.shippingHeight = 2;
             }
             
             // If stripeAccountId is missing, fetch it from the vendors collection

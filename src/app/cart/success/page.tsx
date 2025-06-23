@@ -117,6 +117,21 @@ export default function CartSuccessPage() {
                     </div>
                 </div>
 
+                {/* Cart Cleared Notification */}
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-8">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p className="font-medium text-blue-900">Your cart has been cleared</p>
+                            <p className="text-sm text-blue-700">All items have been successfully ordered and removed from your cart.</p>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Order Summary Cards */}
                 <div className="space-y-6 mb-8">
                     {orderSummary.orders.map((order, index) => (

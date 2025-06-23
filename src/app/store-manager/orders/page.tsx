@@ -13,10 +13,11 @@ type Order = {
     amount: number;
     subtotal?: number;
     shippingCost?: number;
-    payoutStatus: 'available' | 'pending' | 'paid';
+    payoutStatus: 'available' | 'pending' | 'paid' | 'withdrawn';
     products: Array<{
         productId: string;
         productName: string;
+        productImage?: string;
         quantity: number;
         price: number;
     }>;
@@ -36,6 +37,8 @@ type Order = {
     currency: string;
     withdrawAvailableDate?: { seconds: number };
     shippingStatus?: string;
+    shippingError?: string;
+    stripeTransferId?: string;
 };
 
 type SortField = 'purchaseDate' | 'amount' | 'payoutStatus' | 'customerName' | 'products';
@@ -153,6 +156,7 @@ export default function Page() {
             available: 'bg-green-100 text-green-800 border-green-200',
             pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
             paid: 'bg-blue-100 text-blue-800 border-blue-200',
+            withdrawn: 'bg-purple-100 text-purple-800 border-purple-200',
         };
         return styles[status as keyof typeof styles] || 'bg-gray-100 text-gray-800 border-gray-200';
     };
@@ -169,6 +173,64 @@ export default function Page() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ vendorId: user.uid }),
         });
+    };
+
+    const handleIndividualWithdraw = async (orderId: string) => {
+        if (!user) return;
+        try {
+            const response = await fetch(`/api/v1/vendor/withdraw-order`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ vendorId: user.uid, orderId }),
+            });
+            
+            if (response.ok) {
+                // Refresh orders to update the status
+                const res = await fetch(`/api/v1/vendor/orders?vendorId=${user.uid}`);
+                const data = await res.json();
+                setOrders(data.orders || []);
+            }
+        } catch (error) {
+            console.error('Failed to withdraw order:', error);
+        }
+    };
+
+    const getDaysUntilWithdraw = (order: Order) => {
+        const withdrawDate = typeof order.withdrawAvailableDate === 'object' 
+            ? new Date(order.withdrawAvailableDate.seconds * 1000)
+            : new Date(order.withdrawAvailableDate || '');
+        const now = new Date();
+        const diffTime = withdrawDate.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return Math.max(0, diffDays);
+    };
+
+    const canWithdraw = (order: Order) => {
+        return order.payoutStatus === 'available' && getDaysUntilWithdraw(order) <= 0;
+    };
+
+    const retryShippingLabel = async (orderId: string) => {
+        if (!user) return;
+        try {
+            const response = await fetch(`/api/v1/shipping/retry-label`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ orderId }),
+            });
+            
+            if (response.ok) {
+                // Refresh orders to update the status
+                const res = await fetch(`/api/v1/vendor/orders?vendorId=${user.uid}`);
+                const data = await res.json();
+                setOrders(data.orders || []);
+            } else {
+                const errorData = await response.json();
+                alert(`Failed to retry shipping label: ${errorData.error}`);
+            }
+        } catch (error) {
+            console.error('Failed to retry shipping label:', error);
+            alert('Failed to retry shipping label. Please try again.');
+        }
     };
 
     if (loading) {
@@ -194,7 +256,7 @@ export default function Page() {
 
     return (
         <StoreManagerTemplate>
-            <div className="space-y-6">
+                <div className="space-y-6">
                 {/* Header */}
                 <div className="flex justify-between items-center">
                     <div>
@@ -244,6 +306,7 @@ export default function Page() {
                                 <option value="available">Available</option>
                                 <option value="pending">Pending</option>
                                 <option value="paid">Paid</option>
+                                <option value="withdrawn">Withdrawn</option>
                             </select>
                         </div>
 
@@ -391,7 +454,6 @@ export default function Page() {
                                                         <FaDownload className="w-4 h-4" />
                                                     </a>
                                                 )}
-
                                             </div>
                                         </td>
                                     </tr>
@@ -456,31 +518,72 @@ export default function Page() {
                             </div>
                         </div>
                         <div className="p-6 space-y-6">
-                            {/* Order Info */}
-                            <div className="grid grid-cols-2 gap-6">
-                                <div>
-                                    <h3 className="font-semibold mb-2">Order Information</h3>
+                            {/* Order Overview */}
+                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-lg font-semibold text-blue-900">Order #{selectedOrder.id.substring(0, 8)}...</h3>
+                                        <p className="text-blue-700 text-sm">Placed on {formatDate(selectedOrder.purchaseDate)}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-2xl font-bold text-blue-900">${selectedOrder.amount.toFixed(2)}</div>
+                                        <span className={`inline-flex px-3 py-1 text-sm font-medium rounded-full ${getStatusBadge(selectedOrder.payoutStatus)}`}>
+                                            {selectedOrder.payoutStatus.toUpperCase()}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Detailed Order Info */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                                    <h3 className="font-semibold mb-3 text-gray-900 flex items-center gap-2">
+                                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                        Order Details
+                                    </h3>
                                     <div className="space-y-2 text-sm">
-                                        <div><strong>Order ID:</strong> {selectedOrder.id}</div>
-                                        <div><strong>Date:</strong> {formatDate(selectedOrder.purchaseDate)}</div>
-                                        <div><strong>Status:</strong> 
-                                            <span className={`ml-2 px-2 py-1 text-xs rounded-full ${getStatusBadge(selectedOrder.payoutStatus)}`}>
-                                                {selectedOrder.payoutStatus}
-                                            </span>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Order ID:</span>
+                                            <span className="font-mono text-gray-900">{selectedOrder.id}</span>
                                         </div>
-                                        {selectedOrder.trackingNumber && (
-                                            <div><strong>Tracking:</strong> {selectedOrder.trackingNumber}</div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Customer ID:</span>
+                                            <span className="font-mono text-gray-900">{selectedOrder.customerId || 'N/A'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Currency:</span>
+                                            <span className="uppercase font-medium">{selectedOrder.currency}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Items Count:</span>
+                                            <span className="font-medium">{selectedOrder.products.reduce((sum, p) => sum + p.quantity, 0)}</span>
+                                        </div>
+                                        {selectedOrder.refundStatus && selectedOrder.refundStatus !== 'none' && (
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-600">Refund Status:</span>
+                                                <span className="font-medium text-red-600">{selectedOrder.refundStatus}</span>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
-                                <div>
-                                    <h3 className="font-semibold mb-2">Customer Information</h3>
+
+                                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                                    <h3 className="font-semibold mb-3 text-gray-900 flex items-center gap-2">
+                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                        Customer Info
+                                    </h3>
                                     <div className="space-y-2 text-sm">
-                                        <div><strong>Name:</strong> {selectedOrder.shippingAddress.name || 'N/A'}</div>
-                                        <div><strong>Email:</strong> {selectedOrder.customerEmail || 'N/A'}</div>
                                         <div>
-                                            <strong>Shipping Address:</strong>
-                                            <div className="mt-1 text-gray-600">
+                                            <span className="text-gray-600 block">Name:</span>
+                                            <span className="font-medium">{selectedOrder.shippingAddress.name || 'N/A'}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-600 block">Email:</span>
+                                            <span className="font-medium">{selectedOrder.customerEmail || 'N/A'}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-600 block">Shipping Address:</span>
+                                            <div className="text-gray-900 text-xs leading-relaxed bg-gray-50 p-2 rounded mt-1">
                                                 {selectedOrder.shippingAddress.name}<br/>
                                                 {selectedOrder.shippingAddress.street}<br/>
                                                 {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.zip}<br/>
@@ -489,70 +592,240 @@ export default function Page() {
                                         </div>
                                     </div>
                                 </div>
+
+                                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                                    <h3 className="font-semibold mb-3 text-gray-900 flex items-center gap-2">
+                                        <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                                        Fulfillment
+                                    </h3>
+                                    <div className="space-y-2 text-sm">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">Shipping Status:</span>
+                                            <span className={`font-medium ${
+                                                selectedOrder.shippingStatus === 'shipped' ? 'text-green-600' :
+                                                selectedOrder.shippingStatus === 'pending' ? 'text-yellow-600' :
+                                                'text-gray-600'
+                                            }`}>
+                                                {selectedOrder.shippingStatus || 'Not Set'}
+                                            </span>
+                                        </div>
+                                        {selectedOrder.trackingNumber && (
+                                            <div>
+                                                <span className="text-gray-600 block">Tracking Number:</span>
+                                                <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                                                    {selectedOrder.trackingNumber}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {selectedOrder.shippoLabelUrl && (
+                                            <div className="flex items-center gap-1 text-green-600">
+                                                <FaDownload className="w-3 h-3" />
+                                                <span className="text-xs">Shipping Label Available</span>
+                                            </div>
+                                        )}
+                                        {!selectedOrder.trackingNumber && !selectedOrder.shippoLabelUrl && (
+                                            <div className="text-gray-500 text-xs">No shipping information available</div>
+                                        )}
+                                        {selectedOrder.shippingStatus === 'label_failed' && (
+                                            <div className="text-red-600 text-xs">⚠️ Shipping Label Error</div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Financial Information */}
+                            <div className="bg-white border border-gray-200 rounded-lg p-4">
+                                <h3 className="font-semibold mb-3 text-gray-900 flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                                    Financial Details
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <h4 className="font-medium text-gray-700 mb-2">Payout Information</h4>
+                                        <div className="space-y-2 text-sm">
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-600">Payout Status:</span>
+                                                <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadge(selectedOrder.payoutStatus)}`}>
+                                                    {selectedOrder.payoutStatus}
+                                                </span>
+                                            </div>
+                                            {selectedOrder.withdrawAvailableDate && (
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Available Date:</span>
+                                                    <span className="font-medium">
+                                                        {formatDate(selectedOrder.withdrawAvailableDate)}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-600">Days Until Withdraw:</span>
+                                                <span className={`font-medium ${getDaysUntilWithdraw(selectedOrder) <= 0 ? 'text-green-600' : 'text-yellow-600'}`}>
+                                                    {getDaysUntilWithdraw(selectedOrder) <= 0 ? 'Available Now' : `${getDaysUntilWithdraw(selectedOrder)} days`}
+                                                </span>
+                                            </div>
+                                            {selectedOrder.stripeTransferId && (
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Transfer ID:</span>
+                                                    <span className="font-mono text-xs">{selectedOrder.stripeTransferId}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h4 className="font-medium text-gray-700 mb-2">Amount Breakdown</h4>
+                                        <div className="space-y-2 text-sm">
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-600">Subtotal:</span>
+                                                <span className="font-medium">${selectedOrder.subtotal?.toFixed(2) || selectedOrder.amount.toFixed(2)}</span>
+                                            </div>
+                                            {selectedOrder.shippingCost && (
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Shipping:</span>
+                                                    <span className="font-medium">${selectedOrder.shippingCost.toFixed(2)}</span>
+                                                </div>
+                                            )}
+                                            <div className="flex justify-between border-t border-gray-200 pt-2">
+                                                <span className="font-semibold">Total:</span>
+                                                <span className="font-semibold text-lg">${selectedOrder.amount.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-xs text-gray-500">
+                                                <span>Platform Fee (10%):</span>
+                                                <span>-${(selectedOrder.amount * 0.1).toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-sm font-medium text-green-600 border-t border-gray-200 pt-1">
+                                                <span>Your Earnings:</span>
+                                                <span>${(selectedOrder.amount * 0.9).toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Products */}
-                            <div>
-                                <h3 className="font-semibold mb-2">Products</h3>
-                                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                            <div className="bg-white border border-gray-200 rounded-lg p-4">
+                                <h3 className="font-semibold mb-3 text-gray-900 flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                                    Products Ordered ({selectedOrder.products.length} items)
+                                </h3>
+                                <div className="overflow-x-auto">
                                     <table className="w-full">
                                         <thead className="bg-gray-50">
                                             <tr>
-                                                <th className="text-left py-2 px-3 text-sm font-medium">Product</th>
-                                                <th className="text-left py-2 px-3 text-sm font-medium">Quantity</th>
-                                                <th className="text-left py-2 px-3 text-sm font-medium">Price</th>
-                                                <th className="text-left py-2 px-3 text-sm font-medium">Total</th>
+                                                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Product</th>
+                                                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">ID</th>
+                                                <th className="text-center py-3 px-4 text-sm font-medium text-gray-700">Quantity</th>
+                                                <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Unit Price</th>
+                                                <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Line Total</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-200">
                                             {selectedOrder.products.map((product, i) => (
-                                                <tr key={i}>
-                                                    <td className="py-2 px-3 text-sm">{product.productName}</td>
-                                                    <td className="py-2 px-3 text-sm">{product.quantity}</td>
-                                                    <td className="py-2 px-3 text-sm">${product.price.toFixed(2)}</td>
-                                                    <td className="py-2 px-3 text-sm">${(product.price * product.quantity).toFixed(2)}</td>
+                                                <tr key={i} className="hover:bg-gray-50">
+                                                    <td className="py-3 px-4">
+                                                        <div className="flex items-center gap-3">
+                                                            {product.productImage && (
+                                                                <img 
+                                                                    src={product.productImage} 
+                                                                    alt={product.productName}
+                                                                    className="w-12 h-12 object-cover rounded-lg"
+                                                                />
+                                                            )}
+                                                            <div>
+                                                                <div className="font-medium text-gray-900">{product.productName}</div>
+                                                                <div className="text-xs text-gray-500">SKU: {product.productId.substring(0, 8)}...</div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-3 px-4 text-sm font-mono text-gray-600">
+                                                        {product.productId.substring(0, 12)}...
+                                                    </td>
+                                                    <td className="py-3 px-4 text-center">
+                                                        <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
+                                                            {product.quantity}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-3 px-4 text-right text-sm font-medium">${product.price.toFixed(2)}</td>
+                                                    <td className="py-3 px-4 text-right text-sm font-bold">${(product.price * product.quantity).toFixed(2)}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
+                                        <tfoot className="bg-gray-50">
+                                            <tr>
+                                                <td colSpan={4} className="py-3 px-4 text-right font-medium text-gray-700">
+                                                    Items Subtotal:
+                                                </td>
+                                                <td className="py-3 px-4 text-right font-bold text-lg">
+                                                    ${selectedOrder.products.reduce((sum, p) => sum + (p.price * p.quantity), 0).toFixed(2)}
+                                                </td>
+                                            </tr>
+                                        </tfoot>
                                     </table>
                                 </div>
                             </div>
 
-                            {/* Order Totals */}
-                            <div className="bg-gray-50 p-4 rounded-lg">
-                                <h3 className="font-semibold mb-2">Order Totals</h3>
-                                <div className="space-y-1 text-sm">
-                                    <div className="flex justify-between">
-                                        <span>Subtotal:</span>
-                                        <span>${selectedOrder.subtotal?.toFixed(2) || selectedOrder.amount.toFixed(2)}</span>
-                                    </div>
-                                    {selectedOrder.shippingCost && (
-                                        <div className="flex justify-between">
-                                            <span>Shipping:</span>
-                                            <span>${selectedOrder.shippingCost.toFixed(2)}</span>
-                                        </div>
-                                    )}
-                                    <div className="flex justify-between font-semibold border-t border-gray-300 pt-1">
-                                        <span>Total:</span>
-                                        <span>${selectedOrder.amount.toFixed(2)}</span>
-                                    </div>
-                                </div>
-                            </div>
-
                             {/* Actions */}
-                            <div className="flex gap-3">
-                                {selectedOrder.shippoLabelUrl && (
-                                    <a
-                                        href={selectedOrder.shippoLabelUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                                <h3 className="font-semibold mb-3 text-gray-900">Quick Actions</h3>
+                                <div className="flex flex-wrap gap-3">
+                                    {selectedOrder.shippoLabelUrl && (
+                                        <a
+                                            href={selectedOrder.shippoLabelUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                                        >
+                                            <FaDownload className="w-4 h-4" />
+                                            Download Shipping Label
+                                        </a>
+                                    )}
+                                    
+                                    {selectedOrder.trackingNumber && (
+                                        <button
+                                            onClick={() => navigator.clipboard.writeText(selectedOrder.trackingNumber!)}
+                                            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2"
+                                        >
+                                            <FaShippingFast className="w-4 h-4" />
+                                            Copy Tracking Number
+                                        </button>
+                                    )}
+                                    
+                                    <button
+                                        onClick={() => navigator.clipboard.writeText(selectedOrder.customerEmail || '')}
+                                        className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                                        disabled={!selectedOrder.customerEmail}
                                     >
-                                        <FaDownload className="w-4 h-4" />
-                                        Download Shipping Label
-                                    </a>
-                                )}
-
+                                        <FaEye className="w-4 h-4" />
+                                        Copy Customer Email
+                                    </button>
+                                    
+                                    {canWithdraw(selectedOrder) && selectedOrder.payoutStatus !== 'withdrawn' && (
+                                        <button
+                                            onClick={() => handleIndividualWithdraw(selectedOrder.id)}
+                                            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+                                        >
+                                            <FaDownload className="w-4 h-4" />
+                                            Withdraw Funds (${(selectedOrder.amount * 0.9).toFixed(2)})
+                                        </button>
+                                    )}
+                                    
+                                    {selectedOrder.shippingStatus === 'label_failed' && (
+                                        <button
+                                            onClick={() => retryShippingLabel(selectedOrder.id)}
+                                            className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors flex items-center gap-2"
+                                        >
+                                            <FaShippingFast className="w-4 h-4" />
+                                            Retry Shipping Label
+                                        </button>
+                                    )}
+                                    
+                                    <button
+                                        onClick={() => window.print()}
+                                        className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2"
+                                    >
+                                        <FaEye className="w-4 h-4" />
+                                        Print Order Details
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ButtonLink } from "@/components/Links";
 import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
+import { FaFish, FaUsers, FaStore, FaHeart } from "react-icons/fa";
 
 export default function Page() {
     const [aboutImage, setAboutImage] = useState<string | null>(null);
@@ -27,27 +28,92 @@ export default function Page() {
     }, []);
 
     return (
-        <div className="flex flex-col mb-2">
-            <Slide className="mb-2" backgroundSrc={aboutImage || placeholder.src}>
-                <div className="h-[500px] 2xl:h-[750px] flex flex-col px-16 py-32 w-1/2 justify-center">
+        <div className="flex flex-col">
+            {/* Hero Section */}
+            <Slide className="mb-0" backgroundSrc={aboutImage || placeholder.src}>
+                <div className="h-[500px] 2xl:h-[750px] flex flex-col px-6 md:px-16 py-32 w-full md:w-1/2 justify-center">
                     <div className="flex flex-col gap-8">
-                        <h1 className="text-6xl font-semibold">ABOUT US</h1>
-                        <p className="text-lg">We grew up Monmouth County, New Jersey and have been fishing since the age of 2. Throughout the years our fishing interests have shifted from bass on light spinning gear on our neighbors dock, to permit on fly in the Florida Keys. Sneaking in every opportunity we can to tie flies, cast to fish, or watch videos to inspire our next trip, we balance our college education and our passion. </p>
+                        <h1 className="text-4xl md:text-6xl font-bold text-white drop-shadow-lg">ABOUT US</h1>
+                        <p className="text-lg md:text-xl text-white drop-shadow-md leading-relaxed bg-black bg-opacity-30 p-6 rounded-lg backdrop-blur-sm">
+                            We grew up Monmouth County, New Jersey and have been fishing since the age of 2. Throughout the years our fishing interests have shifted from bass on light spinning gear on our neighbors dock, to permit on fly in the Florida Keys. Sneaking in every opportunity we can to tie flies, cast to fish, or watch videos to inspire our next trip, we balance our college education and our passion.
+                        </p>
                     </div>
                 </div>
             </Slide>
             
-            <div className="grid grid-cols-2 p-8">
-                <div className="flex flex-col gap-8 2xl:gap-24">
-                    <div className="flex flex-col gap-4 2xl:gap-8">
-                        <p className="text-xl 2xl:text-2xl">Our goal at ForReelFlies is to bridge the gap between those who love to tie flies and those who love to use them. We want to connect our amazing fly tiers with you to help fool that fish you have always wanted to catch. </p>
-                        <p className="text-xl 2xl:text-2xl">Our blog is a culmination of your catches on flies purchased from one of our vendors. Be sure to send us pictures for us to post!</p>
-                        <p className="text-xl 2xl:text-2xl">We take great care in finding trusted vendors who share our dedication to quality and performance.</p>
-                        <p className="text-xl 2xl:text-2xl">Join us and <Link href="/"><span className="text-greenPrimary font-medium">Become a Vendor</span></Link> and experience the thrill of connecting with your clients to best meet their needs. </p>
+            {/* Main Content Section */}
+            <div className="bg-gray-50">
+                <div className="max-w-7xl mx-auto px-6 py-16">
+                    {/* Mission Statement Cards */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
+                        {/* Left Column - Mission */}
+                        <div className="space-y-8">
+                            <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100 h-64 flex flex-col">
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="bg-green-100 p-3 rounded-full">
+                                        <FaUsers className="w-6 h-6 text-green-600" />
+                                    </div>
+                                    <h2 className="text-2xl font-bold text-gray-900">Our Mission</h2>
+                                </div>
+                                <p className="text-xl text-gray-700 leading-relaxed flex-1">
+                                    Our goal at ForReelFlies is to bridge the gap between those who love to tie flies and those who love to use them. We want to connect our amazing fly tiers with you to help fool that fish you have always wanted to catch.
+                                </p>
+                            </div>
+
+                            <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100 h-64 flex flex-col">
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="bg-blue-100 p-3 rounded-full">
+                                        <FaFish className="w-6 h-6 text-blue-600" />
+                                    </div>
+                                    <h2 className="text-2xl font-bold text-gray-900">Community Stories</h2>
+                                </div>
+                                <p className="text-xl text-gray-700 leading-relaxed flex-1">
+                                    Our blog is a culmination of your catches on flies purchased from one of our vendors. Be sure to send us pictures for us to post!
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Right Column - Quality & Partnership */}
+                        <div className="space-y-8">
+                            <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100 h-64 flex flex-col">
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="bg-purple-100 p-3 rounded-full">
+                                        <FaHeart className="w-6 h-6 text-purple-600" />
+                                    </div>
+                                    <h2 className="text-2xl font-bold text-gray-900">Quality Promise</h2>
+                                </div>
+                                <p className="text-xl text-gray-700 leading-relaxed flex-1">
+                                    We take great care in finding trusted vendors who share our dedication to quality and performance.
+                                </p>
+                            </div>
+
+                            <div className="bg-white rounded-xl shadow-lg p-8 border border-gray-100 h-64 flex flex-col">
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="bg-green-100 p-3 rounded-full">
+                                        <FaStore className="w-6 h-6 text-green-600" />
+                                    </div>
+                                    <h2 className="text-2xl font-bold text-gray-900">Join Our Network</h2>
+                                </div>
+                                <p className="text-xl text-gray-700 leading-relaxed flex-1">
+                                    Join us and <Link href="/vendor-signup" className="text-green-600 font-semibold hover:text-green-700 underline decoration-2 underline-offset-2">Become a Vendor</Link> and experience the thrill of connecting with your clients to best meet their needs.
+                                </p>
+                            </div>
+                        </div>
                     </div>
-                    <div className="flex flex-col gap-5">
-                        <h3 className="text-3xl 2xl:text-4xl">Sell your product with us!</h3>
-                        <ButtonLink className="w-[200px] 2xl:w-[300px] 2xl:h-[60px] 2xl:text-xl p-2 rounded-lg" href="/" text="Become a Vendor" />
+
+                    {/* Call to Action Section */}
+                    <div className="bg-white rounded-2xl shadow-2xl p-12 text-center border border-gray-100">
+                        <div className="max-w-3xl mx-auto">
+                            <h3 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900">Sell your product with us!</h3>
+                            <p className="text-xl mb-8 text-gray-700 leading-relaxed">
+                                Ready to share your passion for fly tying with anglers everywhere? Join our community of skilled artisans and start selling your flies today.
+                            </p>
+                            <ButtonLink 
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-xl font-semibold rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 inline-block" 
+                                href="/vendor-signup" 
+                                text="Become a Vendor" 
+                            />
+                        </div>
                     </div>
                 </div>
             </div>

@@ -1,5 +1,5 @@
 import { db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, collection, addDoc, updateDoc, query, where, getDocs } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, addDoc, updateDoc, query, where, getDocs, deleteDoc } from "firebase/firestore";
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { Order } from "@/app/types/types";
@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
 
       // Retrieve full cart data from Firestore
       let vendorDetails;
+      let userId;
       try {
         const checkoutDoc = await getDoc(doc(db, "checkoutSessions", session.metadata.checkoutSessionId));
         if (!checkoutDoc.exists()) {
@@ -52,6 +53,7 @@ export async function POST(request: NextRequest) {
         
         const checkoutData = checkoutDoc.data();
         vendorDetails = checkoutData.vendorDetails;
+        userId = checkoutData.userId; // Store userId for cart clearing
         
         if (!vendorDetails || vendorDetails.length === 0) {
           return NextResponse.json(
@@ -127,84 +129,192 @@ export async function POST(request: NextRequest) {
         };
         const orderRef = await addDoc(collection(db, "orders"), order);
 
-        // --- Shippo Integration ---
+        // --- Enhanced Shippo Integration ---
         try {
           console.log("Starting Shippo integration for order:", orderRef.id);
           
-          // 1. Prepare addresses
+          // 1. Prepare addresses with validation
           // Sender: vendor info (fetch from vendors collection)
           const vendorDoc = await getDoc(doc(db, "vendors", vendor.vendorId));
           const vendorData = vendorDoc.data();
           console.log("Vendor data for shipping:", vendorData);
           
+          // Validate vendor address
+          if (!vendorData?.storeStreetAddress || !vendorData?.storeCity || !vendorData?.storeState || !vendorData?.storeZip) {
+            console.error("Incomplete vendor address for shipping:", vendorData);
+            throw new Error(`Vendor address is incomplete for shipping. Missing: ${[
+              !vendorData?.storeStreetAddress && 'street',
+              !vendorData?.storeCity && 'city', 
+              !vendorData?.storeState && 'state',
+              !vendorData?.storeZip && 'zip'
+            ].filter(Boolean).join(', ')}`);
+          }
+          
           const address_from = {
-            name: vendorData?.storeName || '',
-            street1: vendorData?.storeStreetAddress || '',
-            city: vendorData?.storeCity || '',
-            state: vendorData?.storeState || '',
-            zip: vendorData?.storeZip || '',
-            country: vendorData?.storeCountry || '',
+            name: vendorData.storeName || 'Store',
+            street1: vendorData.storeStreetAddress,
+            city: vendorData.storeCity,
+            state: vendorData.storeState,
+            zip: vendorData.storeZip,
+            country: vendorData.storeCountry || 'US',
+            phone: vendorData.storePhone || '',
+            email: vendorData.storeEmail || '',
           };
           
-          // Recipient: order shipping address
+          // Recipient: order shipping address with validation
+          if (!order.shippingAddress.street || !order.shippingAddress.city || !order.shippingAddress.state || !order.shippingAddress.zip) {
+            console.error("Incomplete customer address for shipping:", order.shippingAddress);
+            throw new Error(`Customer address is incomplete for shipping. Missing: ${[
+              !order.shippingAddress.street && 'street',
+              !order.shippingAddress.city && 'city',
+              !order.shippingAddress.state && 'state', 
+              !order.shippingAddress.zip && 'zip'
+            ].filter(Boolean).join(', ')}`);
+          }
+          
           const address_to = {
-            name: order.shippingAddress.name,
+            name: order.shippingAddress.name || 'Customer',
             street1: order.shippingAddress.street,
             city: order.shippingAddress.city,
             state: order.shippingAddress.state,
             zip: order.shippingAddress.zip,
-            country: order.shippingAddress.country,
+            country: order.shippingAddress.country || 'US',
           };
           
           console.log("Shippo addresses:", { address_from, address_to });
-          // 2. Prepare parcels (combine all products for this vendor)
-          // For simplicity, sum weights and use max dimensions
-          const totalWeight = products.reduce((sum: number, p: any) => sum + (p.quantity * (vendor.cartItems.find((i: any) => i.product.id === p.productId)?.product.shippingWeight || 1)), 0);
-          const maxLength = Math.max(...products.map((p: any) => vendor.cartItems.find((i: any) => i.product.id === p.productId)?.product.shippingLength || 1));
-          const maxWidth = Math.max(...products.map((p: any) => vendor.cartItems.find((i: any) => i.product.id === p.productId)?.product.shippingWidth || 1));
-          const maxHeight = Math.max(...products.map((p: any) => vendor.cartItems.find((i: any) => i.product.id === p.productId)?.product.shippingHeight || 1));
+          
+          // 2. Prepare parcels with better defaults and validation
+          console.log("Products for shipping calculation:", products);
+          console.log("Vendor cart items:", vendor.cartItems);
+          
+          if (!vendor.cartItems || vendor.cartItems.length === 0) {
+            throw new Error("No cart items found for shipping calculation");
+          }
+          
+          const totalWeight = products.reduce((sum: number, p: any) => {
+            const cartItem = vendor.cartItems.find((i: any) => i.product.id === p.productId);
+            const productWeight = cartItem?.product?.shippingWeight || 1;
+            console.log(`Product ${p.productId}: weight ${productWeight}, quantity ${p.quantity}`);
+            return sum + (p.quantity * productWeight);
+          }, 0);
+          
+          const maxLength = Math.max(...products.map((p: any) => {
+            const cartItem = vendor.cartItems.find((i: any) => i.product.id === p.productId);
+            return cartItem?.product?.shippingLength || 6;
+          }));
+          const maxWidth = Math.max(...products.map((p: any) => {
+            const cartItem = vendor.cartItems.find((i: any) => i.product.id === p.productId);
+            return cartItem?.product?.shippingWidth || 4;
+          }));
+          const maxHeight = Math.max(...products.map((p: any) => {
+            const cartItem = vendor.cartItems.find((i: any) => i.product.id === p.productId);
+            return cartItem?.product?.shippingHeight || 2;
+          }));
+          
           const parcels = [{
-            length: maxLength.toString(),
-            width: maxWidth.toString(),
-            height: maxHeight.toString(),
+            length: Math.max(maxLength, 1).toString(),
+            width: Math.max(maxWidth, 1).toString(),
+            height: Math.max(maxHeight, 1).toString(),
             distance_unit: "in",
-            weight: totalWeight.toString(),
+            weight: Math.max(totalWeight, 0.1).toString(), // Minimum weight
             mass_unit: "lb",
           }];
+          
+          console.log("Shippo parcels:", parcels);
+          
           // 3. Create shipment (get rates)
+          const shipmentPayload = {
+            address_from,
+            address_to,
+            parcels,
+            async: false,
+            extra: {
+              reference_1: orderRef.id, // Order reference
+              reference_2: `Vendor: ${vendor.vendorName}`,
+            }
+          };
+          
           const shipmentRes = await fetch("https://api.goshippo.com/shipments/", {
             method: "POST",
             headers: {
               "Authorization": `ShippoToken ${process.env.SHIPPO_KEY}`,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ address_from, address_to, parcels, async: false }),
+            body: JSON.stringify(shipmentPayload),
           });
-          if (!shipmentRes.ok) throw new Error("Failed to create Shippo shipment");
+          
+          if (!shipmentRes.ok) {
+            const errorText = await shipmentRes.text();
+            console.error("Shippo shipment creation failed:", errorText);
+            throw new Error(`Failed to create Shippo shipment: ${errorText}`);
+          }
+          
           const shipmentData = await shipmentRes.json();
+          console.log("Shippo shipment created:", shipmentData.object_id);
+          
           const rates = shipmentData.rates;
-          if (!rates || !rates.length) throw new Error("No Shippo rates found");
-          // Pick the cheapest rate
-          const cheapestRate = rates.reduce((min: any, r: any) => parseFloat(r.amount) < parseFloat(min.amount) ? r : min, rates[0]);
-          // 4. Purchase label (create transaction)
+          if (!rates || !rates.length) {
+            console.error("No Shippo rates available for shipment:", shipmentData);
+            throw new Error("No Shippo rates found");
+          }
+          
+          // Pick the cheapest rate (or Ground service if available)
+          const groundRate = rates.find((r: any) => r.servicelevel.name.toLowerCase().includes('ground'));
+          const cheapestRate = groundRate || rates.reduce((min: any, r: any) => 
+            parseFloat(r.amount) < parseFloat(min.amount) ? r : min, rates[0]
+          );
+          
+          console.log("Selected rate:", cheapestRate.servicelevel.name, "$" + cheapestRate.amount);
+          
+                     // 4. Purchase label (create transaction)
+           const transactionPayload = {
+             rate: cheapestRate.object_id,
+             label_file_type: "PDF",
+             async: false
+           };
+          
           const transactionRes = await fetch("https://api.goshippo.com/transactions", {
             method: "POST",
             headers: {
               "Authorization": `ShippoToken ${process.env.SHIPPO_KEY}`,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ rate: cheapestRate.object_id, label_file_type: "PDF", async: false }),
+            body: JSON.stringify(transactionPayload),
           });
-          if (!transactionRes.ok) throw new Error("Failed to purchase Shippo label");
+          
+          if (!transactionRes.ok) {
+            const errorText = await transactionRes.text();
+            console.error("Shippo transaction creation failed:", errorText);
+            throw new Error(`Failed to purchase Shippo label: ${errorText}`);
+          }
+          
           const transactionData = await transactionRes.json();
-          // 5. Update order with label URL and tracking
+          console.log("Shippo label created:", transactionData.object_id);
+          
+          // 5. Update order with comprehensive shipping info
           await updateDoc(orderRef, {
             shippoLabelUrl: transactionData.label_url,
             trackingNumber: transactionData.tracking_number,
-            shippingStatus: "pending",
+            shippingStatus: "label_created",
+            shippoTransactionId: transactionData.object_id,
+            shippoShipmentId: shipmentData.object_id,
+            shippingCarrier: cheapestRate.provider,
+            shippingService: cheapestRate.servicelevel.name,
+            shippingCostActual: parseFloat(cheapestRate.amount),
+            estimatedDeliveryDate: cheapestRate.estimated_days ? 
+              new Date(Date.now() + (cheapestRate.estimated_days * 24 * 60 * 60 * 1000)) : null,
           });
+          
+          console.log("✅ Shipping label created successfully for order:", orderRef.id);
+          
         } catch (err) {
-          console.error("Shippo label creation failed for order", orderRef.id, err);
+          console.error("❌ Shippo label creation failed for order", orderRef.id, ":", err);
+          
+          // Update order to indicate shipping label creation failed
+          await updateDoc(orderRef, {
+            shippingStatus: "label_failed",
+            shippingError: err instanceof Error ? err.message : "Unknown error",
+          });
         }
       }
 
@@ -235,6 +345,33 @@ export async function POST(request: NextRequest) {
         } catch (transferError) {
           console.error(`Tried to transfer ${vendorAmount}. Transfer failed for vendor`, vendorId, transferError);
         }
+      }
+
+      // Clear user's cart after successful order processing
+      if (userId) {
+        try {
+          console.log(`Clearing cart for user: ${userId}`);
+          
+          // Delete the user's cart document
+          await deleteDoc(doc(db, "carts", userId));
+          
+          console.log(`✅ Cart cleared successfully for user: ${userId}`);
+        } catch (cartError) {
+          console.error(`Failed to clear cart for user ${userId}:`, cartError);
+          // Don't fail the entire webhook if cart clearing fails
+        }
+      } else {
+        console.warn("No userId found, cannot clear cart");
+      }
+
+      // Clean up temporary checkout session data
+      try {
+        console.log(`Cleaning up checkout session: ${session.metadata.checkoutSessionId}`);
+        await deleteDoc(doc(db, "checkoutSessions", session.metadata.checkoutSessionId));
+        console.log("✅ Checkout session cleaned up successfully");
+      } catch (cleanupError) {
+        console.error("Failed to clean up checkout session:", cleanupError);
+        // Don't fail the entire webhook if cleanup fails
       }
     } else if (event.type === "account.updated") {
       const account = event.data.object as Stripe.Account;
