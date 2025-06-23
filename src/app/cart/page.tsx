@@ -29,6 +29,9 @@ export default function Page() {
     const [error, setError] = useState<string | null>(null);
     const [rates, setRates] = useState<Rate[]>([]);
     const [showAddressModal, setShowAddressModal] = useState(false);
+    const [shippingCalculationStatus, setShippingCalculationStatus] = useState<'idle' | 'calculating' | 'success' | 'failed'>('idle');
+    const [shippingError, setShippingError] = useState<string | null>(null);
+    const [clearingCart, setClearingCart] = useState(false);
 
     useEffect(() => {
         if (status === 'loading') return; // Still loading session
@@ -92,24 +95,60 @@ export default function Page() {
 
                 if (session.user.streetAddress && session.user.city && session.user.state && session.user.zipCode && session.user.country) {
                     console.log("User has complete address, calculating shipping...");
+                    console.log("Cart items for shipping calculation:", items.map(item => ({
+                        id: item.product.id,
+                        name: item.product.name,
+                        vendorId: item.product.vendorId,
+                        vendorName: item.product.vendorName,
+                        hasShippingDimensions: !!(item.product.shippingWeight && item.product.shippingLength && item.product.shippingWidth && item.product.shippingHeight)
+                    })));
+                    
+                    setShippingCalculationStatus('calculating');
+                    setShippingError(null);
+                    
                     try {
                         const { calculateShipping } = await import("@/helpers/calculateShipping");
                         const userForShipping = {
                             ...session.user,
                             vendorSignUpStatus: session.user.vendorSignUpStatus as any
                         };
+                        
+                        console.log("Starting shipping calculation for user:", {
+                            username: userForShipping.username,
+                            address: `${userForShipping.streetAddress}, ${userForShipping.city}, ${userForShipping.state} ${userForShipping.zipCode}`
+                        });
+                        
                         const [calculatedRates, err] = await calculateShipping(userForShipping, items.map(item => item.product));
+                        
+                        console.log("Shipping calculation result:", {
+                            success: !err,
+                            error: err,
+                            ratesCount: calculatedRates.length,
+                            rates: calculatedRates.map(rate => ({
+                                vendorId: rate.sellerId,
+                                vendorName: rate.sellerName,
+                                amount: rate.amount,
+                                provider: rate.provider
+                            }))
+                        });
+                        
                         if (!err && calculatedRates.length > 0) {
                             setRates(calculatedRates);
-                            console.log("Initial shipping rates calculated:", calculatedRates);
+                            setShippingCalculationStatus('success');
+                            console.log("Initial shipping rates calculated successfully");
                         } else {
-                            console.log("Failed to calculate initial shipping rates:", err);
+                            console.error("Failed to calculate initial shipping rates:", err);
+                            setShippingCalculationStatus('failed');
+                            setShippingError(err || "Failed to calculate shipping rates");
                         }
                     } catch (shippingError) {
                         console.error('Error calculating shipping:', shippingError);
+                        setShippingCalculationStatus('failed');
+                        setShippingError(shippingError instanceof Error ? shippingError.message : "Shipping calculation failed");
                     }
                 } else {
                     console.log("User address incomplete, skipping shipping calculation");
+                    setShippingCalculationStatus('idle');
                 }
 
             } catch (error) {
@@ -181,21 +220,54 @@ export default function Page() {
                         }
                     });
                     
+                    setShippingCalculationStatus('calculating');
+                    setShippingError(null);
+                    
                     const [calculatedRates, err] = await calculateShipping(userForShipping, cartItems.map(item => item.product));
                     if (!err && calculatedRates.length > 0) {
                         setRates(calculatedRates);
+                        setShippingCalculationStatus('success');
                         console.log("Updated shipping rates:", calculatedRates);
                     } else {
                         console.log("No shipping rates calculated:", err);
+                        setShippingCalculationStatus('failed');
+                        setShippingError(err || "Failed to calculate shipping rates");
                     }
                 } catch (shippingError) {
                     console.error('Error calculating shipping:', shippingError);
+                    setShippingCalculationStatus('failed');
+                    setShippingError(shippingError instanceof Error ? shippingError.message : "Shipping calculation failed");
                 }
             }
         }, 1000); // 1 second delay to ensure session update
     };
 
-    if (status === 'loading' || loading) {
+    const handleClearCart = async () => {
+        if (!session?.user?.uid) return;
+        
+        setClearingCart(true);
+        try {
+            const response = await fetch(`/api/v1/user/cart?userId=${session.user.uid}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            
+            if (response.ok) {
+                setCartItems([]);
+                setRates([]);
+                setShippingCalculationStatus('idle');
+                console.log('Cart cleared successfully');
+            } else {
+                console.error('Failed to clear cart:', response.status);
+            }
+        } catch (error) {
+            console.error('Error clearing cart:', error);
+        } finally {
+            setClearingCart(false);
+        }
+    };
+
+    if (status === 'loading') {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-xl">Loading...</div>
@@ -225,7 +297,7 @@ export default function Page() {
         );
     }
 
-    if (cartItems.length === 0) {
+    if (cartItems.length === 0 && !loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
@@ -246,7 +318,7 @@ export default function Page() {
     ];
 
     // Calculate totals
-    const subtotal = cartItems
+    const subtotal = loading ? 0 : cartItems
         .map(item => item.product.price * item.quantity)
         .reduce((acc, val) => acc + val, 0);
 
@@ -257,25 +329,27 @@ export default function Page() {
     // Prepare vendor items for checkout by grouping cart items by vendor
     const vendorItemsMap = new Map<string, VendorItem>();
     
-    cartItems.forEach(cartItem => {
-        const vendorId = cartItem.product.vendorId;
-        
-        if (!vendorItemsMap.has(vendorId)) {
-            // Find shipping rate for this vendor
-            const vendorRate = rates.find(rate => rate.sellerId === vendorId);
-            const shippingFee = vendorRate ? vendorRate.amount : 0;
+    if (!loading) {
+        cartItems.forEach(cartItem => {
+            const vendorId = cartItem.product.vendorId;
             
-            vendorItemsMap.set(vendorId, {
-                vendorId: vendorId,
-                stripeAccountId: '', // TODO: Need to fetch vendor's Stripe account ID
-                cartItems: [],
-                shippingFee: shippingFee
-            });
-        }
-        
-        const vendorItem = vendorItemsMap.get(vendorId)!;
-        vendorItem.cartItems.push(cartItem);
-    });
+            if (!vendorItemsMap.has(vendorId)) {
+                // Find shipping rate for this vendor
+                const vendorRate = rates.find(rate => rate.sellerId === vendorId);
+                const shippingFee = vendorRate ? vendorRate.amount : 0;
+                
+                vendorItemsMap.set(vendorId, {
+                    vendorId: vendorId,
+                    stripeAccountId: '', // TODO: Need to fetch vendor's Stripe account ID
+                    cartItems: [],
+                    shippingFee: shippingFee
+                });
+            }
+            
+            const vendorItem = vendorItemsMap.get(vendorId)!;
+            vendorItem.cartItems.push(cartItem);
+        });
+    }
     
     const vendorItems: VendorItem[] = Array.from(vendorItemsMap.values());
 
@@ -307,7 +381,31 @@ export default function Page() {
                         </div>
 
                         {/* Cart items */}
-                        {cartItems.map((item) => {
+                        {loading ? (
+                            // Loading skeleton for cart items
+                            Array.from({ length: 2 }).map((_, index) => (
+                                <div key={index} className="flex flex-col md:flex-row items-center border-b border-gray-200 py-4 animate-pulse">
+                                    <div className="w-full md:w-1/2 flex items-center space-x-4">
+                                        <div className="h-40 w-40 bg-gray-200 rounded"></div>
+                                        <div className="flex flex-col items-start space-y-2">
+                                            <div className="h-4 bg-gray-200 rounded w-32"></div>
+                                            <div className="h-3 bg-gray-200 rounded w-24"></div>
+                                            <div className="h-3 bg-gray-200 rounded w-16"></div>
+                                        </div>
+                                    </div>
+                                    <div className="w-full md:w-1/6 mt-2 md:mt-0">
+                                        <div className="h-4 bg-gray-200 rounded w-16"></div>
+                                    </div>
+                                    <div className="w-full md:w-1/6 mt-2 md:mt-0">
+                                        <div className="h-8 bg-gray-200 rounded w-12"></div>
+                                    </div>
+                                    <div className="w-full md:w-1/6 mt-2 md:mt-0">
+                                        <div className="h-4 bg-gray-200 rounded w-16"></div>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            cartItems.map((item) => {
                             const productTotal = item.product.price * item.quantity;
                             const stockLabel = stockOptions.find(
                                 (option) => option.value === item.product.stockStatus
@@ -367,24 +465,30 @@ export default function Page() {
                                     </div>
                                 </div>
                             );
-                        })}
+                        }))}
 
                         {/* Coupon & Clear Row */}
-                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mt-6">
-                            <div className="flex items-center space-x-2">
-                                <input
-                                    type="text"
-                                    placeholder="Coupon code"
-                                    className="border p-2 rounded text-sm w-36"
-                                />
-                                <button className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors">
-                                    OK
+                        {!loading && (
+                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between mt-6">
+                                <div className="flex items-center space-x-2">
+                                    <input
+                                        type="text"
+                                        placeholder="Coupon code"
+                                        className="border p-2 rounded text-sm w-36"
+                                    />
+                                    <button className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors">
+                                        OK
+                                    </button>
+                                </div>
+                                <button 
+                                    onClick={handleClearCart}
+                                    disabled={clearingCart}
+                                    className="text-red-500 mt-4 md:mt-0 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {clearingCart ? 'Clearing...' : 'Clear Shopping Cart'}
                                 </button>
                             </div>
-                            <button className="text-red-500 mt-4 md:mt-0 hover:underline">
-                                Clear Shopping Cart
-                            </button>
-                        </div>
+                        )}
                     </div>
 
                     {/* Right side: Order summary */}
@@ -395,7 +499,11 @@ export default function Page() {
                         {/* Subtotal */}
                         <div className="flex justify-between text-gray-700">
                             <span>Subtotal</span>
-                            <span>${subtotal.toFixed(2)}</span>
+                            {loading ? (
+                                <div className="h-4 bg-gray-200 rounded w-16 animate-pulse"></div>
+                            ) : (
+                                <span>${subtotal.toFixed(2)}</span>
+                            )}
                         </div>
                         
                         {/* Shipping */}
@@ -434,7 +542,10 @@ export default function Page() {
                                         {session.user.streetAddress}, {session.user.city}, {session.user.state} {session.user.zipCode}
                                     </div>
                                     <div className="text-xs text-green-600 mt-1">
-                                        Calculating shipping rates...
+                                        {shippingCalculationStatus === 'calculating' ? 'Calculating shipping rates...' :
+                                         shippingCalculationStatus === 'success' ? 'Shipping rates calculated' :
+                                         shippingCalculationStatus === 'failed' ? 'Failed to calculate shipping' :
+                                         'Ready for shipping calculation'}
                                     </div>
                                 </div>
                             ) : null}
@@ -553,11 +664,88 @@ export default function Page() {
                         {/* Total */}
                         <div className="border-t border-gray-300 pt-2 flex justify-between text-gray-800 font-semibold">
                             <span>Total</span>
-                            <span>${total.toFixed(2)}</span>
+                            {loading ? (
+                                <div className="h-5 bg-gray-200 rounded w-20 animate-pulse"></div>
+                            ) : (
+                                <span>${total.toFixed(2)}</span>
+                            )}
                         </div>
 
+                        {/* Shipping Status Indicator */}
+                        {shippingCalculationStatus === 'calculating' && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                <div className="flex items-center gap-2">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                    <span className="text-sm text-blue-800">Calculating shipping rates...</span>
+                                </div>
+                            </div>
+                        )}
+                        
+                        {shippingCalculationStatus === 'failed' && (
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                <div className="flex items-start gap-2">
+                                    <svg className="w-4 h-4 text-red-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                                    </svg>
+                                    <div>
+                                        <div className="text-sm font-medium text-red-800">Shipping Calculation Failed</div>
+                                        <div className="text-xs text-red-700 mt-1">
+                                            {shippingError || "Unable to calculate shipping rates"}
+                                        </div>
+                                        <div className="text-xs text-red-600 mt-1">
+                                            This might be due to:
+                                            <br />• Vendor address information missing
+                                            <br />• Product shipping dimensions not set
+                                            <br />• Temporary shipping service issue
+                                        </div>
+                                        <button 
+                                            onClick={() => {
+                                                // Retry shipping calculation
+                                                if (session?.user && cartItems.length > 0) {
+                                                    handleAddressAdded(); // Reuse the existing shipping calculation logic
+                                                }
+                                            }}
+                                            className="text-xs bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition-colors mt-2"
+                                        >
+                                            Retry Shipping Calculation
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Buttons (Checkout, Payment, etc.) */}
-                        <CheckoutButton vendorItems={vendorItems} />
+                        {!loading && shippingCalculationStatus === 'success' && rates.length > 0 ? (
+                            <CheckoutButton vendorItems={vendorItems} />
+                        ) : (
+                            <div className="space-y-2">
+                                <button 
+                                    disabled 
+                                    className="w-full bg-gray-300 text-gray-500 px-4 py-2 rounded cursor-not-allowed"
+                                >
+                                    {loading 
+                                        ? "Loading Cart..."
+                                        : !session?.user?.streetAddress 
+                                        ? "Add Shipping Address to Continue" 
+                                        : shippingCalculationStatus === 'calculating'
+                                        ? "Calculating Shipping..."
+                                        : shippingCalculationStatus === 'failed'
+                                        ? "Shipping Unavailable"
+                                        : "Checkout Unavailable"
+                                    }
+                                </button>
+                                <div className="text-xs text-gray-600 text-center">
+                                    {loading
+                                        ? "Please wait while we load your cart items"
+                                        : !session?.user?.streetAddress 
+                                        ? "We need your shipping address to calculate shipping costs"
+                                        : shippingCalculationStatus === 'failed'
+                                        ? "Unable to calculate shipping rates. Please try again later."
+                                        : "Shipping rates must be calculated before checkout"
+                                    }
+                                </div>
+                            </div>
+                        )}
                         <Link href="/shop" className="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 text-center">
                             CONTINUE SHOPPING
                         </Link>

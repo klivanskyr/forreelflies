@@ -86,7 +86,7 @@ export default function Home() {
               <Card
                 key={product.id}
                 title={product.name}
-                rating={product.rating || 0}
+                rating={product.reviewSummary?.averageRating || 0}
                 vendorName={product.vendorName}
                 price={product.price?.toFixed(2) || "0.00"}
                 image={product.images?.[0]}
