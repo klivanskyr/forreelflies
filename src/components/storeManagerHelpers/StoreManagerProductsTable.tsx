@@ -5,6 +5,7 @@ import Table from "../Table/Table";
 import Button from "../buttons/Button";
 import { useState } from "react";
 import StoreManagerUpdateProductModal from "./StoreManagerUpdateProductModal";
+import Image from 'next/image';
 
 interface Props {
     products: Product[];
@@ -117,11 +118,15 @@ export default function StoreManagerProductsTable({ products, onProductUpdated, 
                             <div className="flex flex-row w-full h-full items-center">
                                 <div className="flex items-center space-x-3">
                                     {item.images && item.images.length > 0 && (
-                                        <img 
-                                            src={item.images[0]} 
-                                            alt={item.name}
-                                            className="w-12 h-12 object-cover rounded"
-                                        />
+                                        <div className="relative w-12 h-12">
+                                            <Image 
+                                                src={item.images[0]} 
+                                                alt={item.name}
+                                                fill
+                                                className="object-cover rounded"
+                                                sizes="48px"
+                                            />
+                                        </div>
                                     )}
                                     <div>
                                         <p className="font-medium">{item.name}</p>

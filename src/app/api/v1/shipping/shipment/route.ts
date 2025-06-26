@@ -128,7 +128,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         }
 
         console.log("✅ Shippo shipment created");
-        console.log("Shipment ID:", shipment.object_id);
+        console.log("Shipment ID:", shipment.objectId);
         console.log("Available rates:", shipment.rates.length);
 
         // If orderId is provided, update the order with shipping info
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                 }
 
                 await updateDoc(doc(db, "orders", body.orderId), {
-                    shipmentId: shipment.object_id,
+                    shipmentId: shipment.objectId,
                     shippingStatus: "ready_for_purchase",
                     availableRates: shipment.rates
                 });

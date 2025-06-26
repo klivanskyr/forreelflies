@@ -3,6 +3,8 @@ import { requireRole } from "@/app/api/utils/withRole";
 import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
     const user = await requireRole(request, "user");
     if (user instanceof NextResponse) return user;

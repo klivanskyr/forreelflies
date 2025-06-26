@@ -2,6 +2,8 @@ import { db } from "@/lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = 'force-dynamic';
+
 // GET - Check if user has already reviewed a vendor
 export async function GET(request: NextRequest) {
   try {

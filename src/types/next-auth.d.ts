@@ -1,10 +1,11 @@
 import "next-auth"
+import { VendorSignUpStatus } from "@/app/types/types"
 
 declare module "next-auth" {
   interface User {
     uid: string
     username: string
-    vendorSignUpStatus: string
+    vendorSignUpStatus: VendorSignUpStatus
     phoneNumber?: string
     streetAddress?: string
     city?: string
@@ -14,6 +15,7 @@ declare module "next-auth" {
     photoURL?: string
     isAdmin?: boolean
     isVendor?: boolean
+    stripeDetailsSubmitted?: boolean
   }
 
   interface Session {
@@ -22,7 +24,7 @@ declare module "next-auth" {
       email: string
       name: string
       username: string
-      vendorSignUpStatus: string
+      vendorSignUpStatus: VendorSignUpStatus
       phoneNumber?: string
       streetAddress?: string
       city?: string
@@ -32,6 +34,7 @@ declare module "next-auth" {
       photoURL?: string
       isAdmin?: boolean
       isVendor?: boolean
+      stripeDetailsSubmitted?: boolean
     }
   }
 }
@@ -40,7 +43,7 @@ declare module "next-auth/jwt" {
   interface JWT {
     uid: string
     username: string
-    vendorSignUpStatus: string
+    vendorSignUpStatus: VendorSignUpStatus
     phoneNumber?: string
     streetAddress?: string
     city?: string
@@ -50,5 +53,6 @@ declare module "next-auth/jwt" {
     photoURL?: string
     isAdmin?: boolean
     isVendor?: boolean
+    stripeDetailsSubmitted?: boolean
   }
 } 

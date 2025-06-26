@@ -72,6 +72,10 @@ export async function POST(request: NextRequest) {
         const platformFee = Math.round(orderAmount * 0.1); // 10% platform fee
         const withdrawalAmount = orderAmount - platformFee;
 
+        if (!order.id) {
+            throw new Error("Order ID is required");
+        }
+
         try {
             // Create transfer to vendor's connected account
             const transfer = await stripe.transfers.create({

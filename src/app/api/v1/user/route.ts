@@ -3,7 +3,7 @@ import { adminAuth } from "@/lib/firebase-admin";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/app/api/utils/withRole";
-import { shippo } from "@/lib/shippo";
+import shippo from "@/lib/shippo";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
     const user = await requireRole(request, "user");
@@ -170,11 +170,11 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
                     validate: true
                 });
 
-                if (address.validation_results && address.validation_results.is_valid) {
+                if (address.validationResults && address.validationResults.isValid) {
                     return address;
                 } else {
-                    console.log("Invalid Address", address.validation_results || address);
-                    return null;
+                    console.log("Invalid Address", address.validationResults || address);
+                    throw new Error("Invalid address");
                 }
             } catch (error) {
                 console.error("Address validation error:", error);
