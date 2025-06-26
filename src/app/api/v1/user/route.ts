@@ -3,6 +3,7 @@ import { adminAuth } from "@/lib/firebase-admin";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/app/api/utils/withRole";
+import { shippo } from "@/lib/shippo";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
     const user = await requireRole(request, "user");
@@ -91,21 +92,30 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                 },
             });
 
-            // check to see if token was set
-            const setCookie = signInResponse.headers.get('Set-Cookie');
-            const token = setCookie?.split('=')[1].split(';')[0];
-
-            if (!token) {
+            if (!signInResponse.ok) {
                 console.log("SERVER ERROR: Successfully created user but could not sign in");
                 return NextResponse.json({ error: "Successfully created user but could not sign in" }, { status: 400 });
             }
 
+            // Get the Set-Cookie header from the sign-in response
+            const setCookie = signInResponse.headers.get('Set-Cookie');
+            if (!setCookie) {
+                console.log("SERVER ERROR: No auth token received from sign in");
+                return NextResponse.json({ error: "No auth token received from sign in" }, { status: 400 });
+            }
+
+            // Create the response with success message
             const res = NextResponse.json({ message: "Successfully created user and signed in" }, { status: 200 });
-            res.cookies.set({
-                name: 'token',
-                value: token,
-                httpOnly: true,
-            })
+            
+            // Set the cookie with the same parameters as the sign-in endpoint
+            const tokenMatch = setCookie.match(/token=([^;]+)/);
+            if (tokenMatch) {
+                res.cookies.set("token", tokenMatch[1], {
+                    httpOnly: true,
+                    sameSite: "strict",
+                });
+            }
+            
             return res;
         } catch (error) {
             if (error instanceof Error) {
@@ -150,37 +160,24 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
         
         // Verify address
         async function validateAddress(streetAddress: string, city: string, state: string, zipCode: string, country: string) {
-            const shippoKey = process.env.SHIPPO_KEY;
-            console.log("Shippo key exists:", !!shippoKey);
-            
-            if (!shippoKey) {
-                console.error("SHIPPO_KEY environment variable is not set");
-                throw new Error("Shipping validation service not configured");
-            }
-
-            const response = await fetch(`https://api.goshippo.com/addresses/`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `ShippoToken ${shippoKey}`,
-                },
-                body: JSON.stringify({
-                    "street1": streetAddress,
-                    "city": city,
-                    "state": state,
-                    "zip": zipCode,
-                    "country": country,
+            try {
+                const address = await shippo.addresses.create({
+                    street1: streetAddress,
+                    city: city,
+                    state: state,
+                    zip: zipCode,
+                    country: country,
                     validate: true
-                })
-            });
-        
-            const data = await response.json();
-            console.log("Shippo validation response:", data);
-            
-            if (data.validation_results && data.validation_results.is_valid) {
-                return data; // Validated address
-            } else {
-                console.log("Invalid Address", data.validation_results || data);
+                });
+
+                if (address.validation_results && address.validation_results.is_valid) {
+                    return address;
+                } else {
+                    console.log("Invalid Address", address.validation_results || address);
+                    return null;
+                }
+            } catch (error) {
+                console.error("Address validation error:", error);
                 return null;
             }
         }

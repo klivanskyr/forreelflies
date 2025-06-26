@@ -4,49 +4,25 @@ import StoreManagerTemplate from "@/components/storeManagerHelpers/StoreManagerT
 import { useUser } from "@/contexts/UserContext";
 import { useEffect, useState, useMemo } from "react";
 import { FaSearch, FaSort, FaSortUp, FaSortDown, FaDownload, FaShippingFast, FaEye, FaFilter, FaExternalLinkAlt } from "react-icons/fa";
-
-type Order = {
-    id: string;
-    vendorId: string;
-    vendorName: string;
-    purchaseDate: { seconds: number } | string;
-    amount: number;
-    subtotal?: number;
-    shippingCost?: number;
-    payoutStatus: 'available' | 'pending' | 'paid' | 'withdrawn';
-    products: Array<{
-        productId: string;
-        productName: string;
-        productImage?: string;
-        quantity: number;
-        price: number;
-    }>;
-    shippoLabelUrl?: string;
-    trackingNumber?: string;
-    customerId: string;
-    customerEmail?: string;
-    shippingAddress: {
-        name: string;
-        street: string;
-        city: string;
-        state: string;
-        zip: string;
-        country: string;
-    };
-    refundStatus: string;
-    currency: string;
-    withdrawAvailableDate?: { seconds: number };
-    shippingStatus?: string;
-    shippingError?: string;
-    stripeTransferId?: string;
-};
+import { Order } from "@/app/types/types";
 
 type SortField = 'purchaseDate' | 'amount' | 'payoutStatus' | 'customerName' | 'products';
 type SortDirection = 'asc' | 'desc';
 
+type FirestoreTimestamp = {
+    seconds: number;
+    nanoseconds: number;
+};
+
+type FirestoreOrder = Omit<Order, 'purchaseDate' | 'withdrawAvailableDate' | 'estimatedDeliveryDate'> & {
+    purchaseDate: FirestoreTimestamp;
+    withdrawAvailableDate: FirestoreTimestamp;
+    estimatedDeliveryDate?: FirestoreTimestamp;
+};
+
 export default function Page() {
     const { user } = useUser();
-    const [orders, setOrders] = useState<Order[]>([]);
+    const [orders, setOrders] = useState<FirestoreOrder[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     
@@ -55,7 +31,7 @@ export default function Page() {
     const [sortField, setSortField] = useState<SortField>('purchaseDate');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
     const [statusFilter, setStatusFilter] = useState<string>('all');
-    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+    const [selectedOrder, setSelectedOrder] = useState<FirestoreOrder | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
 
@@ -161,9 +137,9 @@ export default function Page() {
         return styles[status as keyof typeof styles] || 'bg-gray-100 text-gray-800 border-gray-200';
     };
 
-    const formatDate = (date: { seconds: number } | string) => {
-        const d = typeof date === 'object' ? new Date(date.seconds * 1000) : new Date(date);
-        return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const formatDate = (timestamp: FirestoreTimestamp | undefined) => {
+        if (!timestamp) return 'N/A';
+        return new Date(timestamp.seconds * 1000).toLocaleDateString();
     };
 
     const handleWithdraw = async () => {
@@ -195,7 +171,7 @@ export default function Page() {
         }
     };
 
-    const getDaysUntilWithdraw = (order: Order) => {
+    const getDaysUntilWithdraw = (order: FirestoreOrder) => {
         const withdrawDate = typeof order.withdrawAvailableDate === 'object' 
             ? new Date(order.withdrawAvailableDate.seconds * 1000)
             : new Date(order.withdrawAvailableDate || '');
@@ -205,7 +181,7 @@ export default function Page() {
         return Math.max(0, diffDays);
     };
 
-    const canWithdraw = (order: Order) => {
+    const canWithdraw = (order: FirestoreOrder) => {
         return order.payoutStatus === 'available' && getDaysUntilWithdraw(order) <= 0;
     };
 
@@ -230,6 +206,20 @@ export default function Page() {
         } catch (error) {
             console.error('Failed to retry shipping label:', error);
             alert('Failed to retry shipping label. Please try again.');
+        }
+    };
+
+    const getShippingStatusBadge = (status: Order['shippingStatus']) => {
+        switch (status) {
+            case 'shipped':
+                return 'bg-green-100 text-green-800';
+            case 'delivered':
+                return 'bg-blue-100 text-blue-800';
+            case 'label_failed':
+                return 'bg-red-100 text-red-800';
+            case 'pending':
+            default:
+                return 'bg-yellow-100 text-yellow-800';
         }
     };
 
@@ -387,15 +377,20 @@ export default function Page() {
                                         </td>
                                         <td className="py-3 px-4 text-sm text-gray-900">
                                             <div className="space-y-1">
-                                                {order.products.slice(0, 2).map((product, i) => (
+                                                {order.products?.slice(0, 2).map((product, i) => (
                                                     <div key={i} className="flex justify-between">
                                                         <span className="truncate max-w-32">{product.productName}</span>
                                                         <span className="text-gray-500">×{product.quantity}</span>
                                                     </div>
                                                 ))}
-                                                {order.products.length > 2 && (
+                                                {order.products && order.products.length > 2 && (
                                                     <div className="text-xs text-gray-500">
                                                         +{order.products.length - 2} more
+                                                    </div>
+                                                )}
+                                                {!order.products && (
+                                                    <div className="text-xs text-gray-500">
+                                                        No products found
                                                     </div>
                                                 )}
                                             </div>
@@ -526,9 +521,11 @@ export default function Page() {
                                         <p className="text-blue-700 text-sm">Placed on {formatDate(selectedOrder.purchaseDate)}</p>
                                     </div>
                                     <div className="text-right">
-                                        <div className="text-2xl font-bold text-blue-900">${selectedOrder.amount.toFixed(2)}</div>
-                                        <span className={`inline-flex px-3 py-1 text-sm font-medium rounded-full ${getStatusBadge(selectedOrder.payoutStatus)}`}>
-                                            {selectedOrder.payoutStatus.toUpperCase()}
+                                        <div className="text-2xl font-bold text-blue-900">
+                                            ${selectedOrder.amount?.toFixed(2) || '0.00'}
+                                        </div>
+                                        <span className={`inline-flex px-3 py-1 text-sm font-medium rounded-full ${getStatusBadge(selectedOrder.payoutStatus || 'pending')}`}>
+                                            {(selectedOrder.payoutStatus || 'pending').toUpperCase()}
                                         </span>
                                     </div>
                                 </div>
@@ -544,7 +541,7 @@ export default function Page() {
                                     <div className="space-y-2 text-sm">
                                         <div className="flex justify-between">
                                             <span className="text-gray-600">Order ID:</span>
-                                            <span className="font-mono text-gray-900">{selectedOrder.id}</span>
+                                            <span className="font-mono text-gray-900">{selectedOrder.id || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-gray-600">Customer ID:</span>
@@ -552,11 +549,13 @@ export default function Page() {
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-gray-600">Currency:</span>
-                                            <span className="uppercase font-medium">{selectedOrder.currency}</span>
+                                            <span className="uppercase font-medium">{selectedOrder.currency || 'USD'}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span className="text-gray-600">Items Count:</span>
-                                            <span className="font-medium">{selectedOrder.products.reduce((sum, p) => sum + p.quantity, 0)}</span>
+                                            <span className="font-medium">
+                                                {selectedOrder.products?.reduce((sum, p) => sum + (p.quantity || 0), 0) || 0}
+                                            </span>
                                         </div>
                                         {selectedOrder.refundStatus && selectedOrder.refundStatus !== 'none' && (
                                             <div className="flex justify-between">
@@ -575,21 +574,35 @@ export default function Page() {
                                     <div className="space-y-2 text-sm">
                                         <div>
                                             <span className="text-gray-600 block">Name:</span>
-                                            <span className="font-medium">{selectedOrder.shippingAddress.name || 'N/A'}</span>
+                                            <span className="font-medium">{selectedOrder.shippingAddress?.name || 'N/A'}</span>
                                         </div>
                                         <div>
-                                            <span className="text-gray-600 block">Email:</span>
-                                            <span className="font-medium">{selectedOrder.customerEmail || 'N/A'}</span>
+                                            <span className="text-gray-600 block">Address:</span>
+                                            <span className="font-medium">
+                                                {selectedOrder.shippingAddress?.street1 || 'N/A'}
+                                                {selectedOrder.shippingAddress?.street2 && `, ${selectedOrder.shippingAddress.street2}`}
+                                            </span>
                                         </div>
                                         <div>
-                                            <span className="text-gray-600 block">Shipping Address:</span>
-                                            <div className="text-gray-900 text-xs leading-relaxed bg-gray-50 p-2 rounded mt-1">
-                                                {selectedOrder.shippingAddress.name}<br/>
-                                                {selectedOrder.shippingAddress.street}<br/>
-                                                {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.zip}<br/>
-                                                {selectedOrder.shippingAddress.country}
+                                            <span className="text-gray-600 block">City, State, ZIP:</span>
+                                            <span className="font-medium">
+                                                {[
+                                                    selectedOrder.shippingAddress?.city,
+                                                    selectedOrder.shippingAddress?.state,
+                                                    selectedOrder.shippingAddress?.zip
+                                                ].filter(Boolean).join(', ') || 'N/A'}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-600 block">Country:</span>
+                                            <span className="font-medium">{selectedOrder.shippingAddress?.country || 'N/A'}</span>
+                                        </div>
+                                        {selectedOrder.shippingAddress?.phone && (
+                                            <div>
+                                                <span className="text-gray-600 block">Phone:</span>
+                                                <span className="font-medium">{selectedOrder.shippingAddress.phone}</span>
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -601,11 +614,7 @@ export default function Page() {
                                     <div className="space-y-2 text-sm">
                                         <div className="flex justify-between">
                                             <span className="text-gray-600">Shipping Status:</span>
-                                            <span className={`font-medium ${
-                                                selectedOrder.shippingStatus === 'shipped' ? 'text-green-600' :
-                                                selectedOrder.shippingStatus === 'pending' ? 'text-yellow-600' :
-                                                'text-gray-600'
-                                            }`}>
+                                            <span className={`font-medium ${getShippingStatusBadge(selectedOrder.shippingStatus)}`}>
                                                 {selectedOrder.shippingStatus || 'Not Set'}
                                             </span>
                                         </div>
@@ -645,8 +654,8 @@ export default function Page() {
                                         <div className="space-y-2 text-sm">
                                             <div className="flex justify-between">
                                                 <span className="text-gray-600">Payout Status:</span>
-                                                <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadge(selectedOrder.payoutStatus)}`}>
-                                                    {selectedOrder.payoutStatus}
+                                                <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadge(selectedOrder.payoutStatus || 'pending')}`}>
+                                                    {selectedOrder.payoutStatus || 'pending'}
                                                 </span>
                                             </div>
                                             {selectedOrder.withdrawAvailableDate && (
@@ -703,63 +712,52 @@ export default function Page() {
 
                             {/* Products */}
                             <div className="bg-white border border-gray-200 rounded-lg p-4">
-                                <h3 className="font-semibold mb-3 text-gray-900 flex items-center gap-2">
-                                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                                    Products Ordered ({selectedOrder.products.length} items)
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                                    Products Ordered ({selectedOrder.products?.length || 0} items)
                                 </h3>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full">
-                                        <thead className="bg-gray-50">
-                                            <tr>
-                                                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Product</th>
-                                                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">ID</th>
-                                                <th className="text-center py-3 px-4 text-sm font-medium text-gray-700">Quantity</th>
-                                                <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Unit Price</th>
-                                                <th className="text-right py-3 px-4 text-sm font-medium text-gray-700">Line Total</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-200">
-                                            {selectedOrder.products.map((product, i) => (
-                                                <tr key={i} className="hover:bg-gray-50">
-                                                    <td className="py-3 px-4">
-                                                        <div className="flex items-center gap-3">
-                                                            {product.productImage && (
-                                                                <img 
-                                                                    src={product.productImage} 
-                                                                    alt={product.productName}
-                                                                    className="w-12 h-12 object-cover rounded-lg"
-                                                                />
-                                                            )}
-                                                            <div>
-                                                                <div className="font-medium text-gray-900">{product.productName}</div>
-                                                                <div className="text-xs text-gray-500">SKU: {product.productId.substring(0, 8)}...</div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="py-3 px-4 text-sm font-mono text-gray-600">
-                                                        {product.productId.substring(0, 12)}...
-                                                    </td>
-                                                    <td className="py-3 px-4 text-center">
-                                                        <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
-                                                            {product.quantity}
-                                                        </span>
-                                                    </td>
-                                                    <td className="py-3 px-4 text-right text-sm font-medium">${product.price.toFixed(2)}</td>
-                                                    <td className="py-3 px-4 text-right text-sm font-bold">${(product.price * product.quantity).toFixed(2)}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                        <tfoot className="bg-gray-50">
-                                            <tr>
-                                                <td colSpan={4} className="py-3 px-4 text-right font-medium text-gray-700">
-                                                    Items Subtotal:
-                                                </td>
-                                                <td className="py-3 px-4 text-right font-bold text-lg">
-                                                    ${selectedOrder.products.reduce((sum, p) => sum + (p.price * p.quantity), 0).toFixed(2)}
-                                                </td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
+                                <div className="space-y-4">
+                                    {selectedOrder.products?.map((product, index) => (
+                                        <div key={index} className="flex items-center space-x-4 p-4 bg-white rounded-lg shadow">
+                                            {product.productImage ? (
+                                                <img
+                                                    src={product.productImage}
+                                                    alt={product.productName}
+                                                    className="w-16 h-16 object-cover rounded"
+                                                />
+                                            ) : (
+                                                <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center">
+                                                    <span className="text-gray-400">No image</span>
+                                                </div>
+                                            )}
+                                            <div className="flex-1">
+                                                <h4 className="font-medium text-gray-900">{product.productName}</h4>
+                                                <div className="text-sm text-gray-500">
+                                                    Quantity: {product.quantity || 0} × ${product.price?.toFixed(2) || '0.00'}
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="font-medium text-gray-900">
+                                                    ${((product.quantity || 0) * (product.price || 0)).toFixed(2)}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                
+                                {/* Order Totals */}
+                                <div className="mt-6 border-t pt-4 space-y-2">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600">Subtotal:</span>
+                                        <span className="font-medium">${selectedOrder.subtotal?.toFixed(2) || '0.00'}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-600">Shipping:</span>
+                                        <span className="font-medium">${selectedOrder.shippingCost?.toFixed(2) || '0.00'}</span>
+                                    </div>
+                                    <div className="flex justify-between text-base font-bold pt-2 border-t">
+                                        <span>Total:</span>
+                                        <span>${selectedOrder.amount?.toFixed(2) || '0.00'}</span>
+                                    </div>
                                 </div>
                             </div>
 

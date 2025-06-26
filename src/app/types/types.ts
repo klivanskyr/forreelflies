@@ -72,7 +72,14 @@ export type Rate = {
     estimatedDays: number,
 }
 
-export type VendorSignUpStatus = "notStarted" | "submittedApprovalForm" | "approvalFormApproved" | "approvalFormRejected" | "onboardingStarted" | "onboardingCompleted";
+export type VendorSignUpStatus = 
+    | "notStarted" 
+    | "submittedApprovalForm" 
+    | "approvalFormApproved" 
+    | "approvalFormRejected" 
+    | "onboardingStarted" 
+    | "onboardingCompleted"
+    | "stripeSetupPending";
 
 export type OrderProduct = {
   productId: string;
@@ -82,33 +89,47 @@ export type OrderProduct = {
   price: number; // per unit
 };
 
+export type FirestoreTimestamp = {
+  seconds: number;
+  nanoseconds: number;
+};
+
 export type Order = {
-  id: string; // Firestore doc ID
+  id?: string;  // Optional because it's added after creation
   vendorId: string;
   vendorName: string;
-  products: OrderProduct[];
-  subtotal: number; // Items total before shipping
-  shippingCost: number; // Shipping fee for this vendor
-  amount: number; // Total amount (subtotal + shipping)
-  currency: string;
-  purchaseDate: Date;
   customerId: string;
   customerEmail: string;
-  payoutStatus: 'pending' | 'available' | 'withdrawn';
-  withdrawAvailableDate: Date;
+  amount: number;
+  subtotal: number;
+  shippingCost: number;
+  currency: string;
+  payoutStatus: string;
+  purchaseDate: Date | FirestoreTimestamp;
+  withdrawAvailableDate: Date | FirestoreTimestamp;
+  estimatedDeliveryDate?: Date | FirestoreTimestamp;
+  products: Array<{
+    productId: string;
+    productName: string;
+    productImage?: string;
+    quantity: number;
+    price: number;
+  }>;
   stripeTransferId?: string;
   shippoLabelUrl?: string;
-  shippingStatus?: 'pending' | 'shipped' | 'delivered';
+  shippingStatus?: 'pending' | 'shipped' | 'delivered' | 'label_failed';
   refundStatus?: 'none' | 'requested' | 'completed';
+  checkoutSessionId: string;  // Reference to the original checkout session
   shippingAddress: {
     name: string;
-    street: string;
+    street1: string;
+    street2?: string;
     city: string;
     state: string;
     zip: string;
     country: string;
+    phone?: string;
   };
-  trackingNumber?: string;
 };
 
 export type VendorProfile = {

@@ -92,6 +92,12 @@ export default function LoginSidebar({ setOpen, open }: { setOpen: (open: boolea
         } else {
             setError("Account created successfully.");
             setRegister({ email: "", password: "", confirmPassword: "" });
+            await signIn("credentials", {
+                email: register.email,
+                password: register.password,
+                redirect: false,
+            });
+            setOpen(false);
             router.refresh();
         }
     }

@@ -45,9 +45,9 @@ export default function Footer() {
                 </div>
             </div>
 
-            <div className="flex flex-row w-full justify-center items-center p-0.5">
+            {/* <div className="flex flex-row w-full justify-center items-center p-0.5">
                 <h4 className="">ForReelFlies made by <Link href="https://ryanklivansky.com"><span className="font-medium text-blue-500">Ryan Klivansky</span></Link></h4>
-            </div>
+            </div> */}
         </div>
     )
 }

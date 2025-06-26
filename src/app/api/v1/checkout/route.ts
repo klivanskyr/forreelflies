@@ -3,29 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/app/api/utils/withRole";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-
 import Stripe from "stripe";
+import shippo from "@/lib/shippo";
 
 // Function to validate Shippo connectivity
 async function validateShippoConnectivity(): Promise<{ success: boolean; error?: string }> {
     try {
-        if (!process.env.SHIPPO_KEY) {
-            return { success: false, error: "Shippo API key not configured" };
-        }
-
         // Test Shippo API with a simple request to verify connectivity
-        const response = await fetch("https://api.goshippo.com/addresses/", {
-            method: "GET",
-            headers: {
-                "Authorization": `ShippoToken ${process.env.SHIPPO_KEY}`,
-                "Content-Type": "application/json",
-            },
-        });
-
-        if (!response.ok) {
-            return { success: false, error: `Shippo API error: ${response.status}` };
-        }
-
+        await shippo.addresses.list(1);
         return { success: true };
     } catch (error) {
         console.error("Shippo connectivity test failed:", error);
@@ -73,81 +58,71 @@ type VendorDetails = {
 };
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
+    console.log("\n=== CHECKOUT SESSION CREATION START ===");
     const user = await requireRole(request, "user");
-    if (user instanceof NextResponse) return user;
+    if (user instanceof NextResponse) {
+        console.log("❌ User authentication failed");
+        return user;
+    }
+    console.log("✅ User authenticated:", user.uid);
 
     try {
         const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 
         // Extract vendorItems from the request body
         const { vendorItems }: { vendorItems: VendorItem[] } = await request.json();
+        console.log("📦 Processing checkout for vendors:", vendorItems.map(v => v.vendorId).join(", "));
 
         if (!vendorItems || vendorItems.length === 0) {
+            console.log("❌ No vendor items provided");
             return NextResponse.json({ error: "Required field: vendorItems (array)" }, { status: 400 });
         }
 
-        // Validate that user has required information for shipping calculation
-        // Note: Stripe will collect shipping address, but we need to ensure shipping was calculated properly
-        console.log("Validating checkout request for user:", user.uid);
-
-        // Test Shippo connectivity before allowing checkout
+        // Validate Shippo connectivity
+        console.log("🚢 Validating Shippo connectivity...");
         const shippoValidation = await validateShippoConnectivity();
         if (!shippoValidation.success) {
+            console.log("❌ Shippo validation failed:", shippoValidation.error);
             return NextResponse.json({ 
                 error: `Shipping service is currently unavailable: ${shippoValidation.error}. Please try again later.` 
             }, { status: 503 });
         }
+        console.log("✅ Shippo connectivity validated");
 
-        // verify the vendorItems array follows the correct structure and fetch missing stripeAccountIds
+        // Validate vendors and fetch Stripe accounts
+        console.log("🔍 Validating vendors and fetching Stripe accounts...");
         for (const vendor of vendorItems) {
-            if (!vendor.vendorId || !vendor.cartItems || vendor.shippingFee === undefined) {
-                return NextResponse.json({ error: "Each vendor item must have: vendorId, cartItems, shippingFee" }, { status: 400 });
-            }
-
-            // Validate that shipping fee is not zero (indicates shipping calculation failed or wasn't performed)
-            if (vendor.shippingFee <= 0) {
-                return NextResponse.json({ 
-                    error: `Shipping calculation required. Please ensure shipping rates are calculated before checkout for vendor ${vendor.vendorId}` 
-                }, { status: 400 });
-            }
-
-            // Validate that cartItems have required shipping dimensions for Shippo integration
-            for (const item of vendor.cartItems) {
-                if (!item.product.shippingWeight || item.product.shippingWeight <= 0) {
-                    return NextResponse.json({ 
-                        error: `Product "${item.product.name}" is missing shipping weight. Please contact the vendor to update product shipping information.` 
-                    }, { status: 400 });
-                }
-                
-                // Check for basic shipping dimensions (use defaults if missing)
-                if (!item.product.shippingLength) item.product.shippingLength = 6;
-                if (!item.product.shippingWidth) item.product.shippingWidth = 4;  
-                if (!item.product.shippingHeight) item.product.shippingHeight = 2;
-            }
+            console.log(`\n📋 Processing vendor: ${vendor.vendorId}`);
             
             // If stripeAccountId is missing, fetch it from the vendors collection
             if (!vendor.stripeAccountId) {
+                console.log("ℹ️ No Stripe account ID provided, fetching from database...");
                 try {
                     const vendorDoc = await getDoc(doc(db, "vendors", vendor.vendorId));
                     if (!vendorDoc.exists()) {
+                        console.log("❌ Vendor document not found");
                         return NextResponse.json({ error: `Vendor ${vendor.vendorId} not found` }, { status: 400 });
                     }
                     
                     const vendorData = vendorDoc.data();
                     if (!vendorData.stripeAccountId) {
+                        console.log("❌ Vendor has not completed Stripe onboarding");
                         return NextResponse.json({ error: `Vendor ${vendor.vendorId} has not completed Stripe onboarding` }, { status: 400 });
                     }
                     
                     vendor.stripeAccountId = vendorData.stripeAccountId;
+                    console.log("✅ Found Stripe account ID:", vendor.stripeAccountId);
                 } catch (error) {
-                    console.error(`Error fetching vendor ${vendor.vendorId}:`, error);
+                    console.error(`❌ Error fetching vendor ${vendor.vendorId}:`, error);
                     return NextResponse.json({ error: `Failed to fetch vendor ${vendor.vendorId} information` }, { status: 500 });
                 }
             }
         }
 
-        // Generate a unique checkout session ID for storing cart data
+        // Generate checkout session ID and prepare data
+        console.log("\n🔄 Preparing checkout session data...");
         const checkoutSessionId = `checkout_${Date.now()}_${user.uid}`;
+        console.log("📝 Checkout session ID:", checkoutSessionId);
         
         let totalShippingfeeCents = 0;
         const lineItems: LineItem[] = [];
@@ -156,108 +131,142 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
         // Process each vendor's items
         for (const vendor of vendorItems) {
-            if (!vendor.cartItems || vendor.cartItems.length === 0) {
-                return NextResponse.json({ error: `Vendor ${vendor.vendorId} has no cart items` }, { status: 400 });
-            }
-
-            if (!vendor.stripeAccountId) {
-                return NextResponse.json({ error: `Vendor ${vendor.vendorId} is missing Stripe Account ID` }, { status: 400 });
-            }
-
+            console.log(`\n🛍️ Processing items for vendor: ${vendor.vendorId}`);
             let vendorTotal = 0;
+            let vendorName = "Unknown Vendor";
 
-            // Convert items into Stripe line items
-            vendor.cartItems.forEach((item) => {
-                const itemTotalCents = item.product.price * item.quantity * 100; // Convert price to cents
+            // Calculate vendor totals and prepare line items
+            for (const item of vendor.cartItems) {
+                const amountCents = Math.round(item.product.price * 100);
+                vendorTotal += amountCents * item.quantity;
+                
+                console.log(`📦 Adding item: ${item.product.name}`);
+                console.log(`   Quantity: ${item.quantity}`);
+                console.log(`   Price: $${item.product.price}`);
+                
                 lineItems.push({
                     price_data: {
                         currency: "usd",
-                        product_data: { 
-                            name: item.product.name ,
-                            images: item.product.images,
-                            description: item.product.shortDescription
+                        product_data: {
+                            name: item.product.name,
+                            images: item.product.images || [],
+                            description: item.product.shortDescription || undefined
                         },
-                        unit_amount: itemTotalCents / item.quantity,
+                        unit_amount: amountCents,
                     },
                     quantity: item.quantity,
                 });
+            }
 
-                vendorTotal += itemTotalCents;
-            });
+            // Add shipping fee to total (but don't add as line item)
+            if (vendor.shippingFee) {
+                console.log(`📦 Adding shipping fee: $${vendor.shippingFee}`);
+                const shippingFeeCents = Math.round(vendor.shippingFee * 100);
+                totalShippingfeeCents += shippingFeeCents;
+                vendorTotal += shippingFeeCents;  // Add shipping fee to vendor total
+            }
 
-            // Add shipping fee to totalShippingfee
-            totalShippingfeeCents += vendor.shippingFee * 100; //Convert to cents
-
-            const vendorName = vendor.cartItems[0]?.product?.vendorName || '';
-
-            // Store full vendor details for Firestore
+            // Store vendor details
             vendorDetails.push({
                 vendorId: vendor.vendorId,
                 stripeAccountId: vendor.stripeAccountId,
-                amount: vendorTotal,
-                shippingFee: vendor.shippingFee * 100, // Convert to cents for consistency
-                cartItems: vendor.cartItems, // Include cart items for order creation
-                vendorName: vendorName,
+                cartItems: vendor.cartItems,
+                amount: vendorTotal,  // Now includes shipping fee
+                shippingFee: vendor.shippingFee,
+                vendorName,
             });
 
-            // Store minimal vendor metadata for Stripe (to fit in 500 char limit)
+            console.log(`💰 Vendor subtotal: $${(vendorTotal - Math.round(vendor.shippingFee * 100))/100}`);
+            console.log(`💰 Vendor shipping: $${vendor.shippingFee}`);
+            console.log(`💰 Vendor total: $${vendorTotal/100}`);
+            
+            // Store minimal vendor metadata
             vendorMetadata.push({
                 vendorId: vendor.vendorId,
                 stripeAccountId: vendor.stripeAccountId,
-                amount: vendorTotal,
-                shippingFee: vendor.shippingFee * 100,
-                vendorName: vendorName,
+                amount: vendorTotal,  // Now includes shipping fee
+                shippingFee: Math.round(vendor.shippingFee * 100),  // Store in cents
+                vendorName,
             });
         }
 
-        // Store full cart data in Firestore temporarily (expires in 1 hour)
+        // Store cart data in Firestore
+        console.log("\n💾 Storing checkout session data in Firestore...");
         await setDoc(doc(db, "checkoutSessions", checkoutSessionId), {
             vendorDetails: vendorDetails,
             userId: user.uid,
             createdAt: new Date(),
             expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour from now
         });
+        console.log("✅ Checkout session data stored");
 
-        // Calculate platform fee (10% of total)
-        // const applicationFeeAmount = Math.round(totalAmountCents * 0.1);
-
-        // Create a single Stripe Checkout Session
+        // Create Stripe Checkout Session
+        console.log("\n💳 Creating Stripe checkout session...");
         const session = await stripe.checkout.sessions.create({
+            customer_email: user.email || undefined,
             line_items: lineItems,
+            mode: "payment",
+            success_url: `${process.env.NEXT_PUBLIC_URL}/cart/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.NEXT_PUBLIC_URL}/cart`,
             metadata: {
-                vendorMetadata: JSON.stringify(vendorMetadata), // Minimal vendor data (under 500 chars)
-                checkoutSessionId: checkoutSessionId, // Reference to full cart data in Firestore
-                userId: user.uid, // Store the user ID for order tracking
+                userId: user.uid,
+                checkoutSessionId,
+                vendorData: JSON.stringify(vendorMetadata),
             },
-            // Collect customer information
-            customer_creation: 'always',
-            billing_address_collection: 'required',
+            payment_intent_data: {
+                metadata: {
+                    userId: user.uid,
+                    checkoutSessionId,
+                },
+            },
             shipping_address_collection: {
-                allowed_countries: ['US', 'CA'], // Add more countries as needed
+                allowed_countries: ['US'],
             },
+            billing_address_collection: 'required',
             phone_number_collection: {
-                enabled: true,
+                enabled: true
             },
+            customer_creation: 'always',
             shipping_options: [
                 {
                     shipping_rate_data: {
-                        type: "fixed_amount",
-                        fixed_amount: { amount: totalShippingfeeCents, currency: "usd" }, 
-                        display_name: "Multi-Vendor Shipping",
+                        type: 'fixed_amount',
+                        fixed_amount: {
+                            amount: totalShippingfeeCents,
+                            currency: 'usd',
+                        },
+                        display_name: 'Standard Shipping',
                     },
                 },
             ],
-            mode: "payment",
-            ui_mode: "hosted",
-            success_url: `${process.env.URL}/cart/success?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${process.env.URL}/checkout/cancel`,
+            automatic_tax: { enabled: false },
+            allow_promotion_codes: false,
+            submit_type: 'pay',
+            payment_method_types: ['card'],
+            locale: 'en',
         });
 
-        console.log("session", session);
+        console.log("✅ Stripe checkout session created");
+        console.log("Session ID:", session.id);
+        console.log("Checkout URL:", session.url);
+        console.log("Shipping Collection:", session.shipping_address_collection ? "Enabled" : "Disabled");
+        console.log("Billing Collection:", session.billing_address_collection);
+        console.log("Phone Collection:", session.phone_number_collection?.enabled);
+        console.log("=== CHECKOUT SESSION CREATION COMPLETE ===\n");
 
-        return NextResponse.json({ data: { url: session.url }}, { status: 200 });
+        return NextResponse.json({ 
+            data: {
+                url: session.url,
+                clientSecret: session.client_secret,
+                checkoutSessionId: session.id
+            }
+        });
 
     } catch (error) {
-        return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 400 });
+        console.error("❌ Error creating checkout session:", error);
+        return NextResponse.json(
+            { error: error instanceof Error ? error.message : "Unknown error" },
+            { status: 500 }
+        );
     }
 }

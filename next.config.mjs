@@ -14,6 +14,9 @@ const nextConfig = {
       }
     ]
   },
+  env: {
+    SHIPPO_KEY: process.env.SHIPPO_KEY,
+  },
   webpack: (config, { isServer }) => {
       if (isServer) {
           config.externals = [...config.externals, 'firebase-admin', 'buffer'];
