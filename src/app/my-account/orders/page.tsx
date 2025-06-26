@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { FaTruck, FaStore, FaReceipt } from "react-icons/fa";
+import { FirestoreTimestamp } from "@/app/types/types";
 
 type Order = {
     id: string;
@@ -21,23 +22,32 @@ type Order = {
     shippingCost: number;
     amount: number;
     currency: string;
-    purchaseDate: { seconds: number };
+    purchaseDate: FirestoreTimestamp;
     payoutStatus: string;
     shippingStatus?: string;
     trackingNumber?: string;
     shippoLabelUrl?: string;
     shippingCarrier?: string;
     shippingService?: string;
-    estimatedDeliveryDate?: { seconds: number };
+    estimatedDeliveryDate?: FirestoreTimestamp;
     shippingError?: string;
     shippingAddress: {
         name: string;
-        street: string;
+        street1: string;
+        street2?: string;
         city: string;
         state: string;
         zip: string;
         country: string;
+        phone?: string;
     };
+};
+
+const formatDate = (date: Date | FirestoreTimestamp) => {
+    if (date instanceof Date) {
+        return date.toLocaleDateString();
+    }
+    return new Date(date.seconds * 1000).toLocaleDateString();
 };
 
 export default function Page() {
@@ -125,7 +135,7 @@ export default function Page() {
                                                 Order #{order.id.slice(-8).toUpperCase()}
                                             </h3>
                                             <p className="text-sm text-gray-600">
-                                                {new Date(order.purchaseDate.seconds * 1000).toLocaleDateString()}
+                                                {formatDate(order.purchaseDate)}
                                             </p>
                                         </div>
                                         <div className="text-right">

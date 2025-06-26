@@ -3,7 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { headers } from "next/headers";
 
-export async function requireRole(request: NextRequest, role: "admin" | "vendor" | "user") {
+type Role = "admin" | "vendor" | "user";
+
+export async function requireRole(request: NextRequest, role: Role | Role[]) {
   try {
     const session = await getServerSession(authOptions);
     
@@ -12,14 +14,20 @@ export async function requireRole(request: NextRequest, role: "admin" | "vendor"
     }
 
     const user = session.user;
+    const roles = Array.isArray(role) ? role : [role];
 
-    if (role === "admin" && !user.isAdmin) {
+    // Check if user has any of the required roles
+    const hasRequiredRole = roles.some(r => {
+      if (r === "admin") return user.isAdmin;
+      if (r === "vendor") return user.isVendor;
+      if (r === "user") return true; // All authenticated users have 'user' role
+      return false;
+    });
+
+    if (!hasRequiredRole) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    if (role === "vendor" && !user.isVendor) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-    // For 'user', just check authentication
+
     return user;
   } catch (error) {
     console.error("Error in requireRole:", error);

@@ -12,7 +12,7 @@ type T = {
 
 export async function calculateShipping(buyer: DbUser, products: Product[]): Promise<[Rate[], string]> {
     // Create buyer address
-    const address_to = {
+    const addressTo = {
         name: buyer.username,
         street1: buyer.streetAddress,
         city: buyer.city,
@@ -28,12 +28,13 @@ export async function calculateShipping(buyer: DbUser, products: Product[]): Pro
     const ratesPromises = sellerIds.map(async (sellerId) => {
         const sellerProducts = products.filter((product) => product.vendorId === sellerId);
         const parcels = sellerProducts.map((product) => ({
-            length: product.shippingLength || 6,
-            width: product.shippingWidth || 4,
-            height: product.shippingHeight || 2,
-            distance_unit: "in",
-            weight: product.shippingWeight || 1,
-            mass_unit: "lb",
+            length: String(product.shippingLength || 6),
+            width: String(product.shippingWidth || 4),
+            height: String(product.shippingHeight || 2),
+            distanceUnit: "in",
+            weight: String(product.shippingWeight || 1),
+            massUnit: "lb",
+            template: "USPS_IrregularParcel" // Default to irregular parcel for flexibility
         }));
 
         try {
@@ -53,7 +54,7 @@ export async function calculateShipping(buyer: DbUser, products: Product[]): Pro
             }
             const vendor: Vendor = data2.vendor;
 
-            const address_from = {
+            const addressFrom = {
                 name: vendor.storeName,
                 street1: vendor.storeStreetAddress,
                 city: vendor.storeCity,
@@ -63,13 +64,13 @@ export async function calculateShipping(buyer: DbUser, products: Product[]): Pro
             };
 
             // Validate addresses
-            if (!address_from.street1 || !address_from.city || !address_from.state || !address_from.zip) {
-                console.error("Incomplete vendor address:", address_from);
+            if (!addressFrom.street1 || !addressFrom.city || !addressFrom.state || !addressFrom.zip) {
+                console.error("Incomplete vendor address:", addressFrom);
                 return null;
             }
 
-            if (!address_to.street1 || !address_to.city || !address_to.state || !address_to.zip) {
-                console.error("Incomplete buyer address:", address_to);
+            if (!addressTo.street1 || !addressTo.city || !addressTo.state || !addressTo.zip) {
+                console.error("Incomplete buyer address:", addressTo);
                 return null;
             }
 
@@ -81,9 +82,10 @@ export async function calculateShipping(buyer: DbUser, products: Product[]): Pro
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    address_from,
-                    address_to,
+                    addressFrom,
+                    addressTo,
                     parcels,
+                    async: false
                 }),
             });
 

@@ -3,6 +3,7 @@ import { requireRole } from "@/app/api/utils/withRole";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import Stripe from "stripe";
+import { Order } from "@/app/types/types";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
     apiVersion: "2025-02-24.acacia",
@@ -24,29 +25,33 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
         }
 
-        // Get the order
+        // Get order details
         const orderDoc = await getDoc(doc(db, "orders", orderId));
         if (!orderDoc.exists()) {
+            console.error("❌ Order not found:", orderId);
             return NextResponse.json({ error: "Order not found" }, { status: 404 });
         }
+        const order = { id: orderDoc.id, ...orderDoc.data() } as Order;
 
-        const orderData = orderDoc.data();
-        
-        // Verify the order belongs to this vendor
-        if (orderData.vendorId !== vendorId) {
-            return NextResponse.json({ error: "Order does not belong to this vendor" }, { status: 403 });
+        // Verify vendor owns this order
+        if (order.vendorId !== vendorId) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
         }
 
         // Check if order is available for withdrawal
-        if (orderData.payoutStatus !== 'available') {
+        if (order.payoutStatus !== 'available') {
             return NextResponse.json({ error: "Order is not available for withdrawal" }, { status: 400 });
         }
 
         // Check if withdrawal date has passed
-        const withdrawDate = orderData.withdrawAvailableDate?.toDate?.() || new Date(orderData.withdrawAvailableDate);
+        const withdrawDate = order.withdrawAvailableDate instanceof Date 
+            ? order.withdrawAvailableDate 
+            : new Date(order.withdrawAvailableDate.seconds * 1000);
         const now = new Date();
         if (withdrawDate > now) {
-            return NextResponse.json({ error: "Withdrawal not yet available" }, { status: 400 });
+            return NextResponse.json({ 
+                error: `Order is not available for withdrawal until ${withdrawDate.toLocaleDateString()}` 
+            }, { status: 400 });
         }
 
         // Get vendor's Stripe account ID
@@ -63,7 +68,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Calculate withdrawal amount (deduct platform fee)
-        const orderAmount = Math.round(orderData.amount * 100); // Convert to cents
+        const orderAmount = Math.round(order.amount * 100); // Convert to cents
         const platformFee = Math.round(orderAmount * 0.1); // 10% platform fee
         const withdrawalAmount = orderAmount - platformFee;
 
@@ -71,17 +76,17 @@ export async function POST(request: NextRequest) {
             // Create transfer to vendor's connected account
             const transfer = await stripe.transfers.create({
                 amount: withdrawalAmount,
-                currency: orderData.currency || "usd",
+                currency: order.currency || "usd",
                 destination: stripeAccountId,
                 metadata: {
-                    orderId: orderId,
+                    orderId: order.id,
                     vendorId: vendorId,
                     type: 'individual_order_withdrawal'
                 }
             });
 
             // Update order status
-            await updateDoc(doc(db, "orders", orderId), {
+            await updateDoc(doc(db, "orders", order.id), {
                 payoutStatus: 'withdrawn',
                 stripeTransferId: transfer.id,
                 withdrawnAt: new Date()

@@ -44,8 +44,11 @@ export async function GET(request: NextRequest) {
             customerEmail: session.customer_email || '',
             paymentStatus: session.payment_status || 'unknown',
             orders: vendorDetails.map((vendor: any) => {
-                const subtotal = (vendor.amount || 0) / 100; // Convert cents to dollars
-                const shippingCost = (vendor.shippingFee || 0) / 100; // Convert cents to dollars
+                // Calculate product subtotal from cart items
+                const subtotal = (vendor.cartItems || []).reduce((sum: number, item: any) => 
+                    sum + (item.product?.price || 0) * (item.quantity || 1), 
+                0);
+                const shippingCost = (vendor.shippingFee || 0);
                 const total = subtotal + shippingCost;
 
                 return {
