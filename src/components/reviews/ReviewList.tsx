@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { FaStar, FaStarHalfAlt, FaRegStar, FaThumbsUp, FaUser } from 'react-icons/fa';
 import { ProductReview, VendorReview, ReviewSummary } from '@/app/types/types';
+import Image from 'next/image';
 
 interface ReviewListProps {
   type: 'product' | 'vendor';
@@ -130,12 +131,15 @@ const ReviewCard = ({ review, type }: { review: ProductReview | VendorReview, ty
       {review.images && review.images.length > 0 && (
         <div className="flex gap-2 mb-4">
           {review.images.slice(0, 3).map((image, idx) => (
-            <img
-              key={idx}
-              src={image}
-              alt={`Review image ${idx + 1}`}
-              className="w-16 h-16 object-cover rounded-lg border"
-            />
+            <div key={idx} className="relative w-16 h-16">
+              <Image
+                src={image}
+                alt={`Review image ${idx + 1}`}
+                fill
+                className="object-cover rounded-lg border"
+                sizes="64px"
+              />
+            </div>
           ))}
           {review.images.length > 3 && (
             <div className="w-16 h-16 bg-gray-100 rounded-lg border flex items-center justify-center text-xs text-gray-600">

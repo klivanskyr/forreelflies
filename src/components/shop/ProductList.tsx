@@ -6,6 +6,7 @@ import Link from "next/link";
 import ClientAddToCartButton from "../buttons/ClientAddToCartButton";
 import ProductListButtons from "./ProductListButtons";
 import { FaStar, FaStarHalfAlt, FaRegStar, FaStore, FaShippingFast } from "react-icons/fa";
+import Image from 'next/image';
 
 interface ProductListProps {
     sort: Sort;
@@ -75,11 +76,13 @@ const ProductGridCard = async ({ product }: { product: Product }) => {
                 {/* Large Product Image */}
                 {product?.images && (
                     <Link className="block relative overflow-hidden rounded-t-lg" href={`/product/${product.id}`}>
-                        <div className="aspect-square bg-gray-100">
-                            <img 
-                                className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" 
+                        <div className="aspect-square bg-gray-100 relative">
+                            <Image 
+                                className="hover:scale-105 transition-transform duration-300 object-cover" 
                                 src={product.images[0]} 
                                 alt={product.name}
+                                fill
+                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                             />
                         </div>
                     </Link>
@@ -196,11 +199,13 @@ const ProductListCard = async ({ product }: { product: Product }) => {
                 {/* Large Product Image */}
                 {product?.images && (
                     <Link className="block relative overflow-hidden rounded-lg flex-shrink-0" href={`/product/${product.id}`}>
-                        <div className="w-48 h-48 bg-gray-100">
-                            <img 
-                                className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" 
+                        <div className="w-48 h-48 bg-gray-100 relative">
+                            <Image 
+                                className="hover:scale-105 transition-transform duration-300 object-cover" 
                                 src={product.images[0]} 
                                 alt={product.name}
+                                fill
+                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 192px"
                             />
                         </div>
                     </Link>

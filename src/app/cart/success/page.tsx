@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { FaCheckCircle, FaTruck, FaReceipt, FaStore } from 'react-icons/fa';
@@ -26,7 +26,7 @@ type OrderSummary = {
     }>;
 };
 
-export default function CartSuccessPage() {
+function CartSuccessContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const { data: session } = useSession();
@@ -238,5 +238,18 @@ export default function CartSuccessPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function CartSuccessPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50">
+            <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading your order details...</p>
+            </div>
+        </div>}>
+            <CartSuccessContent />
+        </Suspense>
     );
 } 

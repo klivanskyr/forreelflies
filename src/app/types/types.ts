@@ -117,6 +117,7 @@ export type Order = {
   }>;
   stripeTransferId?: string;
   shippoLabelUrl?: string;
+  trackingNumber?: string;
   shippingStatus?: 'pending' | 'shipped' | 'delivered' | 'label_failed';
   refundStatus?: 'none' | 'requested' | 'completed';
   checkoutSessionId: string;  // Reference to the original checkout session

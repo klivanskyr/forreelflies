@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/app/api/utils/withRole";
 import { db } from "@/lib/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, getDoc, orderBy, setDoc } from "firebase/firestore";
+import Stripe from "stripe";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: "2025-02-24.acacia"
+});
 
 export async function GET(request: NextRequest) {
     const user = await requireRole(request, "vendor");

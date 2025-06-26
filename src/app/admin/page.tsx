@@ -4,6 +4,7 @@ import { uploadFileAndGetUrl } from "@/lib/firebase";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, getDocs, query, where, deleteDoc, doc } from "firebase/firestore";
 import VendorRequestModal from "@/components/VendorRequestModal";
+import Image from 'next/image';
 
 const SECTIONS = [
   { value: "slider", label: "Homepage Slider" },
@@ -499,7 +500,15 @@ export default function AdminPage() {
                   {sliderImages.length === 0 && <li className="text-gray-500">No images assigned.</li>}
                   {sliderImages.map((a, i) => (
                     <li key={i} className="flex flex-col items-center gap-2">
-                      <img src={a.imageUrl} alt="slider" className="h-24 w-48 object-cover rounded border" />
+                      <div className="relative h-24 w-48">
+                        <Image 
+                          src={a.imageUrl} 
+                          alt="slider" 
+                          fill
+                          className="object-cover rounded border"
+                          sizes="192px"
+                        />
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -510,7 +519,15 @@ export default function AdminPage() {
                   {ourFliesImages.length === 0 && <li className="text-gray-500">No images assigned.</li>}
                   {ourFliesImages.map((a, i) => (
                     <li key={i} className="flex flex-col items-center gap-2">
-                      <img src={a.imageUrl} alt="our flies" className="h-24 w-48 object-cover rounded border" />
+                      <div className="relative h-24 w-48">
+                        <Image 
+                          src={a.imageUrl} 
+                          alt="our flies" 
+                          fill
+                          className="object-cover rounded border"
+                          sizes="192px"
+                        />
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -521,7 +538,15 @@ export default function AdminPage() {
                   {aboutUsImages.length === 0 && <li className="text-gray-500">No images assigned.</li>}
                   {aboutUsImages.map((a, i) => (
                     <li key={i} className="flex flex-col items-center gap-2">
-                      <img src={a.imageUrl} alt="about us" className="h-24 w-48 object-cover rounded border" />
+                      <div className="relative h-24 w-48">
+                        <Image 
+                          src={a.imageUrl} 
+                          alt="about us" 
+                          fill
+                          className="object-cover rounded border"
+                          sizes="192px"
+                        />
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -789,11 +814,15 @@ export default function AdminPage() {
                       >
                         <div className="flex gap-3">
                           {product.images?.[0] && (
-                            <img 
-                              src={product.images[0]} 
-                              alt={product.name}
-                              className="w-16 h-16 object-cover rounded"
-                            />
+                            <div className="relative w-16 h-16">
+                              <Image 
+                                src={product.images[0]} 
+                                alt={product.name}
+                                fill
+                                className="object-cover rounded"
+                                sizes="64px"
+                              />
+                            </div>
                           )}
                           <div className="flex-1">
                             <h4 className="font-medium text-sm mb-1">{product.name}</h4>
@@ -847,11 +876,15 @@ export default function AdminPage() {
                       >
                         <div className="flex gap-3">
                           {vendor.profileImage && (
-                            <img 
-                              src={vendor.profileImage} 
-                              alt={vendor.storeName}
-                              className="w-16 h-16 object-cover rounded"
-                            />
+                            <div className="relative w-16 h-16">
+                              <Image 
+                                src={vendor.profileImage} 
+                                alt={vendor.storeName}
+                                fill
+                                className="object-cover rounded"
+                                sizes="64px"
+                              />
+                            </div>
                           )}
                           <div className="flex-1">
                             <h4 className="font-medium text-sm mb-1">{vendor.storeName}</h4>

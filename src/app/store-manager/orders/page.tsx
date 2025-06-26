@@ -55,9 +55,9 @@ export default function Page() {
     // Filtered and sorted orders
     const filteredOrders = useMemo(() => {
         let filtered = orders.filter(order => {
-            const matchesSearch = searchTerm === "" || 
-                order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                order.shippingAddress.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            const matchesSearch = searchTerm === "" ||
+                (order.id && order.id.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                order.shippingAddress.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                 order.customerEmail?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 order.trackingNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 order.products.some(p => p.productName.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -151,8 +151,8 @@ export default function Page() {
         });
     };
 
-    const handleIndividualWithdraw = async (orderId: string) => {
-        if (!user) return;
+    const handleIndividualWithdraw = async (orderId: string | undefined) => {
+        if (!user || !orderId) return;
         try {
             const response = await fetch(`/api/v1/vendor/withdraw-order`, {
                 method: "POST",
@@ -185,27 +185,23 @@ export default function Page() {
         return order.payoutStatus === 'available' && getDaysUntilWithdraw(order) <= 0;
     };
 
-    const retryShippingLabel = async (orderId: string) => {
-        if (!user) return;
+    const retryShippingLabel = async (orderId: string | undefined) => {
+        if (!orderId) return;
         try {
             const response = await fetch(`/api/v1/shipping/retry-label`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ orderId }),
             });
-            
+
             if (response.ok) {
                 // Refresh orders to update the status
-                const res = await fetch(`/api/v1/vendor/orders?vendorId=${user.uid}`);
+                const res = await fetch(`/api/v1/vendor/orders?vendorId=${user?.uid}`);
                 const data = await res.json();
                 setOrders(data.orders || []);
-            } else {
-                const errorData = await response.json();
-                alert(`Failed to retry shipping label: ${errorData.error}`);
             }
         } catch (error) {
             console.error('Failed to retry shipping label:', error);
-            alert('Failed to retry shipping label. Please try again.');
         }
     };
 
@@ -517,7 +513,7 @@ export default function Page() {
                             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <h3 className="text-lg font-semibold text-blue-900">Order #{selectedOrder.id.substring(0, 8)}...</h3>
+                                        <h3 className="text-lg font-semibold text-blue-900">Order #{selectedOrder.id ? selectedOrder.id.substring(0, 8) : 'N/A'}...</h3>
                                         <p className="text-blue-700 text-sm">Placed on {formatDate(selectedOrder.purchaseDate)}</p>
                                     </div>
                                     <div className="text-right">
@@ -798,7 +794,7 @@ export default function Page() {
                                     
                                     {canWithdraw(selectedOrder) && selectedOrder.payoutStatus !== 'withdrawn' && (
                                         <button
-                                            onClick={() => handleIndividualWithdraw(selectedOrder.id)}
+                                            onClick={() => selectedOrder.id && handleIndividualWithdraw(selectedOrder.id)}
                                             className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
                                         >
                                             <FaDownload className="w-4 h-4" />

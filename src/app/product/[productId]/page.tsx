@@ -8,6 +8,7 @@ import { Product, ReviewSummary } from '@/app/types/types'
 import { ProductInfo } from '@/components/ProductInfo'
 import { useParams } from 'next/navigation'
 import ProductReviews from '@/components/ProductReviews'
+import Image from 'next/image'
 
 const StarRating = ({ rating, size = "sm" }: { rating: number, size?: "xs" | "sm" | "lg" }) => {
     const stars = []
@@ -134,11 +135,15 @@ export default function ProductPage() {
                                     </div>
                                 )}
                                 {product.images && product.images.length > 0 && (
-                                    <img 
-                                        src={product.images[selectedImageIndex]} 
-                                        alt={product.name} 
-                                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" 
-                                    />
+                                    <div className="relative w-full h-full">
+                                        <Image 
+                                            src={product.images[selectedImageIndex]} 
+                                            alt={product.name} 
+                                            fill
+                                            className="object-cover hover:scale-105 transition-transform duration-300"
+                                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                                        />
+                                    </div>
                                 )}
                             </div>
                             
@@ -148,15 +153,17 @@ export default function ProductPage() {
                                     {product.images.map((image, idx) => (
                                         <div 
                                             key={idx} 
-                                            className={`aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer border-2 transition-all duration-200 ${
+                                            className={`aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer border-2 transition-all duration-200 relative ${
                                                 selectedImageIndex === idx ? 'border-green-600 ring-2 ring-green-200' : 'border-transparent hover:border-gray-300'
                                             }`}
                                             onClick={() => setSelectedImageIndex(idx)}
                                         >
-                                            <img 
+                                            <Image 
                                                 src={image} 
                                                 alt={`${product.name} ${idx + 1}`} 
-                                                className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" 
+                                                fill
+                                                className="object-cover hover:scale-105 transition-transform duration-300"
+                                                sizes="(max-width: 768px) 25vw, (max-width: 1200px) 20vw, 15vw"
                                             />
                                         </div>
                                     ))}

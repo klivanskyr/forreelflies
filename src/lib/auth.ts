@@ -4,6 +4,7 @@ import { signInWithEmailAndPassword } from "firebase/auth"
 import { auth } from "./firebase"
 import { doc, getDoc } from "firebase/firestore"
 import { db } from "./firebase"
+import { VendorSignUpStatus } from "@/app/types/types"
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -110,7 +111,7 @@ export const authOptions: NextAuthOptions = {
             // Fallback to token data if document doesn't exist
             session.user.uid = token.uid as string
             session.user.username = token.username as string
-            session.user.vendorSignUpStatus = token.vendorSignUpStatus as string
+            session.user.vendorSignUpStatus = token.vendorSignUpStatus as VendorSignUpStatus
             session.user.phoneNumber = token.phoneNumber as string
             session.user.streetAddress = token.streetAddress as string
             session.user.city = token.city as string
@@ -126,7 +127,7 @@ export const authOptions: NextAuthOptions = {
           // Fallback to token data if there's an error
           session.user.uid = token.uid as string
           session.user.username = token.username as string
-          session.user.vendorSignUpStatus = token.vendorSignUpStatus as string
+          session.user.vendorSignUpStatus = token.vendorSignUpStatus as VendorSignUpStatus
           session.user.phoneNumber = token.phoneNumber as string
           session.user.streetAddress = token.streetAddress as string
           session.user.city = token.city as string

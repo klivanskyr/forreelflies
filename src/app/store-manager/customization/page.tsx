@@ -6,6 +6,7 @@ import { useUser } from "@/contexts/UserContext";
 import { DbUser } from "@/lib/firebase-admin";
 import { Vendor } from "@/app/types/types";
 import { uploadFileAndGetUrl } from "@/lib/firebase";
+import Image from 'next/image';
 
 export default function Page() {
     const { user } = useUser();
@@ -186,8 +187,14 @@ export default function Page() {
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Banner Image</label>
                             {bannerImageUrl && (
-                                <div className="mb-4">
-                                    <img src={bannerImageUrl} alt="Banner" className="w-full h-48 object-cover rounded-lg border" />
+                                <div className="mb-4 relative w-full h-48">
+                                    <Image 
+                                        src={bannerImageUrl} 
+                                        alt="Banner" 
+                                        fill
+                                        className="object-cover rounded-lg border"
+                                        sizes="(max-width: 1200px) 100vw, 1200px"
+                                    />
                                 </div>
                             )}
                             <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
@@ -206,8 +213,14 @@ export default function Page() {
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Profile Image</label>
                             {profileImageUrl && (
-                                <div className="mb-4">
-                                    <img src={profileImageUrl} alt="Profile" className="h-32 w-32 rounded-full object-cover border-4 border-white shadow-lg" />
+                                <div className="mb-4 relative w-32 h-32">
+                                    <Image 
+                                        src={profileImageUrl} 
+                                        alt="Profile" 
+                                        fill
+                                        className="rounded-full object-cover border-4 border-white shadow-lg"
+                                        sizes="128px"
+                                    />
                                 </div>
                             )}
                             <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">

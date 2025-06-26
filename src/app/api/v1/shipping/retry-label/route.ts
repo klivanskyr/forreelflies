@@ -119,6 +119,10 @@ export async function POST(request: NextRequest) {
         });
 
         // Update order with shipping info
+        if (!order.id) {
+            throw new Error("Order ID is required");
+        }
+
         await updateDoc(doc(db, "orders", order.id), {
             shippoLabelUrl: transaction.labelUrl,
             trackingNumber: transaction.trackingNumber,

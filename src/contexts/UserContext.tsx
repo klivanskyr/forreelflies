@@ -2,9 +2,10 @@
 
 import { createContext, useContext, ReactNode } from 'react';
 import { SessionProvider, useSession } from 'next-auth/react';
+import type { Session } from 'next-auth';
 
 interface UserContextType {
-  user: any;
+  user: Session['user'] | null;
   isLoading: boolean;
   setIsLoading: (isLoading: boolean) => void;
   refreshUser: () => Promise<void>;

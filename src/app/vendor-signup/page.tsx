@@ -5,9 +5,9 @@ import NoXRedirect from "@/components/NoXRedirect";
 import { useUser } from "@/contexts/UserContext";
 import { DbUser } from "@/lib/firebase-admin";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef } from "react";
 
-export default function Page() {
+function VendorSignUpContent() {
     const { user, refreshUser } = useUser();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -213,4 +213,17 @@ export default function Page() {
             </div>
         </NoXRedirect>
     )
+}
+
+export default function Page() {
+    return (
+        <Suspense fallback={
+            <div className="w-full h-full flex flex-col flex-1 justify-center items-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+                <p className="mt-4 text-gray-600">Loading...</p>
+            </div>
+        }>
+            <VendorSignUpContent />
+        </Suspense>
+    );
 }
