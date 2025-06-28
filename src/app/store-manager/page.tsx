@@ -6,40 +6,55 @@ import NoXRedirect from "@/components/NoXRedirect";
 import { useUser } from "@/contexts/UserContext";
 import { useEffect, useState } from "react";
 import { DbUser } from "@/lib/firebase-admin";
+import NoVendorRedirect from "@/components/storeManagerHelpers/NoVendorRedirect";
 
 export default function Page() {
     const { user } = useUser();
     const [vendor, setVendor] = useState<Vendor | undefined>(undefined);
+    const [totalProducts, setTotalProducts] = useState(0);
+    const [monthlyEarnings, setMonthlyEarnings] = useState(0);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const getVendor = async (user: DbUser) => {
             try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/vendor?userId=${user.uid}`, {
+                const res = await fetch(`/api/v1/vendor?userId=${user.uid}`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
                     }
                 });
-        
-                if (!response.ok) {
-                    return undefined;
-                } else {
-                    const data = await response.json();
-                    return data.vendor as Vendor;
-                }
+                const data = await res.json();
+                setVendor(data.vendor);
             } catch (error) {
-                console.error('Error fetching vendor:', error);
-                return undefined;
+                console.error("Failed to fetch vendor:", error);
             }
-        }
+        };
 
-        if (user) {
-            getVendor(user).then((data) => {
-                setVendor(data);
+        const fetchData = async () => {
+            if (!user) return;
+            setLoading(true);
+            try {
+                // Fetch vendor data
+                await getVendor(user);
+
+                // Fetch products count
+                const productsRes = await fetch(`/api/v1/product?vendorId=${user.uid}`);
+                const productsData = await productsRes.json();
+                setTotalProducts(productsData.data?.length || 0);
+
+                // Fetch monthly earnings
+                const transactionsRes = await fetch(`/api/v1/vendor/transactions?vendorId=${user.uid}&period=month`);
+                const transactionsData = await transactionsRes.json();
+                setMonthlyEarnings(transactionsData.summary?.totalEarnings || 0);
+            } catch (error) {
+                console.error("Failed to fetch dashboard data:", error);
+            } finally {
                 setLoading(false);
-            });
-        }
+            }
+        };
+
+        fetchData();
     }, [user]);
 
     if (loading) {
@@ -47,44 +62,24 @@ export default function Page() {
             <div className="min-h-screen flex items-center justify-center">
                 <div className="flex flex-col items-center space-y-4">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-greenPrimary"></div>
-                    <p className="text-gray-600">Loading vendor information...</p>
+                    <p className="text-gray-600">Loading dashboard...</p>
                 </div>
             </div>
         );
     }
 
-    if (!vendor) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <h1 className="text-2xl font-bold text-gray-900 mb-2">Vendor not found</h1>
-                    <p className="text-gray-600">Unable to load vendor information. Please try again later.</p>
-                </div>
-            </div>
-        )
-    }
-    
     return (
-        <NoXRedirect<Vendor> x={vendor} redirectUrl="/?login=true" alertMessage="You must be logged in as a vendor to access the store manager">
+        <NoVendorRedirect vendor={vendor}>
             <StoreManagerTemplate>
                 <div className="space-y-6">
-                    {/* Welcome Hero Section */}
-                    <div className="bg-gradient-to-r from-greenPrimary to-green-600 rounded-lg shadow-lg text-white p-8">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-6">
-                                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
-                                    <span className="text-2xl font-bold">🏪</span>
-                                </div>
-                                <div>
-                                    <h1 className="text-3xl font-bold">Welcome to Store Manager</h1>
-                                    <h2 className="text-xl opacity-90">{vendor.storeName}</h2>
-                                    <p className="opacity-75 mt-1">Manage your store, products, and orders</p>
-                                </div>
-                            </div>
+                    <div className="flex justify-between items-center">
+                        <h1 className="text-2xl font-bold text-gray-900">Store Dashboard</h1>
+                        <div className="text-sm text-gray-600">
+                            Last updated: {new Date().toLocaleString()}
                         </div>
                     </div>
 
-                    {/* Quick Stats */}
+                    {/* Overview Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500">
                             <div className="flex items-center">
@@ -95,7 +90,7 @@ export default function Page() {
                                 </div>
                                 <div className="ml-4">
                                     <p className="text-sm font-medium text-gray-600">Total Products</p>
-                                    <p className="text-2xl font-semibold text-gray-900">{vendor.products?.length || 0}</p>
+                                    <p className="text-2xl font-semibold text-gray-900">{totalProducts}</p>
                                 </div>
                             </div>
                         </div>
@@ -123,7 +118,7 @@ export default function Page() {
                                 </div>
                                 <div className="ml-4">
                                     <p className="text-sm font-medium text-gray-600">This Month</p>
-                                    <p className="text-2xl font-semibold text-gray-900">$0</p>
+                                    <p className="text-2xl font-semibold text-gray-900">${monthlyEarnings.toFixed(2)}</p>
                                 </div>
                             </div>
                         </div>
@@ -145,23 +140,22 @@ export default function Page() {
                                 </svg>
                                 <span className="text-sm font-medium text-gray-900">View Orders</span>
                             </a>
-                            <a href="/store-manager/customization" className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                                <svg className="w-8 h-8 text-purple-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4 4 4 0 004-4V5z"></path>
+                            <a href="/store-manager/reviews" className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                                <svg className="w-8 h-8 text-yellow-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
                                 </svg>
-                                <span className="text-sm font-medium text-gray-900">Customize Store</span>
+                                <span className="text-sm font-medium text-gray-900">Reviews</span>
                             </a>
-                            <a href="/store-manager/settings" className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                                <svg className="w-8 h-8 text-gray-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <a href="/store-manager/payments" className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                                <svg className="w-8 h-8 text-purple-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
                                 </svg>
-                                <span className="text-sm font-medium text-gray-900">Settings</span>
+                                <span className="text-sm font-medium text-gray-900">Payments</span>
                             </a>
                         </div>
                     </div>
                 </div>
             </StoreManagerTemplate>
-        </NoXRedirect>
-    )
+        </NoVendorRedirect>
+    );
 }

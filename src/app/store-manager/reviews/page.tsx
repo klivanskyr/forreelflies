@@ -1,31 +1,167 @@
 'use client';
 
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import StoreManagerTemplate from "@/components/storeManagerHelpers/StoreManagerTemplate";
-import { useState } from "react";
+import { ProductReview, VendorReview } from "@/app/types/types";
+import { FaStar } from "react-icons/fa";
+
+type Review = (ProductReview | VendorReview) & {
+    status: 'Published' | 'Pending' | 'Hidden';
+};
+
+type ReviewStats = {
+    averageRating: number;
+    totalReviews: number;
+    published: number;
+    pending: number;
+    hidden: number;
+    ratingDistribution: {
+        1: number;
+        2: number;
+        3: number;
+        4: number;
+        5: number;
+    };
+};
 
 export default function Page() {
+    const { data: session } = useSession();
+    const [reviews, setReviews] = useState<Review[]>([]);
+    const [stats, setStats] = useState<ReviewStats>({
+        averageRating: 0,
+        totalReviews: 0,
+        published: 0,
+        pending: 0,
+        hidden: 0,
+        ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+    });
     const [selectedFilter, setSelectedFilter] = useState('All');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const reviews = [
-        { id: 1, customer: 'John Doe', product: 'Premium Fly Rod', rating: 5, comment: 'Excellent quality! Perfect for stream fishing.', date: '2024-01-15', status: 'Published' },
-        { id: 2, customer: 'Jane Smith', product: 'Fly Fishing Kit', rating: 4, comment: 'Great starter kit, everything you need included.', date: '2024-01-14', status: 'Published' },
-        { id: 3, customer: 'Bob Johnson', product: 'Tackle Box Set', rating: 5, comment: 'Very well organized and durable construction.', date: '2024-01-13', status: 'Published' },
-        { id: 4, customer: 'Alice Brown', product: 'Fishing Line Pro', rating: 2, comment: 'Line broke after just one use. Disappointed.', date: '2024-01-12', status: 'Pending' },
-        { id: 5, customer: 'Charlie Wilson', product: 'Dry Flies Pack', rating: 4, comment: 'Good variety of flies, caught several fish.', date: '2024-01-11', status: 'Published' },
-    ];
+    useEffect(() => {
+        if (session?.user?.uid) {
+            fetchReviews();
+        }
+    }, [session?.user?.uid]);
+
+    const fetchReviews = async () => {
+        try {
+            setLoading(true);
+            // Fetch product reviews
+            const productRes = await fetch('/api/v1/product/reviews?vendorId=' + session?.user?.uid);
+            const productData = await productRes.json();
+            const productReviews = productData.reviews.map((review: ProductReview) => ({
+                ...review,
+                status: 'Published' as const
+            }));
+
+            // Fetch vendor reviews
+            const vendorRes = await fetch('/api/v1/vendor/reviews?vendorId=' + session?.user?.uid);
+            const vendorData = await vendorRes.json();
+            const vendorReviews = vendorData.reviews.map((review: VendorReview) => ({
+                ...review,
+                status: 'Published' as const
+            }));
+
+            // Combine and sort reviews by date
+            const allReviews = [...productReviews, ...vendorReviews].sort(
+                (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            );
+
+            setReviews(allReviews);
+
+            // Calculate stats
+            const totalReviews = allReviews.length;
+            const published = allReviews.filter(r => r.status === 'Published').length;
+            const pending = allReviews.filter(r => r.status === 'Pending').length;
+            const hidden = allReviews.filter(r => r.status === 'Hidden').length;
+            const averageRating = totalReviews > 0 
+                ? allReviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews 
+                : 0;
+            const ratingDistribution = {
+                1: allReviews.filter(r => r.rating === 1).length,
+                2: allReviews.filter(r => r.rating === 2).length,
+                3: allReviews.filter(r => r.rating === 3).length,
+                4: allReviews.filter(r => r.rating === 4).length,
+                5: allReviews.filter(r => r.rating === 5).length,
+            };
+
+            setStats({
+                averageRating,
+                totalReviews,
+                published,
+                pending,
+                hidden,
+                ratingDistribution
+            });
+
+        } catch (err) {
+            setError('Failed to fetch reviews');
+            console.error('Error fetching reviews:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleStatusChange = async (reviewId: string, newStatus: 'Published' | 'Hidden') => {
+        try {
+            const response = await fetch(`/api/v1/reviews/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reviewId, status: newStatus })
+            });
+
+            if (response.ok) {
+                // Update local state
+                setReviews(prevReviews => 
+                    prevReviews.map(review => 
+                        review.id === reviewId 
+                            ? { ...review, status: newStatus }
+                            : review
+                    )
+                );
+                // Refresh stats
+                fetchReviews();
+            } else {
+                throw new Error('Failed to update review status');
+            }
+        } catch (err) {
+            console.error('Error updating review status:', err);
+            // Show error to user (you could add a toast notification here)
+        }
+    };
+
+    const handleRespond = async (reviewId: string, response: string) => {
+        try {
+            const response = await fetch(`/api/v1/reviews/respond`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reviewId, response })
+            });
+
+            if (response.ok) {
+                // Update local state or refresh reviews
+                fetchReviews();
+            } else {
+                throw new Error('Failed to submit response');
+            }
+        } catch (err) {
+            console.error('Error responding to review:', err);
+            // Show error to user
+        }
+    };
 
     const renderStars = (rating: number) => {
         return (
             <div className="flex">
                 {[1, 2, 3, 4, 5].map((star) => (
-                    <svg
+                    <FaStar
                         key={star}
                         className={`w-4 h-4 ${star <= rating ? 'text-yellow-400' : 'text-gray-300'}`}
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                    >
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
+                    />
                 ))}
             </div>
         );
@@ -40,11 +176,37 @@ export default function Page() {
         }
     };
 
-    const filteredReviews = selectedFilter === 'All' 
-        ? reviews 
-        : reviews.filter(review => review.status === selectedFilter);
+    const filteredReviews = reviews
+        .filter(review => selectedFilter === 'All' || review.status === selectedFilter)
+        .filter(review => {
+            if (!searchQuery) return true;
+            const searchLower = searchQuery.toLowerCase();
+            return (
+                review.userName.toLowerCase().includes(searchLower) ||
+                ('productName' in review && review.productName.toLowerCase().includes(searchLower)) ||
+                review.comment.toLowerCase().includes(searchLower)
+            );
+        });
 
-    const averageRating = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
+    if (loading) {
+        return (
+            <StoreManagerTemplate>
+                <div className="flex items-center justify-center min-h-[60vh]">
+                    <div className="text-xl">Loading reviews...</div>
+                </div>
+            </StoreManagerTemplate>
+        );
+    }
+
+    if (error) {
+        return (
+            <StoreManagerTemplate>
+                <div className="flex items-center justify-center min-h-[60vh]">
+                    <div className="text-xl text-red-600">{error}</div>
+                </div>
+            </StoreManagerTemplate>
+        );
+    }
 
     return (
         <StoreManagerTemplate>
@@ -61,16 +223,14 @@ export default function Page() {
                     <div className="bg-white p-6 rounded-lg shadow border-l-4 border-yellow-500">
                         <div className="flex items-center">
                             <div className="p-2 bg-yellow-100 rounded">
-                                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
-                                </svg>
+                                <FaStar className="w-6 h-6 text-yellow-600" />
                             </div>
                             <div className="ml-4">
                                 <p className="text-sm font-medium text-gray-600">Average Rating</p>
                                 <div className="flex items-center">
-                                    <p className="text-2xl font-semibold text-gray-900">{averageRating.toFixed(1)}</p>
+                                    <p className="text-2xl font-semibold text-gray-900">{stats.averageRating.toFixed(1)}</p>
                                     <div className="ml-2">
-                                        {renderStars(Math.round(averageRating))}
+                                        {renderStars(Math.round(stats.averageRating))}
                                     </div>
                                 </div>
                             </div>
@@ -86,7 +246,7 @@ export default function Page() {
                             </div>
                             <div className="ml-4">
                                 <p className="text-sm font-medium text-gray-600">Total Reviews</p>
-                                <p className="text-2xl font-semibold text-gray-900">147</p>
+                                <p className="text-2xl font-semibold text-gray-900">{stats.totalReviews}</p>
                             </div>
                         </div>
                     </div>
@@ -100,7 +260,7 @@ export default function Page() {
                             </div>
                             <div className="ml-4">
                                 <p className="text-sm font-medium text-gray-600">Published</p>
-                                <p className="text-2xl font-semibold text-gray-900">134</p>
+                                <p className="text-2xl font-semibold text-gray-900">{stats.published}</p>
                             </div>
                         </div>
                     </div>
@@ -114,7 +274,7 @@ export default function Page() {
                             </div>
                             <div className="ml-4">
                                 <p className="text-sm font-medium text-gray-600">Pending Review</p>
-                                <p className="text-2xl font-semibold text-gray-900">13</p>
+                                <p className="text-2xl font-semibold text-gray-900">{stats.pending}</p>
                             </div>
                         </div>
                     </div>
@@ -125,15 +285,13 @@ export default function Page() {
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Rating Distribution</h3>
                     <div className="space-y-3">
                         {[5, 4, 3, 2, 1].map((rating) => {
-                            const count = reviews.filter(r => r.rating === rating).length;
-                            const percentage = (count / reviews.length) * 100;
+                            const count = stats.ratingDistribution[rating as keyof typeof stats.ratingDistribution];
+                            const percentage = (count / stats.totalReviews) * 100 || 0;
                             return (
                                 <div key={rating} className="flex items-center">
                                     <div className="flex items-center w-20">
                                         <span className="text-sm font-medium text-gray-900">{rating}</span>
-                                        <svg className="w-4 h-4 text-yellow-400 ml-1" fill="currentColor" viewBox="0 0 20 20">
-                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                        </svg>
+                                        <FaStar className="w-4 h-4 text-yellow-400 ml-1" />
                                     </div>
                                     <div className="flex-1 mx-4">
                                         <div className="w-full bg-gray-200 rounded-full h-2">
@@ -156,6 +314,8 @@ export default function Page() {
                         <div className="flex-1">
                             <input
                                 type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Search reviews by customer or product..."
                                 className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-greenPrimary focus:border-transparent"
                             />
@@ -175,48 +335,67 @@ export default function Page() {
 
                 {/* Reviews List */}
                 <div className="space-y-4">
-                    {filteredReviews.map((review) => (
-                        <div key={review.id} className="bg-white rounded-lg shadow p-6">
-                            <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div>
-                                            <h3 className="font-medium text-gray-900">{review.customer}</h3>
-                                            <p className="text-sm text-gray-500">{review.product}</p>
+                    {filteredReviews.length === 0 ? (
+                        <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
+                            No reviews found
+                        </div>
+                    ) : (
+                        filteredReviews.map((review) => (
+                            <div key={review.id} className="bg-white rounded-lg shadow p-6">
+                                <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div>
+                                                <h3 className="font-medium text-gray-900">{review.userName}</h3>
+                                                <p className="text-sm text-gray-500">
+                                                    {'productName' in review ? review.productName : 'Vendor Review'}
+                                                </p>
+                                            </div>
+                                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(review.status)}`}>
+                                                {review.status}
+                                            </span>
                                         </div>
-                                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(review.status)}`}>
-                                            {review.status}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center mb-2">
-                                        {renderStars(review.rating)}
-                                        <span className="ml-2 text-sm text-gray-600">{review.date}</span>
-                                    </div>
-                                    <p className="text-gray-700 mb-4">{review.comment}</p>
-                                    <div className="flex space-x-3">
-                                        {review.status === 'Pending' && (
-                                            <>
-                                                <button className="text-green-600 hover:text-green-700 text-sm font-medium">
-                                                    Publish
-                                                </button>
-                                                <button className="text-red-600 hover:text-red-700 text-sm font-medium">
-                                                    Hide
-                                                </button>
-                                            </>
-                                        )}
-                                        <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                                            Respond
-                                        </button>
-                                        <button className="text-gray-600 hover:text-gray-700 text-sm font-medium">
-                                            Report
-                                        </button>
+                                        <div className="flex items-center mb-2">
+                                            {renderStars(review.rating)}
+                                            <span className="ml-2 text-sm text-gray-600">
+                                                {new Date(review.createdAt).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                        <div className="mb-4">
+                                            <h4 className="font-medium text-gray-900 mb-1">{review.title}</h4>
+                                            <p className="text-gray-700">{review.comment}</p>
+                                        </div>
+                                        <div className="flex space-x-3">
+                                            {review.status === 'Pending' && (
+                                                <>
+                                                    <button 
+                                                        onClick={() => handleStatusChange(review.id, 'Published')}
+                                                        className="text-green-600 hover:text-green-700 text-sm font-medium"
+                                                    >
+                                                        Publish
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleStatusChange(review.id, 'Hidden')}
+                                                        className="text-red-600 hover:text-red-700 text-sm font-medium"
+                                                    >
+                                                        Hide
+                                                    </button>
+                                                </>
+                                            )}
+                                            <button 
+                                                onClick={() => handleRespond(review.id, '')}
+                                                className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                                            >
+                                                Respond
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        ))
+                    )}
                 </div>
             </div>
         </StoreManagerTemplate>
-    )
+    );
 }
