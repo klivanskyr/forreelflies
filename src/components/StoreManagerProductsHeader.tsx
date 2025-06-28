@@ -4,7 +4,7 @@ import { useState } from "react";
 import Button from "./buttons/Button";
 import StoreManagerProductModal, { ProductInput } from "./storeManagerHelpers/StoreManagerProductModal";
 
-export default function StoreManagerProductsHeader({ vendorId }: { vendorId: string }) {
+export default function StoreManagerProductsHeader({ vendorId, onProductAdded }: { vendorId: string; onProductAdded?: () => void }) {
     const [modalOpen, setModalOpen] = useState<boolean>(false);
     const [message, setMessage] = useState<string>("");
     const [input, setInput] = useState<ProductInput>({
@@ -14,6 +14,11 @@ export default function StoreManagerProductsHeader({ vendorId }: { vendorId: str
         isDraft: true,
         stockStatus: "unknown",
         price: "",
+        originalPrice: "",
+        discountPercentage: "",
+        stockQuantity: "",
+        lowStockThreshold: "",
+        trackQuantity: false,
         shippingHeight: "",
         shippingLength: "",
         shippingWeight: "",
@@ -21,7 +26,7 @@ export default function StoreManagerProductsHeader({ vendorId }: { vendorId: str
         tags: [],
         catagories: [],
         images: [],
-        quantityOptions: []
+        quantityOptions: [],
     });
 
     const stringtofloat = (str: string) => {
@@ -30,7 +35,7 @@ export default function StoreManagerProductsHeader({ vendorId }: { vendorId: str
         return isNaN(parsedFloat) ? 0 : parsedFloat;
     }
     
-    const handleSubmit = async () => {
+    const handleSubmit = async (imageUrls: string[]) => {
         try {
             const price = stringtofloat(input.price);
             const shippingHeight = stringtofloat(input.shippingHeight);
@@ -47,10 +52,9 @@ export default function StoreManagerProductsHeader({ vendorId }: { vendorId: str
                 return;
             }
 
-            // Convert quanityOptions to number array
-            const quantityOptions = input.quantityOptions.map(option => parseInt(option)).filter(option => !isNaN(option)).sort();
+            // quantityOptions is already a number array
+            const quantityOptions = input.quantityOptions.sort((a, b) => a - b);
 
-    
             // Create FormData object
             const formData = new FormData();
             formData.append("name", input.name);
@@ -67,9 +71,16 @@ export default function StoreManagerProductsHeader({ vendorId }: { vendorId: str
             formData.append("tags", JSON.stringify(input.tags));
             formData.append("categories", JSON.stringify(input.catagories));
             formData.append("quantityOptions", JSON.stringify(quantityOptions));
-    
-            // Append images to FormData
-            input.images.forEach((file) => formData.append("images", file));
+            
+            // Add discount fields
+            if (input.originalPrice) formData.append("originalPrice", input.originalPrice);
+            if (input.discountPercentage) formData.append("discountPercentage", input.discountPercentage);
+            if (input.stockQuantity) formData.append("stockQuantity", input.stockQuantity);
+            if (input.lowStockThreshold) formData.append("lowStockThreshold", input.lowStockThreshold);
+            formData.append("trackQuantity", input.trackQuantity.toString());
+            
+            // Append image URLs
+            formData.append("imageUrls", JSON.stringify(imageUrls));
             
             console.log("Form Data:", formData);
             // Send FormData to backend
@@ -83,6 +94,7 @@ export default function StoreManagerProductsHeader({ vendorId }: { vendorId: str
                 setTimeout(() => {
                     setModalOpen(false);
                     setMessage("");
+                    onProductAdded?.(); // Refresh the products list
                 }, 1000);
             } else {
                 const errorData = await response.json();
@@ -103,8 +115,39 @@ export default function StoreManagerProductsHeader({ vendorId }: { vendorId: str
     return (
         <div className="flex flex-row w-full justify-between py-2 pr-4 pl-2">
             <h1 className="text-2xl font-semibold">Products</h1>
-            <Button text="Add Product" onClick={() => { setModalOpen(true); setInput({ name: "", shortDescription: "", longDescription: "", isDraft: false, price: "", stockStatus: "unknown", tags: [], catagories: [], images: [], quantityOptions: [], shippingHeight: "", shippingLength: "", shippingWeight: "", shippingWidth: "" }) }} />
-            <StoreManagerProductModal handleSubmit={handleSubmit} errorMessage={message} input={input} modalOpen={modalOpen} setModalOpen={setModalOpen} setInput={setInput} vendorId={vendorId} />
+            <Button text="Add Product" onClick={() => { 
+                setModalOpen(true); 
+                setInput({ 
+                    name: "", 
+                    shortDescription: "", 
+                    longDescription: "", 
+                    isDraft: false, 
+                    price: "", 
+                    stockStatus: "unknown", 
+                    tags: [], 
+                    catagories: [], 
+                    images: [], 
+                    quantityOptions: [], 
+                    shippingHeight: "", 
+                    shippingLength: "", 
+                    shippingWeight: "", 
+                    shippingWidth: "", 
+                    originalPrice: "", 
+                    discountPercentage: "", 
+                    stockQuantity: "", 
+                    lowStockThreshold: "", 
+                    trackQuantity: false 
+                }) 
+            }} />
+            <StoreManagerProductModal 
+                handleSubmit={handleSubmit} 
+                errorMessage={message} 
+                input={input} 
+                modalOpen={modalOpen} 
+                setModalOpen={setModalOpen} 
+                setInput={setInput} 
+                vendorId={vendorId} 
+            />
         </div>
     )
 }

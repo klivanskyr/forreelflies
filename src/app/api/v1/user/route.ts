@@ -2,8 +2,13 @@ import { db } from "@/lib/firebase";
 import { adminAuth } from "@/lib/firebase-admin";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { NextRequest, NextResponse } from "next/server";
+import { requireRole } from "@/app/api/utils/withRole";
+import shippo from "@/lib/shippo";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
+    const user = await requireRole(request, "user");
+    if (user instanceof NextResponse) return user;
+
     try {
         const { searchParams } = new URL(request.url);
         const uid = searchParams.get("uid");
@@ -24,7 +29,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
             const userDb = userDoc.data();
             console.log("SERVER SUCCESS: Successfully fetched user");
-            return NextResponse.json({ user: { uid, ...userDb } }, { status: 200 });
+            return NextResponse.json({ user: { uid, ...userDb, vendorSignUpStatus: userDb?.vendorSignUpStatus ?? "notStarted" } }, { status: 200 });
         } catch (error) {
             if (error instanceof Error) {
                 console.log(`SERVER ERROR: ${error.message}`);
@@ -66,7 +71,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                 await setDoc(doc(db, "users", userRecord.uid), {
                     username: email.split("@")[0],
                     email,
-                    isVendor: false
+                    vendorSignUpStatus: "notStarted", // Default status
                 });
             } catch (error) {
                 // Delete user from Firebase Auth if Firestore fails
@@ -87,21 +92,30 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                 },
             });
 
-            // check to see if token was set
-            const setCookie = signInResponse.headers.get('Set-Cookie');
-            const token = setCookie?.split('=')[1].split(';')[0];
-
-            if (!token) {
+            if (!signInResponse.ok) {
                 console.log("SERVER ERROR: Successfully created user but could not sign in");
                 return NextResponse.json({ error: "Successfully created user but could not sign in" }, { status: 400 });
             }
 
+            // Get the Set-Cookie header from the sign-in response
+            const setCookie = signInResponse.headers.get('Set-Cookie');
+            if (!setCookie) {
+                console.log("SERVER ERROR: No auth token received from sign in");
+                return NextResponse.json({ error: "No auth token received from sign in" }, { status: 400 });
+            }
+
+            // Create the response with success message
             const res = NextResponse.json({ message: "Successfully created user and signed in" }, { status: 200 });
-            res.cookies.set({
-                name: 'token',
-                value: token,
-                httpOnly: true,
-            })
+            
+            // Set the cookie with the same parameters as the sign-in endpoint
+            const tokenMatch = setCookie.match(/token=([^;]+)/);
+            if (tokenMatch) {
+                res.cookies.set("token", tokenMatch[1], {
+                    httpOnly: true,
+                    sameSite: "strict",
+                });
+            }
+            
             return res;
         } catch (error) {
             if (error instanceof Error) {
@@ -121,6 +135,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 }
 
 export async function PUT(request: NextRequest): Promise<NextResponse> {
+    console.log("PUT /api/v1/user called");
+    console.log("Request cookies:", request.cookies.getAll().map(c => `${c.name}=${c.value.substring(0, 20)}...`));
+    
+    const user = await requireRole(request, "user");
+    if (user instanceof NextResponse) {
+        console.log("requireRole returned NextResponse (auth failed)");
+        return user;
+    }
+
+    console.log("User authenticated:", { uid: user.uid, email: user.email });
+
     try {
         const { uid, streetAddress, city, state, zipCode, country } = await request.json();
 
@@ -128,56 +153,60 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
             return NextResponse.json({ error: "uid is required" }, { status: 400 });
         }
 
-        // Check auth by seeing if the user calling this function is the same as the uid provided
-        const cookies = request.cookies;
-        const auth = cookies.get("token")?.value;
-
-        // check auth with adminAuth
-        try {
-            await adminAuth.verifyIdToken(auth as string);
-        } catch (_) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        // Verify that the authenticated user matches the uid being updated
+        if (user.uid !== uid) {
+            return NextResponse.json({ error: "Unauthorized: Cannot update another user's data" }, { status: 401 });
         }
         
         // Verify address
         async function validateAddress(streetAddress: string, city: string, state: string, zipCode: string, country: string) {
-            const response = await fetch(`https://api.goshippo.com/addresses/`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `ShippoToken ${process.env.SHIPPO_KEY}`,
-                },
-                body: JSON.stringify({
-                    "street1": streetAddress,
-                    "city": city,
-                    "state": state,
-                    "zip": zipCode,
-                    "country": country,
+            try {
+                const address = await shippo.addresses.create({
+                    street1: streetAddress,
+                    city: city,
+                    state: state,
+                    zip: zipCode,
+                    country: country,
                     validate: true
-                })
-            });
-        
-            const data = await response.json();
-            console.log(data);
-            if (data.validation_results.is_valid) {
-                return data; // Validated address
-            } else {
-                console.log("Invalid Address", data.validation_results);
+                });
+
+                if (address.validationResults && address.validationResults.isValid) {
+                    return address;
+                } else {
+                    console.log("Invalid Address", address.validationResults || address);
+                    throw new Error("Invalid address");
+                }
+            } catch (error) {
+                console.error("Address validation error:", error);
                 return null;
             }
         }
 
-        // Validate address
-        const validatedData = await validateAddress(streetAddress, city, state, zipCode, country);
-        if (!validatedData) {
-            return NextResponse.json({ error: "Invalid address" }, { status: 400 });
-        }
+        // Validate address (optional - fallback to user input if validation fails)
+        let validateStreetAddress = streetAddress;
+        let validateCity = city;
+        let validateState = state;
+        let validateZipCode = zipCode;
+        let validateCountry = country;
 
-        const validateStreetAddress = validatedData.street1;
-        const validateCity = validatedData.city;
-        const validateState = validatedData.state;
-        const validateZipCode = validatedData.zip;
-        const validateCountry = validatedData.country;
+        try {
+            const validatedData = await validateAddress(streetAddress, city, state, zipCode, country);
+            if (validatedData) {
+                // Use validated address if available
+                validateStreetAddress = validatedData.street1;
+                validateCity = validatedData.city;
+                validateState = validatedData.state;
+                validateZipCode = validatedData.zip;
+                validateCountry = validatedData.country;
+                console.log("Using validated address from Shippo");
+            } else {
+                console.log("Shippo validation failed, using user input");
+            }
+        } catch (error) {
+            console.error("Address validation error:", error);
+            console.log("Falling back to user input address");
+            // Continue with user input - don't block the save
+        }
 
         try {
             // Update user in Firestore
@@ -207,6 +236,9 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
 }
 
 export async function DELETE(request: NextRequest): Promise<NextResponse> {
+    const user = await requireRole(request, "user");
+    if (user instanceof NextResponse) return user;
+
     try {
         const { searchParams } = new URL(request.url);
         const uid = searchParams.get("uid");

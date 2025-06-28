@@ -1,26 +1,20 @@
 'use client';
 
-export default function SignOutButton({ text, startingIcon, onSignOut=() => {}, className="" }: { text: string, startingIcon?: JSX.Element, onSignOut?: () => void, className?: string }) {
-    const signOut = async () => {
-        try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/signout`, {
-                method: "POST",
-                credentials: "include",
-            })
+import { signOut } from "next-auth/react";
 
-            if (response.ok) {
-                onSignOut();
-            } else {
-                console.error("Failed to log out");
-            }
+export default function SignOutButton({ text, startingIcon, onSignOut=() => {}, className="" }: { text: string, startingIcon?: JSX.Element, onSignOut?: () => void, className?: string }) {
+    const handleSignOut = async () => {
+        try {
+            await signOut({ redirect: false });
+            onSignOut();
         } catch (error) {
-            console.error(error);
+            console.error("Failed to log out:", error);
         }
     }
 
     return (
         <button className={`${className} linkhover text-lg w-fit flex flex-row items-center gap-1.5`} 
-            onClick={() => signOut()}
+            onClick={handleSignOut}
         >
             {startingIcon ? startingIcon : <></>}
             <h1>{text}</h1>

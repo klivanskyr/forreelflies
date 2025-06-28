@@ -1,13 +1,13 @@
+import Footer from "@/components/Footer";
+import { Navbar } from "@/components/Navbar";
+import DevelopmentBanner from "@/components/DevelopmentBanner";
+import UserProvider from "@/contexts/UserContext";
 import type { Metadata } from "next";
 import "./globals.css";
-import { Navbar } from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import UserProvider from "@/contexts/UserContext";
-import IntializeUser from "@/components/InitalizeUser";
 
 export const metadata: Metadata = {
-  title: "ForReelFlies",
-  description: "",
+  title: "For Reel Flies",
+  description: "Fly fishing marketplace",
 };
 
 export default function RootLayout({
@@ -17,11 +17,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
-        <UserProvider initialUser={null} loading={true}>
-          <IntializeUser />
+      <body className="min-h-screen flex flex-col w-full">
+        <UserProvider>
+          <DevelopmentBanner />
           <Navbar />
-          {children}
+          <main className="flex-grow w-full mt-[120px] md:mt-[140px]">
+            {children}
+          </main>
           <Footer />
         </UserProvider>
       </body>
