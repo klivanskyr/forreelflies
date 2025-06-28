@@ -5,6 +5,7 @@ import { useUser } from "@/contexts/UserContext";
 import { useEffect, useState, useMemo } from "react";
 import { FaSearch, FaSort, FaSortUp, FaSortDown, FaDownload, FaShippingFast, FaEye, FaFilter, FaExternalLinkAlt } from "react-icons/fa";
 import { Order } from "@/app/types/types";
+import toast from "react-hot-toast";
 
 type SortField = 'purchaseDate' | 'amount' | 'payoutStatus' | 'customerName' | 'products';
 type SortDirection = 'asc' | 'desc';
@@ -23,33 +24,40 @@ type FirestoreOrder = Omit<Order, 'purchaseDate' | 'withdrawAvailableDate' | 'es
 export default function Page() {
     const { user } = useUser();
     const [orders, setOrders] = useState<FirestoreOrder[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
+    const [loadingOrders, setLoadingOrders] = useState(true);
     const [error, setError] = useState("");
-    
-    // Table state
-    const [searchTerm, setSearchTerm] = useState("");
+    const [withdrawError, setWithdrawError] = useState<string | null>(null);
     const [sortField, setSortField] = useState<SortField>('purchaseDate');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-    const [statusFilter, setStatusFilter] = useState<string>('all');
-    const [selectedOrder, setSelectedOrder] = useState<FirestoreOrder | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage] = useState(10);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [selectedOrder, setSelectedOrder] = useState<FirestoreOrder | null>(null);
+
+    // Move fetchOrders outside of useEffect for reusability
+    const fetchOrders = async () => {
+        if (!user) return;
+        setLoadingOrders(true);
+        try {
+            const response = await fetch(`/api/v1/vendor/orders?vendorId=${user.uid}`);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Failed to fetch orders');
+            setOrders(data.orders || []);
+        } catch (error) {
+            console.error('Error fetching orders:', error);
+            toast.error('Failed to fetch orders');
+            setError('Failed to fetch orders');
+        } finally {
+            setLoadingOrders(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchOrders = async () => {
-            if (!user) return;
-            setLoading(true);
-            setError("");
-            try {
-                const res = await fetch(`/api/v1/vendor/orders?vendorId=${user.uid}`);
-                const data = await res.json();
-                setOrders(data.orders || []);
-            } catch (err) {
-                setError("Failed to fetch orders");
-            }
-            setLoading(false);
-        };
-        fetchOrders();
+        if (user) {
+            fetchOrders();
+        }
     }, [user]);
 
     // Filtered and sorted orders
@@ -129,12 +137,17 @@ export default function Page() {
 
     const getStatusBadge = (status: string) => {
         const styles = {
-            available: 'bg-green-100 text-green-800 border-green-200',
-            pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-            paid: 'bg-blue-100 text-blue-800 border-blue-200',
-            withdrawn: 'bg-purple-100 text-purple-800 border-purple-200',
+            available: 'bg-emerald-50 text-emerald-700 border-emerald-200 flex items-center justify-center',
+            pending_delivery: 'bg-amber-50 text-amber-700 border-amber-200 flex items-center justify-center',
+            pending_holdback: 'bg-yellow-50 text-yellow-700 border-yellow-200 flex items-center justify-center',
+            pending: 'bg-yellow-50 text-yellow-700 border-yellow-200 flex items-center justify-center',
+            paid: 'bg-sky-50 text-sky-700 border-sky-200 flex items-center justify-center',
+            withdrawn: 'bg-indigo-50 text-indigo-700 border-indigo-200 flex items-center justify-center',
+            admin_approved: 'bg-green-50 text-green-700 border-green-200 flex items-center justify-center',
+            blocked: 'bg-red-50 text-red-700 border-red-200 flex items-center justify-center',
+            refunded: 'bg-slate-50 text-slate-700 border-slate-200 flex items-center justify-center'
         };
-        return styles[status as keyof typeof styles] || 'bg-gray-100 text-gray-800 border-gray-200';
+        return `px-2 py-1 rounded-full text-xs border ${styles[status as keyof typeof styles] || styles.pending}`;
     };
 
     const formatDate = (timestamp: FirestoreTimestamp | undefined) => {
@@ -143,35 +156,142 @@ export default function Page() {
     };
 
     const handleWithdraw = async () => {
-        if (!user) return;
-        await fetch(`/api/v1/vendor/withdraw`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ vendorId: user.uid }),
-        });
+        try {
+            setIsLoading(true);
+            // Filter orders that are actually available for withdrawal
+            const eligibleOrders = orders.filter(order => {
+                const withdrawStatus = getWithdrawStatus(order);
+                return withdrawStatus.canWithdraw && canWithdraw(order);
+            });
+
+            if (eligibleOrders.length === 0) {
+                toast.error("No eligible orders found for withdrawal");
+                setIsLoading(false);
+                return;
+            }
+
+            // Process each eligible order
+            const results = await Promise.all(
+                eligibleOrders.map(async (order) => {
+                    try {
+                        const response = await fetch('/api/v1/vendor/withdraw-order', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ 
+                                vendorId: user.uid,
+                                orderId: order.id,
+                                isAdminApproved: order.payoutStatus === 'admin_approved'
+                            }),
+                        });
+
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.error || 'Failed to withdraw funds');
+                        }
+
+                        return { orderId: order.id, success: true };
+                    } catch (error) {
+                        return { 
+                            orderId: order.id, 
+                            success: false, 
+                            error: error instanceof Error ? error.message : 'Failed to withdraw funds' 
+                        };
+                    }
+                })
+            );
+
+            // Count successes and failures
+            const successCount = results.filter(r => r.success).length;
+            const failureCount = results.filter(r => !r.success).length;
+
+            // Show appropriate toast messages
+            if (successCount > 0) {
+                toast.success(`Successfully withdrew funds from ${successCount} order${successCount > 1 ? 's' : ''}`);
+            }
+            if (failureCount > 0) {
+                toast.error(`Failed to withdraw funds from ${failureCount} order${failureCount > 1 ? 's' : ''}`);
+            }
+
+            // Refresh orders list
+            await fetchOrders();
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'Failed to withdraw funds');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleIndividualWithdraw = async (orderId: string | undefined) => {
         if (!user || !orderId) return;
+        
+        // Find the order to check if it's actually withdrawable
+        const orderToWithdraw = orders.find(o => o.id === orderId);
+        console.log('Found order to withdraw:', orderToWithdraw);
+        
+        if (!orderToWithdraw) {
+            console.error('Order not found');
+            setWithdrawError("Order not found");
+            return;
+        }
+
+        const canWithdrawOrder = canWithdraw(orderToWithdraw);
+        console.log('Can withdraw order?', canWithdrawOrder);
+
+        if (!canWithdrawOrder) {
+            setWithdrawError("Order is not available for withdrawal");
+            return;
+        }
+
+        setWithdrawError(null);
         try {
+            setIsLoading(true);
+            console.log('Sending withdrawal request for order:', {
+                orderId,
+                vendorId: user.uid,
+                isAdminApproved: orderToWithdraw.payoutStatus === 'admin_approved'
+            });
+
             const response = await fetch(`/api/v1/vendor/withdraw-order`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ vendorId: user.uid, orderId }),
+                body: JSON.stringify({ 
+                    vendorId: user.uid,
+                    orderId,
+                    isAdminApproved: orderToWithdraw.payoutStatus === 'admin_approved'
+                }),
             });
             
-            if (response.ok) {
-                // Refresh orders to update the status
-                const res = await fetch(`/api/v1/vendor/orders?vendorId=${user.uid}`);
-                const data = await res.json();
-                setOrders(data.orders || []);
+            const data = await response.json();
+            console.log('Withdrawal response:', data);
+
+            if (!response.ok) {
+                console.error('Withdrawal failed:', data);
+                setWithdrawError(data.error || "Failed to process withdrawal");
+                return;
             }
+
+            // Close the modal first
+            setSelectedOrder(null);
+            
+            // Show success toast
+            toast.success("Successfully withdrew funds");
+
+            // Refresh orders to update the status
+            await fetchOrders();
         } catch (error) {
-            console.error('Failed to withdraw order:', error);
+            console.error('Withdrawal error:', error);
+            setWithdrawError("Failed to process withdrawal. Please try again later.");
+        } finally {
+            setIsLoading(false);
         }
     };
 
     const getDaysUntilWithdraw = (order: FirestoreOrder) => {
+        if (order.shippingStatus !== 'delivered') {
+            return -1; // Special value to indicate order not delivered
+        }
         const withdrawDate = typeof order.withdrawAvailableDate === 'object' 
             ? new Date(order.withdrawAvailableDate.seconds * 1000)
             : new Date(order.withdrawAvailableDate || '');
@@ -181,8 +301,88 @@ export default function Page() {
         return Math.max(0, diffDays);
     };
 
+    const getWithdrawStatus = (order: FirestoreOrder) => {
+        // If admin approved, allow immediate withdrawal
+        if (order.payoutStatus === 'admin_approved') {
+            return {
+                canWithdraw: true,
+                message: "Approved for immediate withdrawal",
+                color: "text-green-600"
+            };
+        }
+
+        // If already withdrawn, show that status
+        if (order.payoutStatus === 'withdrawn') {
+            return {
+                canWithdraw: false,
+                message: "Already withdrawn",
+                color: "text-gray-600"
+            };
+        }
+
+        // If not delivered, can't withdraw
+        if (order.shippingStatus !== 'delivered') {
+            return {
+                canWithdraw: false,
+                message: "Order must be delivered before withdrawal",
+                color: "text-gray-600"
+            };
+        }
+
+        // Check if 30 days have passed since purchase date
+        const purchaseDate = new Date(order.purchaseDate.seconds * 1000);
+        const now = new Date();
+        const daysSincePurchase = Math.floor((now.getTime() - purchaseDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (daysSincePurchase >= 30) {
+            return {
+                canWithdraw: true,
+                message: "Available for withdrawal (30 days passed)",
+                color: "text-green-600"
+            };
+        }
+
+        // If none of the above conditions are met, show days remaining
+        const daysRemaining = 30 - daysSincePurchase;
+        return {
+            canWithdraw: false,
+            message: `Available in ${daysRemaining} days`,
+            color: "text-yellow-600"
+        };
+    };
+
     const canWithdraw = (order: FirestoreOrder) => {
-        return order.payoutStatus === 'available' && getDaysUntilWithdraw(order) <= 0;
+        console.log('Checking withdrawal eligibility for order:', {
+            id: order.id,
+            payoutStatus: order.payoutStatus,
+            shippingStatus: order.shippingStatus
+        });
+
+        // Admin approved orders can be withdrawn immediately
+        if (order.payoutStatus === 'admin_approved') {
+            console.log('Order is admin approved - allowing withdrawal');
+            return true;
+        }
+
+        // Already withdrawn orders can't be withdrawn again
+        if (order.payoutStatus === 'withdrawn') {
+            console.log('Order already withdrawn - blocking withdrawal');
+            return false;
+        }
+
+        // Order must be delivered
+        if (order.shippingStatus !== 'delivered') {
+            console.log('Order not delivered - blocking withdrawal');
+            return false;
+        }
+
+        // Check if 30 days have passed since purchase
+        const purchaseDate = new Date(order.purchaseDate.seconds * 1000);
+        const now = new Date();
+        const daysSincePurchase = Math.floor((now.getTime() - purchaseDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        console.log('Days since purchase:', daysSincePurchase);
+        return daysSincePurchase >= 30;
     };
 
     const retryShippingLabel = async (orderId: string | undefined) => {
@@ -219,7 +419,7 @@ export default function Page() {
         }
     };
 
-    if (loading) {
+    if (loadingOrders) {
         return (
             <StoreManagerTemplate>
                 <div className="flex items-center justify-center h-64">
@@ -242,7 +442,37 @@ export default function Page() {
 
     return (
         <StoreManagerTemplate>
-                <div className="space-y-6">
+            <div className="space-y-6">
+                {/* Error Popup */}
+                {withdrawError && (
+                    <div className="fixed top-4 right-4 bg-red-50 border border-red-200 rounded-lg p-4 shadow-lg z-50 max-w-md">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                                <div className="flex-shrink-0">
+                                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div className="ml-3">
+                                    <h3 className="text-sm font-medium text-red-800">Withdrawal Error</h3>
+                                    <div className="mt-1 text-sm text-red-700">{withdrawError}</div>
+                                </div>
+                            </div>
+                            <div className="ml-4 flex-shrink-0">
+                                <button
+                                    onClick={() => setWithdrawError(null)}
+                                    className="inline-flex text-gray-400 hover:text-gray-500"
+                                >
+                                    <span className="sr-only">Close</span>
+                                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Header */}
                 <div className="flex justify-between items-center">
                     <div>
@@ -402,9 +632,14 @@ export default function Page() {
                                             </div>
                                         </td>
                                         <td className="py-3 px-4">
-                                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${getStatusBadge(order.payoutStatus)}`}>
-                                                {order.payoutStatus}
-                                            </span>
+                                            <div className="flex flex-col gap-1">
+                                                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full border ${getStatusBadge(order.payoutStatus)}`}>
+                                                    {order.payoutStatus}
+                                                </span>
+                                                <span className={`text-xs ${getWithdrawStatus(order).color}`}>
+                                                    {getWithdrawStatus(order).message}
+                                                </span>
+                                            </div>
                                         </td>
                                         <td className="py-3 px-4 text-sm">
                                             <div className="flex flex-col gap-1">
@@ -664,8 +899,8 @@ export default function Page() {
                                             )}
                                             <div className="flex justify-between">
                                                 <span className="text-gray-600">Days Until Withdraw:</span>
-                                                <span className={`font-medium ${getDaysUntilWithdraw(selectedOrder) <= 0 ? 'text-green-600' : 'text-yellow-600'}`}>
-                                                    {getDaysUntilWithdraw(selectedOrder) <= 0 ? 'Available Now' : `${getDaysUntilWithdraw(selectedOrder)} days`}
+                                                <span className={`font-medium ${getWithdrawStatus(selectedOrder).color}`}>
+                                                    {getWithdrawStatus(selectedOrder).message}
                                                 </span>
                                             </div>
                                             {selectedOrder.stripeTransferId && (
@@ -681,25 +916,23 @@ export default function Page() {
                                         <div className="space-y-2 text-sm">
                                             <div className="flex justify-between">
                                                 <span className="text-gray-600">Subtotal:</span>
-                                                <span className="font-medium">${selectedOrder.subtotal?.toFixed(2) || selectedOrder.amount.toFixed(2)}</span>
+                                                <span className="font-medium">${selectedOrder.subtotal?.toFixed(2) || '0.00'}</span>
                                             </div>
-                                            {selectedOrder.shippingCost && (
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600">Shipping:</span>
-                                                    <span className="font-medium">${selectedOrder.shippingCost.toFixed(2)}</span>
-                                                </div>
-                                            )}
-                                            <div className="flex justify-between border-t border-gray-200 pt-2">
-                                                <span className="font-semibold">Total:</span>
-                                                <span className="font-semibold text-lg">${selectedOrder.amount.toFixed(2)}</span>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-600">Shipping:</span>
+                                                <span className="font-medium">${selectedOrder.shippingCost?.toFixed(2) || '0.00'}</span>
+                                            </div>
+                                            <div className="flex justify-between text-base font-bold pt-2 border-t">
+                                                <span>Total:</span>
+                                                <span>${selectedOrder.amount?.toFixed(2) || '0.00'}</span>
                                             </div>
                                             <div className="flex justify-between text-xs text-gray-500">
-                                                <span>Platform Fee (10%):</span>
-                                                <span>-${(selectedOrder.amount * 0.1).toFixed(2)}</span>
+                                                <span>Platform Fee (10% of product amount):</span>
+                                                <span>-${selectedOrder.platformFee?.toFixed(2) || '0.00'}</span>
                                             </div>
                                             <div className="flex justify-between text-sm font-medium text-green-600 border-t border-gray-200 pt-1">
-                                                <span>Your Earnings:</span>
-                                                <span>${(selectedOrder.amount * 0.9).toFixed(2)}</span>
+                                                <span>Your Earnings (90% of products + shipping):</span>
+                                                <span>${selectedOrder.vendorEarnings?.toFixed(2) || '0.00'}</span>
                                             </div>
                                         </div>
                                     </div>

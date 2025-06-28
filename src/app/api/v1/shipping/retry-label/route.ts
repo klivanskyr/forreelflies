@@ -44,11 +44,11 @@ export async function POST(request: NextRequest) {
         }
 
         // Validate customer address
-        if (!order.shippingAddress?.street1 || !order.shippingAddress?.city || 
+        if (!order.shippingAddress?.address1 || !order.shippingAddress?.city || 
             !order.shippingAddress?.state || !order.shippingAddress?.zip) {
             return NextResponse.json({ 
                 error: `Customer address is incomplete. Missing: ${[
-                    !order.shippingAddress?.street1 && 'street',
+                    !order.shippingAddress?.address1 && 'street',
                     !order.shippingAddress?.city && 'city',
                     !order.shippingAddress?.state && 'state', 
                     !order.shippingAddress?.zip && 'zip'
@@ -70,16 +70,17 @@ export async function POST(request: NextRequest) {
 
         const addressTo = {
             name: order.shippingAddress.name || 'Customer',
-            street1: order.shippingAddress.street1,
+            street1: order.shippingAddress.address1,
+            street2: order.shippingAddress.address2 || '',
             city: order.shippingAddress.city,
             state: order.shippingAddress.state,
             zip: order.shippingAddress.zip,
             country: order.shippingAddress.country || 'US',
         };
 
-        // Calculate parcel dimensions from products
-        const products = order.products || [];
-        const totalWeight = products.reduce((sum: number, p: any) => sum + (p.quantity * 1), 0); // Default 1 lb per item
+        // Calculate parcel dimensions from order items (not products)
+        const items = order.items || [];
+        const totalWeight = items.reduce((sum: number, item: any) => sum + (item.quantity * 1), 0); // Default 1 lb per item
         
         const parcels: Parcel[] = [{
             length: "6",

@@ -4,6 +4,7 @@ import { VendorItem } from "@/app/api/v1/checkout/route";
 import Button from "./buttons/Button";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 export default function CheckoutButton({ vendorItems }: { vendorItems: VendorItem[] }) {
     const router = useRouter();
@@ -15,7 +16,7 @@ export default function CheckoutButton({ vendorItems }: { vendorItems: VendorIte
             
             // Validate vendorItems before sending
             if (!vendorItems || vendorItems.length === 0) {
-                alert("Your cart is empty. Please add some items before checkout.");
+                toast.error("Your cart is empty. Please add some items before checkout.");
                 return;
             }
             
@@ -42,7 +43,7 @@ export default function CheckoutButton({ vendorItems }: { vendorItems: VendorIte
                 json = JSON.parse(responseText);
             } catch (parseError) {
                 console.error("Failed to parse response as JSON:", parseError);
-                alert("Checkout failed: Invalid response from server");
+                toast.error("Checkout failed: Invalid response from server");
                 return;
             }
 
@@ -55,17 +56,35 @@ export default function CheckoutButton({ vendorItems }: { vendorItems: VendorIte
                     router.push(json.data.url);
                 } else {
                     console.error("Success response but missing URL:", json);
-                    alert("Checkout failed: No checkout URL received");
+                    toast.error("Checkout failed: No checkout URL received");
                 }
             } else {
-                // Error case - show error message
+                // Error case - show specific error message
                 const errorMessage = json.error || "Unknown error occurred";
                 console.error("Checkout API error:", errorMessage);
-                alert(`Checkout failed: ${errorMessage}`);
+                
+                // Show appropriate error message based on error type
+                if (errorMessage.includes("shipping service")) {
+                    toast.error("Shipping service temporarily unavailable. Please try again in a few minutes.");
+                } else if (errorMessage.includes("stock")) {
+                    toast.error("Some items in your cart are out of stock. Please update your cart and try again.");
+                } else if (errorMessage.includes("price")) {
+                    toast.error("Product prices have changed. Please refresh your cart and try again.");
+                } else if (errorMessage.includes("Stripe")) {
+                    toast.error("Payment system temporarily unavailable. Please try again later.");
+                } else {
+                    toast.error(`Checkout failed: ${errorMessage}`);
+                }
             }
         } catch (error) {
             console.error("Checkout request failed:", error);
-            alert("Checkout failed: Please check your connection and try again");
+            
+            // Network or connection error
+            if (error instanceof TypeError && error.message.includes("fetch")) {
+                toast.error("Connection error. Please check your internet connection and try again.");
+            } else {
+                toast.error("Checkout failed: Please try again in a few moments.");
+            }
         } finally {
             setLoading(false);
         }

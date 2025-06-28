@@ -11,6 +11,9 @@ import CheckoutButton from "@/components/CheckoutButton";
 import ShippingAddressModal from "@/components/modal/ShippingAddressModal";
 import { useSession, signOut, getSession } from "next-auth/react";
 import { useEffect, useState } from "react";
+import { FaMinus, FaPlus, FaTrash } from "react-icons/fa";
+import Dropdown from "@/components/inputs/Dropdown";
+import toast from "react-hot-toast";
 
 export type CartId = {
     id: string,
@@ -22,6 +25,17 @@ export type CartItem = {
     quantity: number,
 };
 
+// Add a helper to hide number input spinners
+const inputNoSpinner = {
+    MozAppearance: "textfield",
+    WebkitAppearance: "none",
+    appearance: "textfield",
+    "&::-webkit-outer-spin-button, &::-webkit-inner-spin-button": {
+        WebkitAppearance: "none",
+        margin: 0
+    }
+} as const;
+
 export default function Page() {
     const { data: session, status, update } = useSession();
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -32,6 +46,7 @@ export default function Page() {
     const [shippingCalculationStatus, setShippingCalculationStatus] = useState<'idle' | 'calculating' | 'success' | 'failed'>('idle');
     const [shippingError, setShippingError] = useState<string | null>(null);
     const [clearingCart, setClearingCart] = useState(false);
+    const [updatingItems, setUpdatingItems] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         if (status === 'loading') return; // Still loading session
@@ -140,11 +155,14 @@ export default function Page() {
                             console.error("Failed to calculate initial shipping rates:", err);
                             setShippingCalculationStatus('failed');
                             setShippingError(err || "Failed to calculate shipping rates");
+                            toast.error('Unable to calculate shipping rates. Please check your address or try again later.');
                         }
                     } catch (shippingError) {
                         console.error('Error calculating shipping:', shippingError);
                         setShippingCalculationStatus('failed');
-                        setShippingError(shippingError instanceof Error ? shippingError.message : "Shipping calculation failed");
+                        const errorMessage = shippingError instanceof Error ? shippingError.message : "Shipping calculation failed";
+                        setShippingError(errorMessage);
+                        toast.error('Shipping calculation failed. Please try again or contact support.');
                     }
                 } else {
                     console.log("User address incomplete, skipping shipping calculation");
@@ -153,7 +171,9 @@ export default function Page() {
 
             } catch (error) {
                 console.error('Error fetching cart data:', error);
-                setError(error instanceof Error ? error.message : 'Failed to load cart');
+                const errorMessage = error instanceof Error ? error.message : 'Failed to load cart';
+                setError(errorMessage);
+                toast.error('Failed to load cart. Please refresh the page and try again.');
             } finally {
                 setLoading(false);
             }
@@ -232,11 +252,14 @@ export default function Page() {
                         console.log("No shipping rates calculated:", err);
                         setShippingCalculationStatus('failed');
                         setShippingError(err || "Failed to calculate shipping rates");
+                        toast.error('Unable to calculate shipping with your new address. Please verify your address details.');
                     }
                 } catch (shippingError) {
                     console.error('Error calculating shipping:', shippingError);
                     setShippingCalculationStatus('failed');
-                    setShippingError(shippingError instanceof Error ? shippingError.message : "Shipping calculation failed");
+                    const errorMessage = shippingError instanceof Error ? shippingError.message : "Shipping calculation failed";
+                    setShippingError(errorMessage);
+                    toast.error('Error calculating shipping. Please try again.');
                 }
             }
         }, 1000); // 1 second delay to ensure session update
@@ -246,6 +269,7 @@ export default function Page() {
         if (!session?.user?.uid) return;
         
         setClearingCart(true);
+        
         try {
             const response = await fetch(`/api/v1/user/cart?userId=${session.user.uid}`, {
                 method: 'DELETE',
@@ -258,12 +282,155 @@ export default function Page() {
                 setShippingCalculationStatus('idle');
                 console.log('Cart cleared successfully');
             } else {
+                toast.error('Failed to clear cart. Please try again.');
                 console.error('Failed to clear cart:', response.status);
             }
         } catch (error) {
+            toast.error('Error clearing cart. Please check your connection and try again.');
             console.error('Error clearing cart:', error);
         } finally {
             setClearingCart(false);
+        }
+    };
+
+    const handleUpdateQuantity = async (productId: string, newQuantity: number) => {
+        if (!session?.user?.uid || newQuantity < 1) return;
+        
+        // Find the product to validate quantity options
+        const product = cartItems.find(item => item.product.id === productId)?.product;
+        if (product) {
+            const minQty = product.quantityOptions?.[0] || 1;
+            const stepQty = product.quantityOptions?.[0] || 1;
+            
+            // Ensure quantity is at least the minimum
+            newQuantity = Math.max(minQty, newQuantity);
+            
+            // Ensure quantity follows the step increment
+            newQuantity = Math.round(newQuantity / stepQty) * stepQty;
+            
+            // Check stock limits if tracking is enabled
+            if (product.trackQuantity && product.stockQuantity && newQuantity > product.stockQuantity) {
+                newQuantity = product.stockQuantity;
+            }
+        }
+        
+        setUpdatingItems(prev => new Set(prev).add(productId));
+        try {
+            const response = await fetch('/api/v1/user/cart', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    userId: session.user.uid,
+                    productId: productId,
+                    quantity: newQuantity
+                })
+            });
+            
+            if (response.ok) {
+                // Update local state
+                setCartItems(prev => prev.map(item => 
+                    item.product.id === productId 
+                        ? { ...item, quantity: newQuantity }
+                        : item
+                ));
+                console.log('Quantity updated successfully');
+            } else {
+                toast.error('Failed to update quantity. Please try again.');
+                console.error('Failed to update quantity:', response.status);
+            }
+        } catch (error) {
+            toast.error('Error updating quantity. Please check your connection.');
+            console.error('Error updating quantity:', error);
+        } finally {
+            setUpdatingItems(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(productId);
+                return newSet;
+            });
+        }
+    };
+
+    const handleRemoveItem = async (productId: string) => {
+        if (!session?.user?.uid) return;
+        
+        setUpdatingItems(prev => new Set(prev).add(productId));
+        try {
+            const response = await fetch(`/api/v1/user/cart?userId=${session.user.uid}&productId=${productId}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+            
+            if (response.ok) {
+                // Remove from local state
+                setCartItems(prev => prev.filter(item => item.product.id !== productId));
+                console.log('Item removed successfully');
+            } else {
+                toast.error('Failed to remove item. Please try again.');
+                console.error('Failed to remove item:', response.status);
+            }
+        } catch (error) {
+            toast.error('Error removing item. Please check your connection.');
+            console.error('Error removing item:', error);
+        } finally {
+            setUpdatingItems(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(productId);
+                return newSet;
+            });
+        }
+    };
+
+    const handleQuantityChange = (productId: string, value: string) => {
+        const numValue = parseInt(value);
+        if (!isNaN(numValue) && numValue >= 1) {
+            // Find the product to get its quantity options
+            const product = cartItems.find(item => item.product.id === productId)?.product;
+            if (product) {
+                const minQty = product.quantityOptions?.[0] || 1;
+                const stepQty = product.quantityOptions?.[0] || 1;
+                
+                // Ensure quantity is at least the minimum
+                const validQty = Math.max(minQty, numValue);
+                
+                // Ensure quantity follows the step increment
+                const adjustedQty = Math.round(validQty / stepQty) * stepQty;
+                
+                handleUpdateQuantity(productId, adjustedQty);
+            } else {
+                handleUpdateQuantity(productId, numValue);
+            }
+        }
+    };
+
+    const handleQuantityBlur = (productId: string, value: string) => {
+        const numValue = parseInt(value);
+        if (isNaN(numValue) || numValue < 1) {
+            // Find the product to get its minimum quantity
+            const product = cartItems.find(item => item.product.id === productId)?.product;
+            const minQty = product?.quantityOptions?.[0] || 1;
+            
+            // Reset to minimum quantity if invalid
+            handleUpdateQuantity(productId, minQty);
+        } else {
+            // Validate against quantity options
+            const product = cartItems.find(item => item.product.id === productId)?.product;
+            if (product) {
+                const minQty = product.quantityOptions?.[0] || 1;
+                const stepQty = product.quantityOptions?.[0] || 1;
+                
+                // Ensure quantity is at least the minimum
+                const validQty = Math.max(minQty, numValue);
+                
+                // Ensure quantity follows the step increment
+                const adjustedQty = Math.round(validQty / stepQty) * stepQty;
+                
+                if (adjustedQty !== numValue) {
+                    handleUpdateQuantity(productId, adjustedQty);
+                }
+            }
         }
     };
 
@@ -291,20 +458,6 @@ export default function Page() {
                     <p className="text-gray-600 mb-4">{error}</p>
                     <Link href="/shop" className="text-green-600 hover:text-green-800 underline">
                         Continue Shopping
-                    </Link>
-                </div>
-            </div>
-        );
-    }
-
-    if (cartItems.length === 0 && !loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <h1 className="text-2xl font-bold text-gray-900 mb-4">Your cart is empty</h1>
-                    <p className="text-gray-600 mb-4">Add some products to get started!</p>
-                    <Link href="/shop" className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors">
-                        Start Shopping
                     </Link>
                 </div>
             </div>
@@ -390,7 +543,6 @@ export default function Page() {
                                         <div className="flex flex-col items-start space-y-2">
                                             <div className="h-4 bg-gray-200 rounded w-32"></div>
                                             <div className="h-3 bg-gray-200 rounded w-24"></div>
-                                            <div className="h-3 bg-gray-200 rounded w-16"></div>
                                         </div>
                                     </div>
                                     <div className="w-full md:w-1/6 mt-2 md:mt-0">
@@ -404,6 +556,13 @@ export default function Page() {
                                     </div>
                                 </div>
                             ))
+                        ) : cartItems.length === 0 ? (
+                            <div className="py-8 text-center">
+                                <p className="text-gray-600 mb-4">Your cart is empty</p>
+                                <Link href="/shop" className="text-green-600 hover:text-green-800 underline">
+                                    Start Shopping
+                                </Link>
+                            </div>
                         ) : (
                             cartItems.map((item) => {
                             const productTotal = item.product.price * item.quantity;
@@ -441,8 +600,13 @@ export default function Page() {
                                             >
                                                 {stockLabel || "In Stock"}
                                             </div>
-                                            <button className="text-blue-500 text-sm mt-1 hover:underline">
-                                                Remove
+                                            <button 
+                                                onClick={() => handleRemoveItem(item.product.id)}
+                                                disabled={updatingItems.has(item.product.id)}
+                                                className="text-red-500 text-sm mt-1 hover:text-red-700 hover:underline disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                                            >
+                                                <FaTrash className="w-3 h-3" />
+                                                {updatingItems.has(item.product.id) ? 'Removing...' : 'Remove'}
                                             </button>
                                         </div>
                                     </div>
@@ -453,10 +617,88 @@ export default function Page() {
                                     </div>
 
                                     {/* Quantity */}
-                                    <div className="w-full md:w-1/6 flex items-center mt-2 md:mt-0">
-                                        <span className="px-3 border">
-                                            {item.quantity}
-                                        </span>
+                                    <div className="w-full md:w-1/6 flex flex-col items-center mt-4 md:mt-0 space-y-2">
+                                        {/* Base Quantity */}
+                                        <label className="block text-sm font-medium text-gray-900">
+                                            Base Quantity
+                                        </label>
+                                        <Dropdown
+                                            options={(item.product.quantityOptions || [1]).map(qty => ({
+                                                value: qty.toString(),
+                                                label: qty.toString()
+                                            }))}
+                                            selected={{ 
+                                                value: (item.product.quantityOptions?.[0] || 1).toString(), 
+                                                label: (item.product.quantityOptions?.[0] || 1).toString() 
+                                            }}
+                                            setSelected={(value) => {
+                                                const baseQty = parseInt(value);
+                                                const currentMultiplier = Math.round(item.quantity / (item.product.quantityOptions?.[0] || 1));
+                                                const newQuantity = baseQty * currentMultiplier;
+                                                handleUpdateQuantity(item.product.id, newQuantity);
+                                            }}
+                                            classNames={{ select: "w-full" }}
+                                        />
+                                        
+                                        <div className="mt-4">
+                                            <label className="block text-sm font-medium text-gray-900">
+                                                Quantity Multiplier
+                                            </label>
+                                            <div className="flex items-center space-x-3 mt-2">
+                                                <div className="flex items-center border border-gray-300 rounded-lg">
+                                                    <button 
+                                                        className="p-2 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                                                        onClick={() => {
+                                                            const baseQty = item.product.quantityOptions?.[0] || 1;
+                                                            const currentMultiplier = Math.round(item.quantity / baseQty);
+                                                            if (currentMultiplier > 1) {
+                                                                handleUpdateQuantity(item.product.id, baseQty * (currentMultiplier - 1));
+                                                            }
+                                                        }}
+                                                        disabled={item.quantity <= (item.product.quantityOptions?.[0] || 1) || updatingItems.has(item.product.id)}
+                                                    >
+                                                        <FaMinus className="w-3 h-3 text-gray-600" />
+                                                    </button>
+                                                    <input
+                                                        type="number"
+                                                        value={Math.round(item.quantity / (item.product.quantityOptions?.[0] || 1))}
+                                                        onChange={(e) => {
+                                                            const value = e.target.value;
+                                                            if (value === "") return;
+                                                            
+                                                            const numValue = parseInt(value);
+                                                            if (!isNaN(numValue) && numValue >= 1) {
+                                                                const baseQty = item.product.quantityOptions?.[0] || 1;
+                                                                handleUpdateQuantity(item.product.id, baseQty * numValue);
+                                                            }
+                                                        }}
+                                                        onBlur={(e) => {
+                                                            const value = e.target.value;
+                                                            if (value === "" || parseInt(value) < 1) {
+                                                                const baseQty = item.product.quantityOptions?.[0] || 1;
+                                                                handleUpdateQuantity(item.product.id, baseQty);
+                                                            }
+                                                        }}
+                                                        className="px-4 py-2 text-center w-20 focus:outline-none font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                        min={1}
+                                                    />
+                                                    <button 
+                                                        className="p-2 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                                                        onClick={() => {
+                                                            const baseQty = item.product.quantityOptions?.[0] || 1;
+                                                            const currentMultiplier = Math.round(item.quantity / baseQty);
+                                                            handleUpdateQuantity(item.product.id, baseQty * (currentMultiplier + 1));
+                                                        }}
+                                                        disabled={updatingItems.has(item.product.id)}
+                                                    >
+                                                        <FaPlus className="w-3 h-3 text-gray-600" />
+                                                    </button>
+                                                </div>
+                                                <div className="text-sm text-gray-600">
+                                                    <span>{item.product.quantityOptions?.[0] || 1} × {Math.round(item.quantity / (item.product.quantityOptions?.[0] || 1))} = {item.quantity} items</span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     {/* Total */}

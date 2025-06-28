@@ -249,37 +249,31 @@ export default function ProductPage() {
 
                                 {/* Vendor Info Card */}
                                 <div className="bg-gray-50 rounded-xl p-6 mb-8">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <Link 
-                                            href={`/vendor/${product.vendorId}`}
-                                            className="flex items-center gap-4 hover:text-green-600 transition-colors"
-                                        >
-                                            <div className="bg-white p-3 rounded-full">
-                                                <FaStore className="w-6 h-6 text-green-600" />
-                                            </div>
-                                            <div>
-                                                <div className="flex items-center gap-3">
-                                                    <h3 className="font-semibold text-xl">{product.vendorName}</h3>
-                                                    {vendorReviews.totalReviews > 0 && (
-                                                        <div className="flex items-center gap-1">
-                                                            <StarRating rating={vendorReviews.averageRating || 0} size="xs" />
-                                                            <span className="text-sm text-gray-600">
-                                                                {(vendorReviews.averageRating || 0).toFixed(1)} ({vendorReviews.totalReviews})
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <p className="text-sm text-gray-500">Visit Store</p>
-                                            </div>
-                                        </Link>
-                                        <div className="flex items-center gap-2">
-                                            <BiSupport className="w-6 h-6 text-gray-400" />
-                                            <span className="text-sm text-gray-500">Support Available</span>
+                                    <Link 
+                                        href={`/vendor/${product.vendorId}`}
+                                        className="flex items-center gap-4 hover:text-green-600 transition-colors"
+                                    >
+                                        <div className="bg-white p-3 rounded-full">
+                                            <FaStore className="w-6 h-6 text-green-600" />
                                         </div>
-                                    </div>
+                                        <div>
+                                            <div className="flex items-center gap-3">
+                                                <h3 className="font-semibold text-xl">{product.vendorName}</h3>
+                                                {vendorReviews.totalReviews > 0 && (
+                                                    <div className="flex items-center gap-1">
+                                                        <StarRating rating={vendorReviews.averageRating || 0} size="xs" />
+                                                        <span className="text-sm text-gray-600">
+                                                            {(vendorReviews.averageRating || 0).toFixed(1)} ({vendorReviews.totalReviews})
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <p className="text-sm text-gray-500">Visit Store</p>
+                                        </div>
+                                    </Link>
                                     
                                     {vendorReviews.totalReviews === 0 && (
-                                        <div className="text-sm text-gray-500">New seller</div>
+                                        <div className="text-sm text-gray-500 mt-2">New seller</div>
                                     )}
                                 </div>
 

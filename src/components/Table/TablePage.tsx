@@ -23,7 +23,7 @@ export default function Page({ rows, headers }: { rows: JSX.Element[][], headers
 
             {/* Only show pagination if there are items */}
             {hasItems && (
-                <div className="flex flex-row items-center justify-center p-6 gap-6">
+                <div className="flex flex-row items-center justify-center p-6 mb-4 gap-6">
                     <button 
                         onClick={() => setPage(page - 1)} 
                         disabled={page === 0}
