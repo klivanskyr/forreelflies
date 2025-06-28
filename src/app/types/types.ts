@@ -104,10 +104,12 @@ export type Order = {
   subtotal: number;
   shippingCost: number;
   currency: string;
-  payoutStatus: string;
+  payoutStatus: 'pending' | 'available' | 'withdrawn';  // Simplified payout statuses
   purchaseDate: Date | FirestoreTimestamp;
   withdrawAvailableDate: Date | FirestoreTimestamp;
   estimatedDeliveryDate?: Date | FirestoreTimestamp;
+  deliveredDate?: Date | FirestoreTimestamp;  // Added to track actual delivery date
+  lastTrackingUpdate?: Date | FirestoreTimestamp;
   products: Array<{
     productId: string;
     productName: string;
@@ -118,7 +120,7 @@ export type Order = {
   stripeTransferId?: string;
   shippoLabelUrl?: string;
   trackingNumber?: string;
-  shippingStatus?: 'pending' | 'shipped' | 'delivered' | 'label_failed';
+  shippingStatus?: 'pending' | 'label_created' | 'shipped' | 'delivered' | 'delivery_failed' | 'tracking_lost' | 'label_failed';
   refundStatus?: 'none' | 'requested' | 'completed';
   checkoutSessionId: string;  // Reference to the original checkout session
   shippingAddress: {

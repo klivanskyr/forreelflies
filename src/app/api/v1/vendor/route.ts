@@ -126,58 +126,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 export async function POST(request: NextRequest) {
   const { pathname } = new URL(request.url);
-  if (pathname.endsWith("/withdraw")) {
-    const user = await requireRole(request, "vendor");
-    if (user instanceof NextResponse) return user;
-    try {
-      const { vendorId } = await request.json();
-      if (!vendorId || vendorId !== user.uid) {
-        return NextResponse.json({ error: "vendorId required and must match authenticated user" }, { status: 400 });
-      }
-      // Find eligible orders
-      const now = new Date();
-      const ordersQuery = query(
-        collection(db, "orders"),
-        where("vendorId", "==", vendorId),
-        where("payoutStatus", "==", "available")
-      );
-      const snapshot = await getDocs(ordersQuery);
-      const eligibleOrders = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter((order: any) => order.withdrawAvailableDate.toDate() <= now);
-      if (eligibleOrders.length === 0) {
-        return NextResponse.json({ error: "No eligible orders for withdrawal" }, { status: 400 });
-      }
-      // Sum total amount
-      const totalAmount = eligibleOrders.reduce((sum: number, order: any) => sum + order.amount, 0);
-      // Get vendor's Stripe account ID
-      const vendorDoc = await getDoc(doc(db, "vendors", vendorId));
-      const stripeAccountId = vendorDoc.data()?.stripeAccountId;
-      if (!stripeAccountId) {
-        return NextResponse.json({ error: "Vendor Stripe account not found" }, { status: 400 });
-      }
-      // Initiate Stripe transfer
-      const payout = await stripe.transfers.create({
-        amount: Math.round(totalAmount * 100), // dollars to cents
-        currency: "usd",
-        destination: stripeAccountId,
-      });
-      // Update orders
-      const updatedOrderIds: string[] = [];
-      for (const order of eligibleOrders) {
-        await updateDoc(doc(db, "orders", order.id), {
-          payoutStatus: "withdrawn",
-          stripeTransferId: payout.id,
-        });
-        updatedOrderIds.push(order.id);
-      }
-      return NextResponse.json({ payoutId: payout.id, updatedOrderIds });
-    } catch (err) {
-      console.error("Withdraw error", err);
-      return NextResponse.json({ error: "Withdraw failed" }, { status: 500 });
-    }
-  }
-  // ... existing POST logic ...
+  // Remove the withdraw endpoint handling since it's now in its own file
+  // ... existing code ...
 }
 
 export async function PUT(request: NextRequest): Promise<NextResponse> {

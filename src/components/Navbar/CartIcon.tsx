@@ -45,11 +45,11 @@ export default function CartIcon() {
 
     return (
         <Link href="/cart" className="relative">
-            <FiShoppingCart className="h-6 w-6" />
+            <FiShoppingCart className="w-5 h-5 md:w-6 md:h-6" />
             {session?.user && numItemsInCart > 0 && (
                 <div className="absolute top-0 right-0 translate-x-[70%] -translate-y-[60%]">
-                    <div className="bg-blue-400 rounded-full w-[17px] h-[17px] text-center content-center">
-                        <p className="text-xs font-medium">{numItemsInCart}</p>
+                    <div className="bg-blue-400 rounded-full w-[15px] h-[15px] md:w-[17px] md:h-[17px] flex items-center justify-center">
+                        <p className="text-[10px] md:text-xs font-medium text-white">{numItemsInCart}</p>
                     </div>
                 </div>
             )}
