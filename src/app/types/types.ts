@@ -55,6 +55,12 @@ export type Vendor = {
     storeState: string,
     storeStreetAddress: string,
     storeZip: string,
+    // Earnings tracking
+    monthlyEarnings: number,
+    allTimeEarnings: number,
+    lastEarningsUpdate: Date | FirestoreTimestamp,
+    stripeAccountId?: string,
+    reviewSummary?: ReviewSummary,
 }
 
 export type Sort = "latest" | "oldest" | "priceLowToHigh" | "priceHighToLow";
@@ -89,50 +95,63 @@ export type OrderProduct = {
   price: number; // per unit
 };
 
-export type FirestoreTimestamp = {
+export interface FirestoreTimestamp {
   seconds: number;
   nanoseconds: number;
-};
+}
+
+export type PayoutStatus = 
+  | 'pending_delivery'           // Initial state, waiting for delivery
+  | 'pending_holdback'          // Delivered but in 30-day holdback period
+  | 'available'                 // Ready for withdrawal (after holdback or admin override)
+  | 'admin_approved'           // Admin bypassed normal requirements
+  | 'withdrawn'                // Funds have been withdrawn
+  | 'blocked'                  // Blocked from withdrawal (e.g., dispute)
+  | 'refunded';               // Order was refunded
 
 export type Order = {
-  id?: string;  // Optional because it's added after creation
+  id?: string;
   vendorId: string;
   vendorName: string;
   customerId: string;
   customerEmail: string;
-  amount: number;
+  customerName: string;
   subtotal: number;
+  amount: number;
   shippingCost: number;
-  currency: string;
-  payoutStatus: 'pending' | 'available' | 'withdrawn';  // Simplified payout statuses
-  purchaseDate: Date | FirestoreTimestamp;
-  withdrawAvailableDate: Date | FirestoreTimestamp;
-  estimatedDeliveryDate?: Date | FirestoreTimestamp;
-  deliveredDate?: Date | FirestoreTimestamp;  // Added to track actual delivery date
-  lastTrackingUpdate?: Date | FirestoreTimestamp;
-  products: Array<{
+  products: {
     productId: string;
     productName: string;
     productImage?: string;
     quantity: number;
     price: number;
-  }>;
-  stripeTransferId?: string;
-  shippoLabelUrl?: string;
-  trackingNumber?: string;
-  shippingStatus?: 'pending' | 'label_created' | 'shipped' | 'delivered' | 'delivery_failed' | 'tracking_lost' | 'label_failed';
-  refundStatus?: 'none' | 'requested' | 'completed';
-  checkoutSessionId: string;  // Reference to the original checkout session
+  }[];
   shippingAddress: {
     name: string;
-    street1: string;
-    street2?: string;
+    address1: string;
+    address2?: string;
     city: string;
     state: string;
     zip: string;
     country: string;
-    phone?: string;
   };
+  shippingStatus: string;
+  status: string;
+  deliveryStatus: string;
+  payoutStatus: PayoutStatus;
+  purchaseDate: Date | FirestoreTimestamp;
+  withdrawAvailableDate: Date | FirestoreTimestamp;
+  platformFee: number;
+  vendorEarnings: number;
+  checkoutSessionId: string;
+  shippoLabelUrl?: string;
+  trackingNumber?: string;
+  shippoTransactionId?: string;
+  shippoShipmentId?: string;
+  shippingCarrier?: string;
+  shippingService?: string;
+  shippingCostActual?: number;
+  shippingError?: string | null;
 };
 
 export type VendorProfile = {
@@ -184,6 +203,8 @@ export type Review = {
 export type ProductReview = Review & {
   productId: string;
   productName: string;
+  vendorId: string;
+  vendorName: string;
 };
 
 export type VendorReview = Review & {

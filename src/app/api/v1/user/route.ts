@@ -135,19 +135,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 }
 
 export async function PUT(request: NextRequest): Promise<NextResponse> {
-    console.log("PUT /api/v1/user called");
-    console.log("Request cookies:", request.cookies.getAll().map(c => `${c.name}=${c.value.substring(0, 20)}...`));
-    
     const user = await requireRole(request, "user");
-    if (user instanceof NextResponse) {
-        console.log("requireRole returned NextResponse (auth failed)");
-        return user;
-    }
-
-    console.log("User authenticated:", { uid: user.uid, email: user.email });
+    if (user instanceof NextResponse) return user;
 
     try {
-        const { uid, streetAddress, city, state, zipCode, country } = await request.json();
+        const { uid, username, email, phoneNumber, photoURL, streetAddress, city, state, zipCode, country } = await request.json();
 
         if (!uid) {
             return NextResponse.json({ error: "uid is required" }, { status: 400 });
@@ -157,75 +149,42 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
         if (user.uid !== uid) {
             return NextResponse.json({ error: "Unauthorized: Cannot update another user's data" }, { status: 401 });
         }
+
+        // Prepare update data
+        const updateData: any = {};
         
-        // Verify address
-        async function validateAddress(streetAddress: string, city: string, state: string, zipCode: string, country: string) {
+        // Add profile fields if provided
+        if (username !== undefined) updateData.username = username;
+        if (email !== undefined) updateData.email = email;
+        if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+        if (photoURL !== undefined) updateData.photoURL = photoURL;
+
+        // Add address fields if provided
+        if (streetAddress !== undefined) updateData.streetAddress = streetAddress;
+        if (city !== undefined) updateData.city = city;
+        if (state !== undefined) updateData.state = state;
+        if (zipCode !== undefined) updateData.zipCode = zipCode;
+        if (country !== undefined) updateData.country = country;
+
+        // If email is being updated, update it in Firebase Auth as well
+        if (email && email !== user.email) {
             try {
-                const address = await shippo.addresses.create({
-                    street1: streetAddress,
-                    city: city,
-                    state: state,
-                    zip: zipCode,
-                    country: country,
-                    validate: true
-                });
-
-                if (address.validationResults && address.validationResults.isValid) {
-                    return address;
-                } else {
-                    console.log("Invalid Address", address.validationResults || address);
-                    throw new Error("Invalid address");
-                }
+                await adminAuth.updateUser(uid, { email });
             } catch (error) {
-                console.error("Address validation error:", error);
-                return null;
+                return NextResponse.json({ 
+                    error: "Failed to update email. It may already be in use." 
+                }, { status: 400 });
             }
         }
 
-        // Validate address (optional - fallback to user input if validation fails)
-        let validateStreetAddress = streetAddress;
-        let validateCity = city;
-        let validateState = state;
-        let validateZipCode = zipCode;
-        let validateCountry = country;
+        // Update user in Firestore
+        await setDoc(doc(db, "users", uid), updateData, { merge: true });
 
-        try {
-            const validatedData = await validateAddress(streetAddress, city, state, zipCode, country);
-            if (validatedData) {
-                // Use validated address if available
-                validateStreetAddress = validatedData.street1;
-                validateCity = validatedData.city;
-                validateState = validatedData.state;
-                validateZipCode = validatedData.zip;
-                validateCountry = validatedData.country;
-                console.log("Using validated address from Shippo");
-            } else {
-                console.log("Shippo validation failed, using user input");
-            }
-        } catch (error) {
-            console.error("Address validation error:", error);
-            console.log("Falling back to user input address");
-            // Continue with user input - don't block the save
-        }
+        return NextResponse.json({ 
+            message: "Successfully updated user",
+            user: { uid, ...updateData }
+        }, { status: 200 });
 
-        try {
-            // Update user in Firestore
-            await setDoc(doc(db, "users", uid), {
-                streetAddress: validateStreetAddress,
-                city: validateCity,
-                state: validateState,
-                zipCode: validateZipCode,
-                country: validateCountry
-            }, { merge: true });
-
-            return NextResponse.json({ message: "Successfully updated user" }, { status: 200 });
-        } catch (error) {
-            if (error instanceof Error) {
-                return NextResponse.json({ error: error.message }, { status: 400 });
-            } else {
-                return NextResponse.json({ error: `An error occurred: ${error}` }, { status: 400 });
-            }
-        }
     } catch (error) {
         if (error instanceof Error) {
             return NextResponse.json({ error: error.message }, { status: 400 });

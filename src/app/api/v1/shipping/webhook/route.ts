@@ -95,9 +95,14 @@ export async function POST(request: NextRequest) {
                 withdrawalDate.setDate(withdrawalDate.getDate() + 30);
                 updateData.withdrawAvailableDate = withdrawalDate;
                 
-                // If 30 days have passed since delivery, make funds available
+                // Update payout status to pending_holdback when delivered
+                if (payoutStatus === 'pending_delivery') {
+                    payoutStatus = 'pending_holdback';
+                }
+                
+                // If 30 days have passed since delivery and not admin approved, make funds available
                 const daysSinceDelivery = Math.floor((now.getTime() - deliveryDate.getTime()) / (1000 * 60 * 60 * 24));
-                if (daysSinceDelivery >= 30 && payoutStatus === 'pending') {
+                if (daysSinceDelivery >= 30 && payoutStatus === 'pending_holdback') {
                     payoutStatus = 'available';
                 }
                 break;

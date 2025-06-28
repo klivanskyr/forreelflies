@@ -6,6 +6,7 @@ import { DbUser } from "@/lib/firebase-admin";
 import { Product, Rate } from "@/app/types/types";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 export default function CalculateShippingButton({ user, products }: { user: DbUser, products: Product[] }) {
     const router = useRouter();
@@ -18,19 +19,34 @@ export default function CalculateShippingButton({ user, products }: { user: DbUs
 
     const handleClick = async () => {
         setLoading(true);
-        const [rates, err] = await calculateShipping(user, products)
-        if (err) {
-            console.log(err);
+        
+        try {
+            const [rates, err] = await calculateShipping(user, products);
+            
+            if (err) {
+                console.log(err);
+                toast.error(`Unable to calculate shipping: ${err}`);
+                return;
+            }
+            
+            if (rates.length === 0) {
+                toast.error("No shipping options available for your location.");
+                return;
+            }
+            
+            setRates(rates);
+            console.log("Shipping rates calculated successfully!");
+        } catch (error) {
+            console.error("Error calculating shipping:", error);
+            toast.error("Failed to calculate shipping. Please try again.");
+        } finally {
             setLoading(false);
-            return;
         }
-        setRates(rates);
-        setLoading(false);
     }
 
     return (
         <>
-            {(rates.length == 0 && !loading) && <Button onClick={() => handleClick()} className="h-10" text="Calculating Shipping Button" />}
+            {(rates.length == 0 && !loading) && <Button onClick={() => handleClick()} className="h-10" text="Calculate Shipping" />}
             {loading && <div>Loading...</div>}
             {rates && <div>{rates.map((rate, i) => <div key={i}>{`$${rate.amount}`}</div>)}</div>}
         </>

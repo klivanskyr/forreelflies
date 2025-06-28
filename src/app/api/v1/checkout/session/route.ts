@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
                 const subtotal = (vendor.cartItems || []).reduce((sum: number, item: any) => 
                     sum + (item.product?.price || 0) * (item.quantity || 1), 
                 0);
-                const shippingCost = (vendor.shippingFee || 0);
+                const shippingCost = (vendor.shippingFee || 0) / 100; // Convert shipping cost from cents to dollars
                 const total = subtotal + shippingCost;
 
                 return {

@@ -3,23 +3,29 @@ import { collection, addDoc, getDocs, query, where, orderBy, doc, getDoc, update
 import { NextRequest, NextResponse } from "next/server";
 import { ProductReview, ReviewSummary } from "@/app/types/types";
 
-// GET - Fetch reviews for a product
+// GET - Fetch reviews for a product or vendor
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get("productId");
+    const vendorId = searchParams.get("vendorId");
     const page = parseInt(searchParams.get("page") || "1");
     const pageSize = parseInt(searchParams.get("pageSize") || "10");
 
-    if (!productId) {
-      return NextResponse.json({ error: "Product ID is required" }, { status: 400 });
+    if (!productId && !vendorId) {
+      return NextResponse.json({ error: "Either Product ID or Vendor ID is required" }, { status: 400 });
     }
 
-    // Fetch reviews for the product
+    // Build the query based on the provided parameter
     const reviewsQuery = query(
       collection(db, "productReviews"),
-      where("productId", "==", productId),
-      orderBy("createdAt", "desc")
+      ...[
+        // If productId is provided, filter by productId
+        productId ? where("productId", "==", productId) : null,
+        // If vendorId is provided, get reviews for all products by this vendor
+        vendorId ? where("vendorId", "==", vendorId) : null,
+        orderBy("createdAt", "desc")
+      ].filter(Boolean) // Remove null values
     );
 
     const reviewsSnapshot = await getDocs(reviewsQuery);
@@ -107,6 +113,8 @@ export async function POST(request: NextRequest) {
     const review: Omit<ProductReview, 'id'> = {
       productId,
       productName: productData.name,
+      vendorId: productData.vendorId,
+      vendorName: productData.vendorName,
       userId,
       userName,
       userEmail,

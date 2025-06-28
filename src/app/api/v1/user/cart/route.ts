@@ -111,6 +111,7 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
     try {
         const { searchParams } = new URL(request.url);
         const userId = searchParams.get("userId");
+        const productId = searchParams.get("productId");
 
         if (!userId) {
             return NextResponse.json({ message: "User ID is required" }, { status: 400 });
@@ -120,7 +121,19 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
             return NextResponse.json({ message: "Unauthorized: userId does not match authenticated user" }, { status: 403 });
         }
 
-        // Get all cart items for the user
+        // If productId is provided, delete specific item
+        if (productId) {
+            const userCartItemDoc = await getDoc(doc(db, "users", userId, "cart", productId));
+            
+            if (!userCartItemDoc.exists()) {
+                return NextResponse.json({ message: "Product not found in cart" }, { status: 404 });
+            }
+
+            await deleteDoc(doc(db, "users", userId, "cart", productId));
+            return NextResponse.json({ message: "Product removed from cart successfully" }, { status: 200 });
+        }
+
+        // If no productId, clear entire cart (existing functionality)
         const userCartDocs = await getDocs(collection(db, "users", userId, "cart"));
         
         // Delete each cart item
