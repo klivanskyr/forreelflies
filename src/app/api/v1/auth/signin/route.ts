@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
     try {
-        const { email, password } = await request.json();
+        const { email, password, remember } = await request.json();
 
         if (!email || !password) {
             console.log("SERVER ERROR: email and password are required");
@@ -18,8 +18,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             const ret = NextResponse.json({ message: "Successfully signed in" }, { status: 200 });
             ret.cookies.set("token", token, {
                 httpOnly: true,
-                maxAge: 1000000000000000,
                 sameSite: "strict",
+                ...(remember ? { maxAge: 1000000000000000 } : {}),
             });
             console.log("SERVER SUCCESS: Successfully signed in");
             return ret;

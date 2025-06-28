@@ -49,7 +49,7 @@ export default function Slider({ children }: { children: React.ReactNode[] }) {
     const swipePower = (offset: number, velocity: number) => Math.abs(offset) * velocity;
 
     return (
-        <div className="relative w-full h-dvh overflow-hidden">
+        <div className="relative w-screen h-screen overflow-hidden">
             <AnimatePresence initial={false} custom={direction} onExitComplete={() => setIsAnimating(false)}>
                 <motion.div
                     key={page}
@@ -75,22 +75,23 @@ export default function Slider({ children }: { children: React.ReactNode[] }) {
                     }}
                     style={{
                         position: 'absolute',
-                        width: '100%',
-                        height: '100%',
-                        backgroundColor: '#fff',
+                        width: '100vw',
+                        height: '100vh',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        border: '1px solid #ccc',
-                        borderRadius: '8px',
-                        fontSize: '24px',
                     }}
                 >
                     {children[imageIndex]}
                 </motion.div>
             </AnimatePresence>
-            <button className="z-40" onClick={() => paginate(-1)} style={{ position: 'absolute', left: '10px', top: '50%' }}><FaChevronLeft /></button>
-            <button className="z-40" onClick={() => paginate(1)} style={{ position: 'absolute', right: '10px', top: '50%' }}><FaChevronRight /></button>
+            
+            <button className="z-40 absolute right-4 top-1/2 -translate-y-1/2" onClick={() => paginate(1)}>
+                <FaChevronRight className="fill-white w-[35px] h-[35px]" />
+            </button>
+            <button className="z-40 absolute left-4 top-1/2 -translate-y-1/2" onClick={() => paginate(-1)}>
+                <FaChevronLeft className="fill-white w-[35px] h-[35px]" />
+            </button>
         </div>
     );
 }

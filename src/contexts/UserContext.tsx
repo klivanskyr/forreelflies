@@ -1,10 +1,11 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
-import { DbUser } from '@/lib/firebase-admin';
+import { createContext, useContext, ReactNode } from 'react';
+import { SessionProvider, useSession } from 'next-auth/react';
+import type { Session } from 'next-auth';
 
 interface UserContextType {
-  user: DbUser | null;
+  user: Session['user'] | null;
   isLoading: boolean;
   setIsLoading: (isLoading: boolean) => void;
   refreshUser: () => Promise<void>;
@@ -12,36 +13,46 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-export default function UserProvider({ initialUser, loading, children }: { initialUser: DbUser | null, loading: boolean, children: ReactNode }) {
-  const [user, setUser] = useState<DbUser | null>(initialUser);
-  const [isLoading, setIsLoading] = useState(loading);
+function UserContextProvider({ children }: { children: ReactNode }) {
+  const { data: session, status, update } = useSession();
 
   const refreshUser = async () => {
-    setIsLoading(true);
-    console.log('refreshing user');
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/validateToken`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    const data = await response.json();
-    setUser(data.user);
-    console.log('user refreshed', data.user);
-    setIsLoading(false);
+    await update();
+  };
+
+  const contextValue: UserContextType = {
+    user: session?.user || null,
+    isLoading: status === 'loading',
+    setIsLoading: () => {}, // No-op since NextAuth handles loading state
+    refreshUser,
   };
 
   return (
-    <UserContext.Provider value={{ user, refreshUser, isLoading, setIsLoading }}>
+    <UserContext.Provider value={contextValue}>
       {children}
     </UserContext.Provider>
+  );
+}
+
+export default function UserProvider({ children }: { children: ReactNode }) {
+  return (
+    <SessionProvider>
+      <UserContextProvider>
+        {children}
+      </UserContextProvider>
+    </SessionProvider>
   );
 }
 
 export const useUser = () => {
   const context = useContext(UserContext);
   if (!context) {
-    throw new Error('useUser must be used within a UserProviderClient');
+    throw new Error('useUser must be used within a UserProvider');
   }
   return context;
+};
+
+// Helper to force refresh from anywhere
+export const forceUserRefresh = (refreshUser: () => Promise<void>) => {
+  refreshUser();
 };

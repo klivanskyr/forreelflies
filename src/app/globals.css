@@ -8,13 +8,6 @@
   --greenPrimary: #206c3c;
 }
 
-/* @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-} */
-
 body {
   color: var(--foreground);
   background: var(--background);
@@ -41,8 +34,15 @@ body {
 }
 
 .footer-header {
-  font-size: 1.75rem;
-  font-weight: 450;
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+@media (min-width: 768px) {
+  .footer-header {
+    font-size: 1.75rem;
+    font-weight: 450;
+  }
 }
 
 .footer-header::after {
@@ -50,5 +50,34 @@ body {
   display: block;
   width: 60%;
   height: 0.1rem;
+  margin: 0.5rem auto;
   background-color: rgba(0, 0, 0, 0.8);
+}
+
+@media (min-width: 768px) {
+  .footer-header::after {
+    margin: 0.5rem 0;
+  }
+}
+
+/* Line clamp utilities */
+.line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.line-clamp-3 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }

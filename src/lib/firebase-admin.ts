@@ -2,6 +2,8 @@ import { initializeApp, getApps, ServiceAccount } from 'firebase-admin/app';
 import admin from 'firebase-admin';
 import { getAuth } from 'firebase-admin/auth';
 import { cookies } from 'next/headers';
+import { VendorSignUpStatus } from '@/app/types/types';
+import { NextRequest } from 'next/server';
 
 const serviceAccount = {
     type: process.env.FIREBASE_ADMIN_TYPE,
@@ -36,6 +38,7 @@ export type DbUser = {
     uid: string;
     email: string;
     username: string;
+    vendorSignUpStatus: VendorSignUpStatus;
     phoneNumber?: string;
     streetAddress?: string;
     city?: string;
@@ -43,42 +46,44 @@ export type DbUser = {
     zipCode?: string;
     country?: string;
     photoURL?: string;
-    isVendor: boolean;
     isAdmin?: boolean;
 }
 
-export const tokenToUser = async (): Promise<DbUser | null> => {
+export const tokenToUser = async (request?: NextRequest): Promise<DbUser | null> => {
     try {
-        const token = await cookies().get('token')?.value;
-
+        let token: string | undefined;
+        if (request) {
+            token = request.cookies.get('token')?.value;
+        } else {
+            token = await cookies().get('token')?.value;
+        }
         if (!token) {
             return null;
         }
-
         const responseUid = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/validate`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
-            }
+            },
         });
-
         const uidData = await responseUid.json();
-
         if (!uidData?.uid) {
             return null;
         }
-
         const responseUser = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user?uid=${uidData.uid}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-            }
+                ...(token ? { 'Cookie': `token=${token}` } : {}),
+            },
         });
-
         const { user } = await responseUser.json();
-
-        return user as DbUser;
+        return {
+            ...user,
+            vendorSignUpStatus: user?.vendorSignUpStatus ?? "notStarted",
+            isVendor: (user?.vendorSignUpStatus ?? "notStarted") === 'onboardingCompleted',
+        };
     } catch (error) {
         console.error(error);
         return null;
