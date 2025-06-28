@@ -43,28 +43,28 @@ export default function Home() {
           <div className="flex flex-col justify-center items-center text-center gap-4 h-full">
             <h2 className="text-[5rem] font-semibold">Fly Tying Lessions</h2>
             <p className="text-[1.5rem] font-semibold">We hold private and small group fly tying sessions</p>
-            <ButtonLink className="max-w-[200px] my-2" href="/" text="Contact Us" />
+            <ButtonLink className="max-w-[200px] my-2" href="/contact" text="Contact Us" />
           </div>
         </Slide>
         <Slide className="text-white" backgroundSrc={flytyingmaterials.src}>
           <div className="flex flex-col justify-center items-center text-center gap-4 px-16 h-full">
             <h2 className="text-[5rem] font-semibold">OUR TIERS USE THE BEST MATERIALS</h2>
             <p className="text-[1.5rem] font-semibold">We select the best tiers with the best materials, so your files last.</p>
-            <ButtonLink className="max-w-[200px] my-2" href="/" text="Shop now" />
+            <ButtonLink className="max-w-[200px] my-2" href="/shop" text="Shop now" />
           </div>
         </Slide>
         <Slide className="text-white" backgroundSrc={hatchtable.src}>
           <div className="flex flex-col justify-center items-center text-center gap-4 px-16 h-full">
             <h2 className="text-[5rem] font-semibold">MATCH THE HATCH</h2>
             <p className="text-[1.5rem] font-semibold">Make sure you have the right fly for the water you are fishing. Our tiers specialize across the United States, giving you the best advice on patterns for your next fishing adventure.</p>
-            <ButtonLink className="max-w-[200px] my-2" href="/" text="Contact Us" />
+            <ButtonLink className="max-w-[200px] my-2" href="/contact" text="Contact Us" />
           </div>
         </Slide>
         <Slide className="text-white" backgroundSrc={castingimage.src}>
           <div className="flex flex-col justify-center items-center text-center gap-4 px-16 h-full z-5">
             <h2 className="text-[5rem] font-semibold">CASTING LESSONS</h2>
             <p className="text-[1.5rem] font-semibold">Contact us if you want casting instructions or are interested in learning anything fly fishing related!</p>
-            <ButtonLink className="max-w-[200px] my-2" href="/" text="Contact Us" />
+            <ButtonLink className="max-w-[200px] my-2" href="/contact" text="Contact Us" />
           </div>
         </Slide>
       </Slider>
@@ -103,19 +103,19 @@ export default function Home() {
           <h3 className="text-2xl mb-2 text-black text-opacity-80">Select from our collection expertly tied flies.</h3>
         </div>
         <Gallery>
-            <SlideLink backgroundSrc={dryflyimage.src}>
+            <SlideLink backgroundSrc={dryflyimage.src} link="/shop?category=dry-flies">
               <h2 className="text-2xl font-semibold text-white">Dry Flies</h2>
             </SlideLink>
-            <SlideLink backgroundSrc={nymphflyimage.src}>
+            <SlideLink backgroundSrc={nymphflyimage.src} link="/shop?category=nymphs">
               <h2 className="text-2xl font-semibold text-white">Nymphs</h2>
             </SlideLink>
-            <SlideLink backgroundSrc={streamerflyimage.src}>
+            <SlideLink backgroundSrc={streamerflyimage.src} link="/shop?category=streamers">
               <h2 className="text-2xl font-semibold text-white">Streamers</h2>
             </SlideLink>
-            <SlideLink backgroundSrc={saltwaterflyimage.src}>
+            <SlideLink backgroundSrc={saltwaterflyimage.src} link="/shop?category=saltwater-flies">
               <h2 className="text-2xl font-semibold text-white">Saltwater Flies</h2>
             </SlideLink>
-            <SlideLink backgroundSrc={wetflyimage.src}>
+            <SlideLink backgroundSrc={wetflyimage.src} link="/shop?category=wet-flies">
               <h2 className="text-2xl font-semibold text-white">Wet Flies</h2>
             </SlideLink>
         </Gallery>

@@ -68,9 +68,11 @@ export default function NavigationHeader({ isScrolled }: { isScrolled: boolean }
                                 classNames={{ "hover": "border pl-10 py-8 bg-white" }}
                                 hoverElement={
                                     <div className="flex flex-col gap-8 w-64">
-                                        <TextLink href="/" text="Link 1" />
-                                        <TextLink href="/" text="Link 2" />
-                                        <TextLink href="/" text="Link 3" />
+                                        <TextLink href="/shop?category=dry-flies" text="Dry Flies" />
+                                        <TextLink href="/shop?category=nymphs" text="Nymphs" />
+                                        <TextLink href="/shop?category=streamers" text="Streamers" />
+                                        <TextLink href="/shop?category=saltwater-flies" text="Saltwater Flies" />
+                                        <TextLink href="/shop?category=wet-flies" text="Wet Flies" />
                                     </div>
                                 }
                             >
@@ -115,9 +117,11 @@ export default function NavigationHeader({ isScrolled }: { isScrolled: boolean }
                                 classNames={{ "hover": "border pl-10 py-8 bg-white" }}
                                 hoverElement={
                                     <div className="flex flex-col gap-8 w-64">
-                                        <TextLink href="/" text="Link 1" />
-                                        <TextLink href="/" text="Link 2" />
-                                        <TextLink href="/" text="Link 3" />
+                                        <TextLink href="/shop?category=dry-flies" text="Dry Flies" />
+                                        <TextLink href="/shop?category=nymphs" text="Nymphs" />
+                                        <TextLink href="/shop?category=streamers" text="Streamers" />
+                                        <TextLink href="/shop?category=saltwater-flies" text="Saltwater Flies" />
+                                        <TextLink href="/shop?category=wet-flies" text="Wet Flies" />
                                     </div>
                                 }
                             >

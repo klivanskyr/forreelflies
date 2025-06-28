@@ -42,6 +42,7 @@ type LineItem = {
 type VendorMetadata = {
     vendorId: string;
     stripeAccountId: string;
+    productTotal: number;
     amount: number;
     shippingFee: number;
     vendorName: string;
@@ -51,6 +52,7 @@ type VendorMetadata = {
 type VendorDetails = {
     vendorId: string;
     stripeAccountId: string;
+    productTotal: number;
     amount: number;
     shippingFee: number;
     cartItems: CartItem[];
@@ -77,6 +79,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             console.log("❌ No vendor items provided");
             return NextResponse.json({ error: "Required field: vendorItems (array)" }, { status: 400 });
         }
+
+        // Debug: Log the structure of vendorItems to see cart data
+        console.log("🔍 Received vendorItems structure:", {
+            vendorCount: vendorItems.length,
+            vendors: vendorItems.map(v => ({
+                vendorId: v.vendorId,
+                cartItemsCount: v.cartItems?.length || 0,
+                cartItems: v.cartItems?.map(item => ({
+                    productId: item.product?.id,
+                    productName: item.product?.name,
+                    quantity: item.quantity,
+                    price: item.product?.price
+                })) || [],
+                shippingFee: v.shippingFee
+            }))
+        });
 
         // Validate Shippo connectivity
         console.log("🚢 Validating Shippo connectivity...");
@@ -132,13 +150,69 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         // Process each vendor's items
         for (const vendor of vendorItems) {
             console.log(`\n🛍️ Processing items for vendor: ${vendor.vendorId}`);
-            let vendorTotal = 0;
+            
+            // Get vendor name from database
             let vendorName = "Unknown Vendor";
+            try {
+                const vendorDoc = await getDoc(doc(db, "vendors", vendor.vendorId));
+                if (vendorDoc.exists()) {
+                    vendorName = vendorDoc.data().storeName || "Unknown Vendor";
+                }
+            } catch (error) {
+                console.error(`Failed to fetch vendor name for ${vendor.vendorId}:`, error);
+                // Continue with "Unknown Vendor" if fetch fails
+            }
 
             // Calculate vendor totals and prepare line items
+            let productTotal = 0;  // Track product total separately from shipping
             for (const item of vendor.cartItems) {
+                // Validate product exists and is available
+                try {
+                    const productDoc = await getDoc(doc(db, "products", item.product.id));
+                    if (!productDoc.exists()) {
+                        console.error(`❌ Product ${item.product.id} not found`);
+                        return NextResponse.json({ 
+                            error: `Product "${item.product.name}" is no longer available` 
+                        }, { status: 400 });
+                    }
+                    
+                    const productData = productDoc.data();
+                    
+                    // Check if product is published (not draft)
+                    if (productData.isDraft) {
+                        console.error(`❌ Product ${item.product.id} is not published`);
+                        return NextResponse.json({ 
+                            error: `Product "${item.product.name}" is not available for purchase` 
+                        }, { status: 400 });
+                    }
+                    
+                    // Check stock if tracking is enabled
+                    if (productData.trackQuantity && productData.stockQuantity !== undefined) {
+                        if (productData.stockQuantity < item.quantity) {
+                            console.error(`❌ Insufficient stock for product ${item.product.id}`);
+                            return NextResponse.json({ 
+                                error: `Insufficient stock for "${item.product.name}". Available: ${productData.stockQuantity}, Requested: ${item.quantity}` 
+                            }, { status: 400 });
+                        }
+                    }
+                    
+                    // Verify price hasn't changed significantly (within 1 cent tolerance)
+                    const priceDifference = Math.abs(productData.price - item.product.price);
+                    if (priceDifference > 0.01) {
+                        console.error(`❌ Price mismatch for product ${item.product.id}`);
+                        return NextResponse.json({ 
+                            error: `Price for "${item.product.name}" has changed. Please refresh your cart.` 
+                        }, { status: 400 });
+                    }
+                } catch (error) {
+                    console.error(`❌ Error validating product ${item.product.id}:`, error);
+                    return NextResponse.json({ 
+                        error: `Unable to validate product "${item.product.name}". Please try again.` 
+                    }, { status: 500 });
+                }
+                
                 const amountCents = Math.round(item.product.price * 100);
-                vendorTotal += amountCents * item.quantity;
+                productTotal += amountCents * item.quantity;
                 
                 console.log(`📦 Adding item: ${item.product.name}`);
                 console.log(`   Quantity: ${item.quantity}`);
@@ -159,24 +233,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             }
 
             // Add shipping fee to total (but don't add as line item)
-            if (vendor.shippingFee) {
-                console.log(`📦 Adding shipping fee: $${vendor.shippingFee}`);
-                const shippingFeeCents = Math.round(vendor.shippingFee * 100);
-                totalShippingfeeCents += shippingFeeCents;
-                vendorTotal += shippingFeeCents;  // Add shipping fee to vendor total
-            }
+            const shippingFeeCents = Math.round(vendor.shippingFee * 100);
+            totalShippingfeeCents += shippingFeeCents;
+            const vendorTotal = productTotal + shippingFeeCents;  // Total including shipping
 
             // Store vendor details
             vendorDetails.push({
                 vendorId: vendor.vendorId,
                 stripeAccountId: vendor.stripeAccountId,
                 cartItems: vendor.cartItems,
-                amount: vendorTotal,  // Now includes shipping fee
-                shippingFee: vendor.shippingFee,
+                productTotal: productTotal,  // Store product total separately
+                amount: vendorTotal,  // Total including shipping
+                shippingFee: shippingFeeCents,
                 vendorName,
             });
 
-            console.log(`💰 Vendor subtotal: $${(vendorTotal - Math.round(vendor.shippingFee * 100))/100}`);
+            console.log(`💰 Vendor product subtotal: $${productTotal/100}`);
             console.log(`💰 Vendor shipping: $${vendor.shippingFee}`);
             console.log(`💰 Vendor total: $${vendorTotal/100}`);
             
@@ -184,14 +256,31 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             vendorMetadata.push({
                 vendorId: vendor.vendorId,
                 stripeAccountId: vendor.stripeAccountId,
-                amount: vendorTotal,  // Now includes shipping fee
-                shippingFee: Math.round(vendor.shippingFee * 100),  // Store in cents
+                productTotal: productTotal,  // Store product total separately
+                amount: vendorTotal,  // Total including shipping
+                shippingFee: shippingFeeCents,
                 vendorName,
             });
         }
 
         // Store cart data in Firestore
         console.log("\n💾 Storing checkout session data in Firestore...");
+        console.log("🔍 About to store vendorDetails:", {
+            vendorDetailsCount: vendorDetails.length,
+            details: vendorDetails.map(v => ({
+                vendorId: v.vendorId,
+                vendorName: v.vendorName,
+                cartItemsCount: v.cartItems?.length || 0,
+                cartItemsStructure: v.cartItems?.map(item => ({
+                    productId: item.product?.id,
+                    productName: item.product?.name,
+                    quantity: item.quantity,
+                    hasProduct: !!item.product
+                })) || "no cart items",
+                amount: v.amount,
+                shippingFee: v.shippingFee
+            }))
+        });
         await setDoc(doc(db, "checkoutSessions", checkoutSessionId), {
             vendorDetails: vendorDetails,
             userId: user.uid,

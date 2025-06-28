@@ -18,9 +18,8 @@ export default function AddToCartButton({ product, quantity, className }: AddToC
     const router = useRouter();
     const [loading, setLoading] = useState<boolean>(false);
     
-    // Ensure quantityOptions exists and quantity is valid
-    const quantityOptions = product.quantityOptions || [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-    const validQuantity = quantityOptions.includes(quantity) ? quantity : quantityOptions[0] || 1;
+    // Remove the quantity validation since we now handle it in the ProductInfo component
+    const validQuantity = quantity;
 
     const addToCart = async () => {
         console.log("AddToCart clicked", { user: user?.uid, product: product.id, quantity: validQuantity });
@@ -56,7 +55,7 @@ export default function AddToCartButton({ product, quantity, className }: AddToC
 
             const existingItem = cartItems.find((item: { id: string; quantity: number; }) => item.id === product.id);
 
-            // if product is already in cart, PUT quantity + 1
+            // if product is already in cart, PUT quantity + validQuantity
             if (existingItem) {
                 const response = await fetch(`/api/v1/user/cart`, {
                     method: "PUT",
