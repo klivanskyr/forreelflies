@@ -43,14 +43,21 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Order is not available for withdrawal" }, { status: 400 });
         }
 
-        // Check if withdrawal date has passed
-        const withdrawDate = order.withdrawAvailableDate instanceof Date 
-            ? order.withdrawAvailableDate 
-            : new Date(order.withdrawAvailableDate.seconds * 1000);
+        // Verify order is delivered
+        if (order.shippingStatus !== 'delivered' || !order.deliveredDate) {
+            return NextResponse.json({ error: "Order must be delivered before withdrawal" }, { status: 400 });
+        }
+
+        // Check if 30 days have passed since delivery
+        const deliveryDate = order.deliveredDate instanceof Date 
+            ? order.deliveredDate 
+            : new Date(order.deliveredDate.seconds * 1000);
         const now = new Date();
-        if (withdrawDate > now) {
+        const daysSinceDelivery = Math.floor((now.getTime() - deliveryDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (daysSinceDelivery < 30) {
             return NextResponse.json({ 
-                error: `Order is not available for withdrawal until ${withdrawDate.toLocaleDateString()}` 
+                error: `Withdrawal will be available after ${new Date(deliveryDate.getTime() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}` 
             }, { status: 400 });
         }
 
@@ -85,7 +92,7 @@ export async function POST(request: NextRequest) {
                 metadata: {
                     orderId: order.id,
                     vendorId: vendorId,
-                    type: 'individual_order_withdrawal'
+                    type: 'full_withdrawal'
                 }
             });
 

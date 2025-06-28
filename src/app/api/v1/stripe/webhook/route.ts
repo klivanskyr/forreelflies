@@ -219,9 +219,9 @@ export async function POST(request: NextRequest) {
           0),
           shippingCost: parseFloat(vendor.shippingFee) / 100, // Convert cents to dollars
           currency: "usd",
-          payoutStatus: "pending",
+          payoutStatus: "available",
           purchaseDate: new Date(),
-          withdrawAvailableDate: new Date(Date.now() + (7 * 24 * 60 * 60 * 1000)), // 7 days from now
+          withdrawAvailableDate: new Date(),
           products: (vendorDetails.cartItems || []).map((item: any) => ({
             productId: item.product?.id || "",
             productName: item.product?.name || "Unknown Product",

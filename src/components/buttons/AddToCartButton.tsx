@@ -7,7 +7,13 @@ import { useState } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { signOut } from "next-auth/react";
 
-export default function AddToCartButton({ product, quantity }: { product: Product, quantity: number }) {
+interface AddToCartButtonProps {
+    product: Product;
+    quantity: number;
+    className?: string;
+}
+
+export default function AddToCartButton({ product, quantity, className }: AddToCartButtonProps) {
     const { user, refreshUser } = useUser();
     const router = useRouter();
     const [loading, setLoading] = useState<boolean>(false);
@@ -119,6 +125,6 @@ export default function AddToCartButton({ product, quantity }: { product: Produc
     }
 
     return (
-        <Button loading={loading} text="Add To Cart" onClick={() => addToCart()} />
+        <Button loading={loading} text="Add To Cart" onClick={() => addToCart()} className={className} />
     )
 }

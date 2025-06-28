@@ -9,6 +9,7 @@ import Checkbox from "../Checkbox";
 import { TextLink } from "../Links";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { FaStore } from "react-icons/fa";
 
 type Section = "login" | "register";
 
@@ -50,7 +51,6 @@ export default function LoginSidebar({ setOpen, open }: { setOpen: (open: boolea
                 return;
             }
 
-            // Success - close sidebar and refresh
             setOpen(false);
             setLogin({ email: "", password: "", remember: false });
             router.refresh();
@@ -104,69 +104,154 @@ export default function LoginSidebar({ setOpen, open }: { setOpen: (open: boolea
 
     return (
         <Sidebar open={open} setOpen={setOpen}>
-            <div className="flex flex-col items-center gap-8">
-                <div className="flex flex-col items-center text-3xl">
-                    <h1>Logo</h1>
-                    <h1>MY ACCOUNT</h1>
-                </div>
-                <div className="flex flex-col w-[80%] items-center gap-12">
-                    <div className="flex flex-row relative w-full">
-                        <div className="flex flex-row justify-around w-full text-lg">
-                            <button className={`p-2 w-[30%] hover:text-opacity-80 ${activeSection !== "login" ? "hover:text-gray-700": ""}`} onClick={() => setActiveSection("login")}>Login</button>
-                            <button className={`p-2 w-[30%] ${activeSection !== "register" ? "hover:text-gray-700": ""}`} onClick={() => setActiveSection("register")}>Register</button>
-                        </div>
-                        <motion.div 
-                            layout
-                            className="absolute bottom-0 h-0.5 bg-black"
-                            initial={{ width: 0 }}
-                            animate={{
-                                width: "50%",
-                                x: activeSection === "login" ? 0 : "100%"
-                            }}
-                            transition={{
-                                type: "spring",
-                                stiffness: 300,
-                                damping: 30
-                            }}                        
-                        />
+            <div className="flex flex-col h-full px-6 py-8">
+                <h1 className="text-2xl font-semibold mb-8 text-center">Welcome Back</h1>
+                
+                {/* Login/Register Tabs */}
+                <div className="flex justify-center mb-8">
+                    <div className="relative flex rounded-lg bg-gray-100 p-1">
+                        <button
+                            className={`px-6 py-2 text-sm font-medium rounded-md transition-all ${
+                                activeSection === "login"
+                                    ? "bg-white text-gray-900 shadow"
+                                    : "text-gray-500 hover:text-gray-900"
+                            }`}
+                            onClick={() => setActiveSection("login")}
+                        >
+                            Login
+                        </button>
+                        <button
+                            className={`px-6 py-2 text-sm font-medium rounded-md transition-all ${
+                                activeSection === "register"
+                                    ? "bg-white text-gray-900 shadow"
+                                    : "text-gray-500 hover:text-gray-900"
+                            }`}
+                            onClick={() => setActiveSection("register")}
+                        >
+                            Register
+                        </button>
                     </div>
+                </div>
+
+                <AnimatePresence mode="wait">
                     {activeSection === "login" ? (
-                        <form className="flex flex-col w-full gap-3 items-center" onSubmit={handleLoginSubmit}>
-                            <Input className="!px-4" name="email" label="Email" placeholder="Email" value={login.email} onChange={(e) => setLogin({ ...login, email: e.target.value })} autoComplete="email"/>
-                            <Input className="!px-4" name="password" label="Password" type="password" placeholder="Password" value={login.password} onChange={(e) => setLogin({ ...login, password: e.target.value })} autoComplete="current-password"/>
-                            <div className="flex flex-row w-full justify-between items-center px-1">
-                                <Checkbox label="Remember password?" bool={login.remember} setBool={(newBool: boolean) => setLogin({ ...login, remember: newBool })} />
-                                <TextLink className="text-sm !text-blue-500 hover:!text-blue-700" text="Forgot password?" href="/forgot-password" />
+                        <motion.form
+                            key="login"
+                            className="flex flex-col gap-4"
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            onSubmit={handleLoginSubmit}
+                        >
+                            <Input
+                                name="email"
+                                label="Email"
+                                placeholder="Enter your email"
+                                value={login.email}
+                                onChange={(e) => setLogin({ ...login, email: e.target.value })}
+                                autoComplete="email"
+                                className="w-full"
+                            />
+                            <Input
+                                name="password"
+                                label="Password"
+                                type="password"
+                                placeholder="Enter your password"
+                                value={login.password}
+                                onChange={(e) => setLogin({ ...login, password: e.target.value })}
+                                autoComplete="current-password"
+                                className="w-full"
+                            />
+                            <div className="flex items-center justify-between">
+                                <Checkbox
+                                    label="Remember me"
+                                    bool={login.remember}
+                                    setBool={(newBool: boolean) => setLogin({ ...login, remember: newBool })}
+                                />
+                                <TextLink
+                                    href="/forgot-password"
+                                    text="Forgot password?"
+                                    className="text-sm text-green-600 hover:text-green-700"
+                                />
                             </div>
-                            <div className="flex flex-row w-full justify-center mt-3">
-                                <Button name="submit" text={isSubmitting ? "Signing in..." : "Submit"} type="submit" disabled={isSubmitting} />
-                            </div>
-                            <AnimatePresence>
-                                {error && <motion.p className="text-red-500 text-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>{error}</motion.p>}
-                            </AnimatePresence>
-                        </form>
+                            <Button
+                                text={isSubmitting ? "Signing in..." : "Sign In"}
+                                type="submit"
+                                disabled={isSubmitting}
+                                className="w-full mt-2"
+                            />
+                        </motion.form>
                     ) : (
-                        <div className="flex flex-col items-center gap-6 w-full">
-                            <form className="flex flex-col w-full gap-8 items-center" onSubmit={handleRegisterSubmit}>
-                                <div className="flex flex-col items-center w-full h-full gap-1">
-                                    <Input className="!px-4" name="email" label="Email" placeholder="Email" value={register.email} onChange={(e) => setRegister({ ...register, email: e.target.value })} autoComplete="email" />
-                                    <Input className="!px-4" name="password" type="password" label="Password" placeholder="Password" value={register.password} onChange={(e) => setRegister({ ...register, password: e.target.value})} autoComplete="new-password" />
-                                    <Input className="!px-4" name="confirm-password" type="password" label="Confirm Password" placeholder="Confirm Password" value={register.confirmPassword} onChange={(e) => setRegister({ ...register, confirmPassword: e.target.value })} autoComplete="new-password" />
-                                </div>
-                                <Button className="w-full" name="register" text="Register" type="submit" />
-                                <AnimatePresence>
-                                    {error && <motion.p className="text-red-500 text-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>{error}</motion.p>}
-                                </AnimatePresence>
-                            </form>
-                            <div className="bg-black w-[100%] h-[0.5px] mt-12 mb-2"></div>
-                            <div className="flex flex-col w-full justify-center items-center font-light">
-                                <TextLink href="/" text="Click Here to" className="!text-2xl !text-black" />
-                                <TextLink href="/" text="Become A Vender" className="!text-2xl font-semibold !text-greenPrimary"/>
-                            </div>
-                        </div>
+                        <motion.form
+                            key="register"
+                            className="flex flex-col gap-4"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            onSubmit={handleRegisterSubmit}
+                        >
+                            <Input
+                                name="email"
+                                label="Email"
+                                placeholder="Enter your email"
+                                value={register.email}
+                                onChange={(e) => setRegister({ ...register, email: e.target.value })}
+                                autoComplete="email"
+                                className="w-full"
+                            />
+                            <Input
+                                name="password"
+                                type="password"
+                                label="Password"
+                                placeholder="Create a password"
+                                value={register.password}
+                                onChange={(e) => setRegister({ ...register, password: e.target.value })}
+                                autoComplete="new-password"
+                                className="w-full"
+                            />
+                            <Input
+                                name="confirm-password"
+                                type="password"
+                                label="Confirm Password"
+                                placeholder="Confirm your password"
+                                value={register.confirmPassword}
+                                onChange={(e) => setRegister({ ...register, confirmPassword: e.target.value })}
+                                autoComplete="new-password"
+                                className="w-full"
+                            />
+                            <Button
+                                text="Create Account"
+                                type="submit"
+                                className="w-full mt-2"
+                            />
+                        </motion.form>
                     )}
+                </AnimatePresence>
+
+                {/* Error Message */}
+                <AnimatePresence>
+                    {error && (
+                        <motion.p
+                            className="mt-4 text-sm text-center text-red-600"
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                        >
+                            {error}
+                        </motion.p>
+                    )}
+                </AnimatePresence>
+
+                {/* Vendor Link */}
+                <div className="mt-auto pt-6 border-t text-center">
+                    <TextLink
+                        href="/vendor-signup"
+                        text="Become a Vendor"
+                        className="inline-flex items-center gap-2 text-green-600 hover:text-green-700 font-medium"
+                        startingIcon={<FaStore className="w-4 h-4" />}
+                    />
                 </div>
             </div>
         </Sidebar>
-    )
+    );
 }
