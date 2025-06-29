@@ -3,7 +3,7 @@
 import { Vendor } from "@/app/types/types";
 import { useRouter } from "next/navigation";
 
-export default function NoVendorRedirect({ children, vendor }: { children: React.ReactNode, vendor: Vendor }) {
+export default function NoVendorRedirect({ children, vendor }: { children: React.ReactNode, vendor: Vendor | undefined }) {
     const router = useRouter();
 
     if (!vendor) {

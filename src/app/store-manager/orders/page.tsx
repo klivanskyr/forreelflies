@@ -156,6 +156,11 @@ export default function Page() {
     };
 
     const handleWithdraw = async () => {
+        if (!user) {
+            toast.error("User not authenticated");
+            return;
+        }
+        
         try {
             setIsLoading(true);
             // Filter orders that are actually available for withdrawal
@@ -810,8 +815,8 @@ export default function Page() {
                                         <div>
                                             <span className="text-gray-600 block">Address:</span>
                                             <span className="font-medium">
-                                                {selectedOrder.shippingAddress?.street1 || 'N/A'}
-                                                {selectedOrder.shippingAddress?.street2 && `, ${selectedOrder.shippingAddress.street2}`}
+                                                {selectedOrder.shippingAddress?.address1 || 'N/A'}
+                                                {selectedOrder.shippingAddress?.address2 && `, ${selectedOrder.shippingAddress.address2}`}
                                             </span>
                                         </div>
                                         <div>

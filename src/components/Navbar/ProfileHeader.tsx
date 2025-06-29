@@ -3,9 +3,9 @@ import { TextLink } from "../Links";
 import { FaFacebook } from "react-icons/fa";
 import { FaInstagram } from "react-icons/fa";
 
-export default function ProfileHeader({ user, className = '' }: { user: DbUser | null, className?: string }) {
+export default function ProfileHeader({ user }: { user: DbUser | null }) {
     return (
-        <div className={`flex flex-row justify-between bg-gray-100 py-2 px-4 md:px-8 lg:px-32 transition-all duration-300 ${className}`}>
+        <div className="flex flex-row justify-between bg-gray-100 py-2 px-4 md:px-8 lg:px-32">
             <div className="flex flex-row gap-3 md:gap-4">
                 <FaFacebook className="w-6 h-6 md:w-[30px] md:h-[30px]" />
                 <FaInstagram className="w-6 h-6 md:w-[30px] md:h-[30px]" />

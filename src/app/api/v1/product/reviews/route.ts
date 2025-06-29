@@ -17,15 +17,23 @@ export async function GET(request: NextRequest) {
     }
 
     // Build the query based on the provided parameter
+    const constraints = [];
+    
+    // If productId is provided, filter by productId
+    if (productId) {
+      constraints.push(where("productId", "==", productId));
+    }
+    
+    // If vendorId is provided, get reviews for all products by this vendor
+    if (vendorId) {
+      constraints.push(where("vendorId", "==", vendorId));
+    }
+    
+    constraints.push(orderBy("createdAt", "desc"));
+    
     const reviewsQuery = query(
       collection(db, "productReviews"),
-      ...[
-        // If productId is provided, filter by productId
-        productId ? where("productId", "==", productId) : null,
-        // If vendorId is provided, get reviews for all products by this vendor
-        vendorId ? where("vendorId", "==", vendorId) : null,
-        orderBy("createdAt", "desc")
-      ].filter(Boolean) // Remove null values
+      ...constraints
     );
 
     const reviewsSnapshot = await getDocs(reviewsQuery);

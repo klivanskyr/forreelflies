@@ -1,9 +1,10 @@
 'use client';
 
 import { Suspense } from "react";
-import Button from "../buttons/Button";
+import IconButton from "../buttons/IconButton";
 import LoginSidebar from "../Sidebar/LoginSidebar";
 import { useRouter, useSearchParams } from "next/navigation";
+import { CgProfile } from "react-icons/cg";
 
 function SigninButtonAndBarContents(): JSX.Element {
     const router = useRouter();
@@ -22,7 +23,10 @@ function SigninButtonAndBarContents(): JSX.Element {
     
     return (
         <>
-            <Button className="mx-1.5" onClick={() => setSidebarOpen(!login)} text="Login/Signup" color="white" type="button" />
+            <IconButton 
+                onClick={() => setSidebarOpen(!login)} 
+                icon={<CgProfile className="w-[25px] 2xl:w-[30px] h-[25px] 2xl:h-[30px]"/>} 
+            />
             <LoginSidebar open={login} setOpen={setSidebarOpen} />
         </>
     )

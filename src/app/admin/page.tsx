@@ -1183,11 +1183,11 @@ export default function AdminPage() {
                         <div className="mb-3">
                           <span className="font-semibold text-gray-700">Items:</span>
                           <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-                            {order.items?.map((item, idx) => (
+                            {order.products?.map((product, idx) => (
                               <div key={idx} className="text-sm bg-gray-50 p-2 rounded">
-                                <span className="font-medium">{item.name}</span>
+                                <span className="font-medium">{product.productName}</span>
                                 <span className="text-gray-600 ml-2">
-                                  ({item.quantity}x @ ${item.price.toFixed(2)})
+                                  ({product.quantity}x @ ${product.price.toFixed(2)})
                                 </span>
                               </div>
                             ))}
@@ -1317,18 +1317,18 @@ export default function AdminPage() {
                     <div className="mb-6">
                       <h3 className="text-lg font-medium mb-4">Products</h3>
                       <div className="bg-gray-50 rounded-lg p-4">
-                        {selectedOrder.items?.map((item, index) => (
-                          <div key={index} className="flex justify-between items-center py-2 border-b last:border-0">
-                            <div>
-                              <p className="font-medium">{item.name}</p>
-                              <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
-                              <p className="text-sm text-gray-600">${item.price.toFixed(2)} each</p>
-                            </div>
-                          </div>
-                        ))}
+                                                            {selectedOrder.products?.map((product, index) => (
+                                        <div key={index} className="flex justify-between items-center py-2 border-b last:border-0">
+                                            <div>
+                                                <p className="font-medium">{product.productName}</p>
+                                                <p className="text-sm text-gray-600">Quantity: {product.quantity}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-medium">${(product.price * product.quantity).toFixed(2)}</p>
+                                                <p className="text-sm text-gray-600">${product.price.toFixed(2)} each</p>
+                                            </div>
+                                        </div>
+                                    ))}
                       </div>
                     </div>
 

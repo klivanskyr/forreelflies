@@ -3,16 +3,21 @@
 import { useUser } from "@/contexts/UserContext";
 import NavigationHeader from "./NavigationHeader";
 import ProfileHeader from "@/components/Navbar/ProfileHeader";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 export default function Navbar() {
     const { user } = useUser();
-    const [isScrolled, setIsScrolled] = useState(false);
+    const [isSticky, setIsSticky] = useState(false);
+    const profileHeaderRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const handleScroll = () => {
-            const scrollPosition = window.scrollY;
-            setIsScrolled(scrollPosition > 100);
+            if (profileHeaderRef.current) {
+                const profileHeaderHeight = profileHeaderRef.current.offsetHeight;
+                const scrollPosition = window.scrollY;
+                // Make NavigationHeader sticky when ProfileHeader is scrolled past
+                setIsSticky(scrollPosition > profileHeaderHeight);
+            }
         };
 
         window.addEventListener('scroll', handleScroll);
@@ -20,11 +25,16 @@ export default function Navbar() {
     }, []);
 
     return (
-        <nav className={`fixed top-0 left-0 right-0 z-50 bg-white transition-all duration-300 ${isScrolled ? 'shadow-md' : ''}`}>
-            <div className={`w-full flex flex-col justify-center border-b-[1px] border-gray-200 transition-all duration-300`}>
-                <ProfileHeader user={user} className={isScrolled ? 'hidden' : ''} />
-                <NavigationHeader isScrolled={isScrolled} />
+        <>
+            {/* ProfileHeader - Normal document flow */}
+            <div ref={profileHeaderRef}>
+                <ProfileHeader user={user} />
             </div>
-        </nav>
+            
+            {/* NavigationHeader - Conditionally sticky */}
+            <nav className={`${isSticky ? 'sticky top-0' : 'relative'} left-0 right-0 z-50 bg-white transition-all duration-300 ${isSticky ? 'shadow-md' : ''} border-b-[1px] border-gray-200`}>
+                <NavigationHeader isScrolled={isSticky} />
+            </nav>
+        </>
     )
 }

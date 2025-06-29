@@ -78,9 +78,9 @@ export async function POST(request: NextRequest) {
             country: order.shippingAddress.country || 'US',
         };
 
-        // Calculate parcel dimensions from order items (not products)
-        const items = order.items || [];
-        const totalWeight = items.reduce((sum: number, item: any) => sum + (item.quantity * 1), 0); // Default 1 lb per item
+        // Calculate parcel dimensions from order products
+        const products = order.products || [];
+        const totalWeight = products.reduce((sum: number, product: any) => sum + (product.quantity * 1), 0); // Default 1 lb per item
         
         const parcels: Parcel[] = [{
             length: "6",

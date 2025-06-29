@@ -2,7 +2,7 @@ import Image from 'next/image';
 
 export default function Slide({ className="", backgroundSrc, children }: { className?: string, backgroundSrc?: string, children: React.ReactNode }) {
     return (
-        <div className={`${className} w-screen h-screen relative`}>
+        <div className={`${className} w-screen h-[80vh] relative`}>
             <Image 
                 className="object-cover" 
                 draggable="false" 
