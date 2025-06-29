@@ -40,30 +40,30 @@ export default function Home() {
     <div className="flex flex-col gap-8 mb-2">
       <Slider>
         <Slide className="text-white" backgroundSrc={flytying.src}>
-          <div className="flex flex-col justify-center items-center text-center gap-16 h-full px-4">
+          <div className="flex flex-col justify-center items-center text-center gap-8 md:gap-12 h-full px-4">
             <h2 className="text-3xl md:text-[5rem] font-semibold">Fly Tying Lessions</h2>
-            <p className="text-lg md:text-[1.5rem] font-semibold">We hold private and small group fly tying sessions</p>
+            <p className="text-base md:text-[1.5rem] font-semibold">We hold private and small group fly tying sessions</p>
             <ButtonLink className="max-w-[200px] my-2" href="/contact" text="Contact Us" />
           </div>
         </Slide>
         <Slide className="text-white" backgroundSrc={flytyingmaterials.src}>
-          <div className="flex flex-col justify-center items-center text-center gap-16 px-4 md:px-16 h-full">
-            <h2 className="text-3xl md:text-[5rem] font-semibold">OUR TIERS USE THE BEST MATERIALS</h2>
-            <p className="text-lg md:text-[1.5rem] font-semibold">We select the best tiers with the best materials, so your files last.</p>
+          <div className="flex flex-col justify-center items-center text-center gap-8 md:gap-12 px-4 md:px-16 h-full">
+            <h2 className="text-2xl md:text-[5rem] font-semibold leading-tight md:leading-normal">OUR TIERS USE THE BEST MATERIALS</h2>
+            <p className="text-base md:text-[1.5rem] font-semibold leading-tight md:leading-normal">We select the best tiers with the best materials, so your files last.</p>
             <ButtonLink className="max-w-[200px] my-2" href="/shop" text="Shop now" />
           </div>
         </Slide>
         <Slide className="text-white" backgroundSrc={hatchtable.src}>
-          <div className="flex flex-col justify-center items-center text-center gap-16 px-4 md:px-16 h-full">
+          <div className="flex flex-col justify-center items-center text-center gap-8 md:gap-12 px-4 md:px-16 h-full">
             <h2 className="text-3xl md:text-[5rem] font-semibold">MATCH THE HATCH</h2>
-            <p className="text-lg md:text-[1.5rem] font-semibold">Make sure you have the right fly for the water you are fishing. Our tiers specialize across the United States, giving you the best advice on patterns for your next fishing adventure.</p>
+            <p className="text-base md:text-[1.5rem] font-semibold leading-tight md:leading-normal">Make sure you have the right fly for the water you are fishing. Our tiers specialize across the United States, giving you the best advice on patterns for your next fishing adventure.</p>
             <ButtonLink className="max-w-[200px] my-2" href="/contact" text="Contact Us" />
           </div>
         </Slide>
         <Slide className="text-white" backgroundSrc={castingimage.src}>
-          <div className="flex flex-col justify-center items-center text-center gap-16 px-4 md:px-16 h-full z-5">
+          <div className="flex flex-col justify-center items-center text-center gap-8 md:gap-12 px-4 md:px-16 h-full z-5">
             <h2 className="text-3xl md:text-[5rem] font-semibold">CASTING LESSONS</h2>
-            <p className="text-lg md:text-[1.5rem] font-semibold">Contact us if you want casting instructions or are interested in learning anything fly fishing related!</p>
+            <p className="text-base md:text-[1.5rem] font-semibold">Contact us if you want casting instructions or are interested in learning anything fly fishing related!</p>
             <ButtonLink className="max-w-[200px] my-2" href="/contact" text="Contact Us" />
           </div>
         </Slide>
