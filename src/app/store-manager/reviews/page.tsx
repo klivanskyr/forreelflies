@@ -136,13 +136,13 @@ export default function Page() {
 
     const handleRespond = async (reviewId: string, response: string) => {
         try {
-            const response = await fetch(`/api/v1/reviews/respond`, {
+            const apiResponse = await fetch(`/api/v1/reviews/respond`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ reviewId, response })
             });
 
-            if (response.ok) {
+            if (apiResponse.ok) {
                 // Update local state or refresh reviews
                 fetchReviews();
             } else {

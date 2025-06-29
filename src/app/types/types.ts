@@ -118,6 +118,7 @@ export type Order = {
   customerName: string;
   subtotal: number;
   amount: number;
+  currency?: string;
   shippingCost: number;
   products: {
     productId: string;
@@ -134,13 +135,18 @@ export type Order = {
     state: string;
     zip: string;
     country: string;
+    phone?: string;
   };
   shippingStatus: string;
   status: string;
   deliveryStatus: string;
   payoutStatus: PayoutStatus;
+  refundStatus?: string;
   purchaseDate: Date | FirestoreTimestamp;
   withdrawAvailableDate: Date | FirestoreTimestamp;
+  deliveredDate?: Date | FirestoreTimestamp;
+  lastTrackingUpdate?: Date | FirestoreTimestamp;
+  estimatedDeliveryDate?: Date | FirestoreTimestamp;
   platformFee: number;
   vendorEarnings: number;
   checkoutSessionId: string;
@@ -152,6 +158,7 @@ export type Order = {
   shippingService?: string;
   shippingCostActual?: number;
   shippingError?: string | null;
+  stripeTransferId?: string;
 };
 
 export type VendorProfile = {

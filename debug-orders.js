@@ -33,15 +33,15 @@ async function checkOrders() {
             console.log(`   Vendor: ${orderData.vendorName || 'Unknown'}`);
             console.log(`   Customer: ${orderData.customerName || 'Unknown'}`);
             console.log(`   Amount: $${orderData.amount || 0}`);
-            console.log(`   Items count: ${orderData.items?.length || 0}`);
+            console.log(`   Products count: ${orderData.products?.length || 0}`);
             
-            if (orderData.items && orderData.items.length > 0) {
-                console.log(`   Items:`);
-                orderData.items.forEach((item, itemIndex) => {
-                    console.log(`     ${itemIndex + 1}. ${item.name || 'Unknown'} (Qty: ${item.quantity || 0}, Price: $${item.price || 0})`);
+            if (orderData.products && orderData.products.length > 0) {
+                console.log(`   Products:`);
+                orderData.products.forEach((product, productIndex) => {
+                    console.log(`     ${productIndex + 1}. ${product.productName || 'Unknown'} (Qty: ${product.quantity || 0}, Price: $${product.price || 0})`);
                 });
             } else {
-                console.log(`   ❌ NO ITEMS FOUND - This order has empty items array!`);
+                console.log(`   ❌ NO PRODUCTS FOUND - This order has empty products array!`);
             }
             
             console.log(`   Purchase Date: ${orderData.purchaseDate?.toDate?.() || orderData.purchaseDate || 'Unknown'}`);

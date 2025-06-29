@@ -1,11 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { withRole } from '@/app/api/utils/withRole';
+import { requireRole } from '@/app/api/utils/withRole';
 import { doc, updateDoc } from 'firebase/firestore';
 
-export const PUT = withRole(['vendor'], async (req: Request) => {
+export async function PUT(request: NextRequest) {
+    const user = await requireRole(request, 'vendor');
+    if (user instanceof NextResponse) return user;
+
     try {
-        const { reviewId, status } = await req.json();
+        const { reviewId, status } = await request.json();
 
         if (!reviewId || !status || !['Published', 'Hidden'].includes(status)) {
             return NextResponse.json({ error: 'Invalid request data' }, { status: 400 });
@@ -23,4 +26,4 @@ export const PUT = withRole(['vendor'], async (req: Request) => {
         console.error('Error updating review status:', error);
         return NextResponse.json({ error: 'Failed to update review status' }, { status: 500 });
     }
-}); 
+} 
