@@ -11,6 +11,7 @@ import Modal from "../modal/Modal";
 import Textarea from "../Textarea";
 import { StockStatus } from "@/app/types/types";
 import { uploadFileAndGetUrl } from "@/lib/firebase";
+import toast from "react-hot-toast";
 
 export interface ProductInput {
     name: string;
@@ -36,7 +37,7 @@ export interface ProductInput {
 
 interface Props<T> {
     handleSubmit: (imageUrls: string[]) => void;
-    errorMessage: string;
+    isSubmitting: boolean;
     input: T;
     setInput: (input: T) => void;
     modalOpen: boolean;
@@ -44,7 +45,7 @@ interface Props<T> {
     vendorId: string;
 }
 
-export default function StoreManagerProductModal({ handleSubmit, errorMessage, input, setInput, modalOpen, setModalOpen }: Props<ProductInput>) {    
+export default function StoreManagerProductModal({ handleSubmit, isSubmitting, input, setInput, modalOpen, setModalOpen }: Props<ProductInput>) {    
     const stockStatusOptions = [
         { value: "inStock", label: "In Stock" },
         { value: "outOfStock", label: "Out of Stock" },
@@ -54,6 +55,11 @@ export default function StoreManagerProductModal({ handleSubmit, errorMessage, i
     const [uploading, setUploading] = useState(false);
     const [imagePreviews, setImagePreviews] = useState<string[]>([]);
     const [activeTab, setActiveTab] = useState<"basic" | "inventory">("basic");
+
+    // File validation constants
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    const MAX_FILES = 10;
+    const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
 
     // Preview selected images
     React.useEffect(() => {
@@ -66,10 +72,59 @@ export default function StoreManagerProductModal({ handleSubmit, errorMessage, i
         }
     }, [input.images]);
 
+    // Validate and handle file selection
+    const handleFileSelection = (files: FileList | null) => {
+        if (!files) return;
+
+        const fileArray = Array.from(files);
+        const validFiles: File[] = [];
+        const errors: string[] = [];
+
+        // Check file count
+        if (fileArray.length > MAX_FILES) {
+            toast.error(`Maximum ${MAX_FILES} images allowed. Please select fewer files.`);
+            return;
+        }
+
+        // Validate each file
+        fileArray.forEach((file, index) => {
+            // Check file type
+            if (!ALLOWED_TYPES.includes(file.type)) {
+                errors.push(`File ${index + 1}: Invalid file type. Only JPEG, PNG, WebP, and GIF images are allowed.`);
+                return;
+            }
+
+            // Check file size
+            if (file.size > MAX_FILE_SIZE) {
+                errors.push(`File ${index + 1}: File size too large. Maximum size is 10MB.`);
+                return;
+            }
+
+            // Check file name length
+            if (file.name.length > 100) {
+                errors.push(`File ${index + 1}: File name too long. Please rename to less than 100 characters.`);
+                return;
+            }
+
+            validFiles.push(file);
+        });
+
+        // Show errors if any
+        if (errors.length > 0) {
+            errors.forEach(error => toast.error(error));
+            if (validFiles.length === 0) return;
+            toast.success(`${validFiles.length} valid images selected.`);
+        }
+
+        // Update state with valid files
+        setInput({ ...input, images: validFiles });
+    };
+
     // Remove image
     const removeImage = (idx: number) => {
         const newFiles = input.images.filter((_, i) => i !== idx);
         setInput({ ...input, images: newFiles });
+        toast.success("Image removed");
     };
 
     // Calculate discount percentage when prices change
@@ -82,20 +137,43 @@ export default function StoreManagerProductModal({ handleSubmit, errorMessage, i
         return "";
     };
 
-
-
     // Handle save: upload images, get URLs, then call handleSubmit
     const handleSave = async () => {
-        setUploading(true);
-        let imageUrls: string[] = [];
-        if (input.images && input.images.length > 0) {
-            imageUrls = await Promise.all(
-                input.images.map((file) => uploadFileAndGetUrl(file, `products/${input.name}_${Date.now()}_${file.name}`))
-            );
+        try {
+            setUploading(true);
+            let imageUrls: string[] = [];
+            
+            if (input.images && input.images.length > 0) {
+                toast.loading(`Uploading ${input.images.length} images...`, { id: 'upload-toast' });
+                
+                const uploadPromises = input.images.map(async (file, index) => {
+                    try {
+                        const url = await uploadFileAndGetUrl(file, `products/${input.name}_${Date.now()}_${file.name}`);
+                        return url;
+                    } catch (uploadError) {
+                        console.error(`Failed to upload image ${index + 1}:`, uploadError);
+                        throw new Error(`Failed to upload image "${file.name}"`);
+                    }
+                });
+
+                try {
+                    imageUrls = await Promise.all(uploadPromises);
+                    toast.success(`Successfully uploaded ${imageUrls.length} images!`, { id: 'upload-toast' });
+                } catch (uploadError) {
+                    toast.error(`Image upload failed: ${uploadError instanceof Error ? uploadError.message : 'Unknown error'}`, { id: 'upload-toast' });
+                    setUploading(false);
+                    return;
+                }
+            }
+            
+            setUploading(false);
+            // Call handleSubmit with imageUrls
+            handleSubmit(imageUrls);
+        } catch (error) {
+            console.error("Error in handleSave:", error);
+            toast.error("Failed to process product data. Please try again.");
+            setUploading(false);
         }
-        setUploading(false);
-        // Call handleSubmit with imageUrls
-        handleSubmit(imageUrls);
     };
 
     const TabButton = ({ tab, label }: { tab: typeof activeTab, label: string }) => (
@@ -111,6 +189,8 @@ export default function StoreManagerProductModal({ handleSubmit, errorMessage, i
             {label}
         </button>
     );
+
+    const isProcessing = uploading || isSubmitting;
 
     return (
         <Modal open={modalOpen} setOpen={setModalOpen} className="w-[85%] h-[95%] rounded-xl flex flex-col justify-between">
@@ -135,6 +215,7 @@ export default function StoreManagerProductModal({ handleSubmit, errorMessage, i
                                 value={input.name} 
                                 onChange={(e) => setInput({ ...input, name: e.target.value })} 
                                 placeholder="Enter product name (e.g., Adams Dry Fly #14)"
+                                disabled={isProcessing}
                             />
                             
                             <Textarea 
@@ -142,6 +223,7 @@ export default function StoreManagerProductModal({ handleSubmit, errorMessage, i
                                 value={input.shortDescription} 
                                 onChange={(e) => setInput({ ...input, shortDescription: e.target.value })} 
                                 placeholder="Brief description for product listings (e.g., Classic dry fly pattern for trout)"
+                                disabled={isProcessing}
                             />
                             
                             <Textarea 
@@ -149,32 +231,38 @@ export default function StoreManagerProductModal({ handleSubmit, errorMessage, i
                                 value={input.longDescription} 
                                 onChange={(e) => setInput({ ...input, longDescription: e.target.value })} 
                                 placeholder="Detailed description including materials, techniques, best fishing conditions, etc."
+                                disabled={isProcessing}
                             />
 
                             <TagInput 
                                 label="Tags (e.g., dry-fly, trout, mayfly, adams)" 
                                 onChange={(newTags: string[]) => setInput({ ...input, tags: newTags })} 
                                 selectedTags={input.tags || []} 
+                                disabled={isProcessing}
                             />
                             
                             <TagInput 
                                 label="Categories (e.g., dry-flies, nymphs, streamers, saltwater)" 
                                 onChange={(newCategories: string[]) => setInput({ ...input, catagories: newCategories })} 
                                 selectedTags={input.catagories || []} 
+                                disabled={isProcessing}
                             />
 
                             {/* Image Upload */}
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">Product Images</label>
+                                <label className="text-sm font-medium text-gray-700">
+                                    Product Images ({input.images?.length || 0}/{MAX_FILES})
+                                </label>
+                                <p className="text-xs text-gray-500 mb-2">
+                                    Upload up to {MAX_FILES} images. Max file size: 10MB. Formats: JPEG, PNG, WebP, GIF
+                                </p>
                                 <input
                                     type="file"
                                     multiple
                                     accept="image/*"
-                                    onChange={(e) => {
-                                        const files = Array.from(e.target.files || []);
-                                        setInput({ ...input, images: files });
-                                    }}
-                                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                    onChange={(e) => handleFileSelection(e.target.files)}
+                                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50"
+                                    disabled={isProcessing}
                                 />
                                 
                                 {/* Image Previews */}
@@ -186,7 +274,8 @@ export default function StoreManagerProductModal({ handleSubmit, errorMessage, i
                                                 <button
                                                     type="button"
                                                     onClick={() => removeImage(idx)}
-                                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600 disabled:opacity-50"
+                                                    disabled={isProcessing}
                                                 >
                                                     ×
                                                 </button>
@@ -222,6 +311,7 @@ export default function StoreManagerProductModal({ handleSubmit, errorMessage, i
                                     placeholder="0.00"
                                     type="number"
                                     step="0.01"
+                                    disabled={isProcessing}
                                 />
                                 <Input 
                                     label="Original Price (for discounts)" 
@@ -234,6 +324,7 @@ export default function StoreManagerProductModal({ handleSubmit, errorMessage, i
                                     placeholder="Leave empty if no discount"
                                     type="number"
                                     step="0.01"
+                                    disabled={isProcessing}
                                 />
                             </div>
 
@@ -256,12 +347,14 @@ export default function StoreManagerProductModal({ handleSubmit, errorMessage, i
                                 selected={stockStatusOptions.find(option => option.value === input.stockStatus) || stockStatusOptions[2]}
                                 options={stockStatusOptions}
                                 setSelected={(newSelected: string) => setInput({ ...input, stockStatus: newSelected as StockStatus })}
+                                disabled={isProcessing}
                             />
 
                             <Checkbox 
                                 label="Track Quantity" 
                                 bool={input.trackQuantity} 
                                 setBool={(newBool) => setInput({ ...input, trackQuantity: newBool })} 
+                                disabled={isProcessing}
                             />
 
                             {input.trackQuantity && (
@@ -272,6 +365,7 @@ export default function StoreManagerProductModal({ handleSubmit, errorMessage, i
                                         onChange={(e) => setInput({ ...input, stockQuantity: e.target.value })} 
                                         placeholder="Available quantity"
                                         type="number"
+                                        disabled={isProcessing}
                                     />
                                     <Input 
                                         label="Low Stock Alert" 
@@ -279,53 +373,60 @@ export default function StoreManagerProductModal({ handleSubmit, errorMessage, i
                                         onChange={(e) => setInput({ ...input, lowStockThreshold: e.target.value })} 
                                         placeholder="Alert when stock is low"
                                         type="number"
+                                        disabled={isProcessing}
                                     />
                                 </div>
                             )}
 
                             <NumberTagInput 
-                                label="Quantity Options" 
+                                label="Quantity Options *" 
                                 selectedNumbers={input.quantityOptions} 
                                 onChange={(newNumbers: number[]) => setInput({ ...input, quantityOptions: newNumbers })} 
                                 placeholder="Enter quantity (e.g., 1, 3, 6, 12)"
+                                disabled={isProcessing}
                             />
 
                             <div className="space-y-2">
-                                <h3 className="text-sm font-medium text-gray-700">Shipping Information (inches and pounds)</h3>
+                                <h3 className="text-sm font-medium text-gray-700">Shipping Information * (inches and pounds)</h3>
+                                <p className="text-xs text-gray-500">Required for accurate shipping calculations</p>
                                 <div className="grid grid-cols-2 gap-4">
                                     <Input 
-                                        label="Length" 
+                                        label="Length *" 
                                         value={input.shippingLength} 
                                         onChange={(e) => setInput({ ...input, shippingLength: e.target.value })} 
                                         type="number"
                                         step="0.1"
                                         placeholder="Package length"
+                                        disabled={isProcessing}
                                     />
                                     <Input 
-                                        label="Width" 
+                                        label="Width *" 
                                         value={input.shippingWidth} 
                                         onChange={(e) => setInput({ ...input, shippingWidth: e.target.value })} 
                                         type="number"
                                         step="0.1"
                                         placeholder="Package width"
+                                        disabled={isProcessing}
                                     />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <Input 
-                                        label="Height" 
+                                        label="Height *" 
                                         value={input.shippingHeight} 
                                         onChange={(e) => setInput({ ...input, shippingHeight: e.target.value })} 
                                         type="number"
                                         step="0.1"
                                         placeholder="Package height"
+                                        disabled={isProcessing}
                                     />
                                     <Input 
-                                        label="Weight" 
+                                        label="Weight *" 
                                         value={input.shippingWeight} 
                                         onChange={(e) => setInput({ ...input, shippingWeight: e.target.value })} 
                                         type="number"
                                         step="0.1"
                                         placeholder="Package weight"
+                                        disabled={isProcessing}
                                     />
                                 </div>
                             </div>
@@ -336,6 +437,7 @@ export default function StoreManagerProductModal({ handleSubmit, errorMessage, i
                                     label="Save as Draft" 
                                     bool={input.isDraft} 
                                     setBool={(newBool) => setInput({ ...input, isDraft: newBool })} 
+                                    disabled={isProcessing}
                                 />
                                 <p className="text-xs text-gray-500 mt-1">
                                     Draft products are not visible to customers
@@ -346,10 +448,28 @@ export default function StoreManagerProductModal({ handleSubmit, errorMessage, i
                 </div>
                 
                 <div className="w-full border-t p-4 flex justify-between items-center">
-                    <div className="text-red-500 text-sm">{errorMessage}</div>
+                    <div className="text-sm text-gray-600">
+                        {isProcessing && (
+                            <div className="flex items-center gap-2">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                <span>
+                                    {uploading ? "Uploading images..." : "Creating product..."}
+                                </span>
+                            </div>
+                        )}
+                    </div>
                     <div className="flex gap-2">
-                        <Button text="Cancel" onClick={() => setModalOpen(false)} className="bg-gray-500 hover:bg-gray-600" />
-                        <Button text={uploading ? "Uploading..." : "Save Product"} onClick={handleSave} disabled={uploading} />
+                        <Button 
+                            text="Cancel" 
+                            onClick={() => setModalOpen(false)} 
+                            className="bg-gray-500 hover:bg-gray-600" 
+                            disabled={isProcessing}
+                        />
+                        <Button 
+                            text={uploading ? "Uploading..." : isSubmitting ? "Creating..." : "Save Product"} 
+                            onClick={handleSave} 
+                            disabled={isProcessing}
+                        />
                     </div>
                 </div>
             </div>

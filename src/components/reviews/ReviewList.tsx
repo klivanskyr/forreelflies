@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { FaStar, FaStarHalfAlt, FaRegStar, FaThumbsUp, FaUser } from 'react-icons/fa';
 import { ProductReview, VendorReview, ReviewSummary } from '@/app/types/types';
 import Image from 'next/image';
+import toast from 'react-hot-toast';
 
 interface ReviewListProps {
   type: 'product' | 'vendor';
@@ -69,7 +70,12 @@ const ReviewCard = ({ review, type }: { review: ProductReview | VendorReview, ty
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const handleHelpfulClick = async () => {
-    if (isSubmitting || !session?.user?.uid) return;
+    if (isSubmitting || !session?.user?.uid) {
+      if (!session?.user?.uid) {
+        toast.error('Please sign in to mark reviews as helpful');
+      }
+      return;
+    }
     
     setIsSubmitting(true);
     try {
@@ -91,9 +97,15 @@ const ReviewCard = ({ review, type }: { review: ProductReview | VendorReview, ty
       if (response.ok) {
         setIsHelpful(true);
         setHelpfulCount(prev => prev + 1);
+        toast.success('Thank you for your feedback!');
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to mark review as helpful');
       }
     } catch (error) {
       console.error('Error marking review as helpful:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to mark review as helpful';
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -196,7 +208,10 @@ export default function ReviewList({ type, targetId, showSummary = true, maxRevi
         : `/api/v1/vendor/reviews?vendorId=${targetId}&page=${pageNum}&pageSize=${maxReviews || 10}`;
       
       const response = await fetch(endpoint);
-      if (!response.ok) throw new Error('Failed to fetch reviews');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to fetch reviews');
+      }
       
       const data = await response.json();
       
@@ -210,7 +225,10 @@ export default function ReviewList({ type, targetId, showSummary = true, maxRevi
       setHasMore(data.pagination.page < data.pagination.totalPages);
       setPage(pageNum);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load reviews');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load reviews';
+      console.error('Error fetching reviews:', err);
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

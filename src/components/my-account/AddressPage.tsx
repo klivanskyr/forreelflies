@@ -6,6 +6,7 @@ import Button from "../buttons/Button";
 import Input from "../inputs/Input";
 import { useUser } from "@/contexts/UserContext";
 import { FaHome, FaBuilding, FaTrash, FaPen, FaStar } from 'react-icons/fa';
+import toast from 'react-hot-toast';
 
 type Address = {
     id: string;
@@ -82,7 +83,7 @@ export default function AddressPage() {
 
             // Update user profile with default address
             if (newAddress.isDefault || addresses.length === 0) {
-                await fetch('/api/v1/user', {
+                const response = await fetch('/api/v1/user', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -95,11 +96,19 @@ export default function AddressPage() {
                         phoneNumber: newAddress.phone
                     })
                 });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to update user profile');
+                }
             }
 
+            toast.success(editingAddress ? 'Address updated successfully!' : 'Address added successfully!');
             setIsModalOpen(false);
             resetForm();
         } catch (err) {
+            console.error('Address save error:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Failed to save address. Please try again.';
+            toast.error(errorMessage);
             setError('Failed to save address. Please try again.');
         } finally {
             setLoading(false);
@@ -122,40 +131,57 @@ export default function AddressPage() {
     };
 
     const handleDelete = async (addressId: string) => {
-        setAddresses(prev => prev.filter(addr => addr.id !== addressId));
-        // If deleting default address, make the first remaining address default
-        const deletedAddress = addresses.find(addr => addr.id === addressId);
-        if (deletedAddress?.isDefault && addresses.length > 1) {
-            const newDefault = addresses.find(addr => addr.id !== addressId);
-            if (newDefault) {
-                await handleSetDefault(newDefault.id);
+        try {
+            setAddresses(prev => prev.filter(addr => addr.id !== addressId));
+            // If deleting default address, make the first remaining address default
+            const deletedAddress = addresses.find(addr => addr.id === addressId);
+            if (deletedAddress?.isDefault && addresses.length > 1) {
+                const newDefault = addresses.find(addr => addr.id !== addressId);
+                if (newDefault) {
+                    await handleSetDefault(newDefault.id);
+                }
             }
+            toast.success('Address deleted successfully!');
+        } catch (error) {
+            console.error('Address deletion error:', error);
+            toast.error('Failed to delete address. Please try again.');
         }
     };
 
     const handleSetDefault = async (addressId: string) => {
-        const newDefault = addresses.find(addr => addr.id === addressId);
-        if (!newDefault) return;
+        try {
+            const newDefault = addresses.find(addr => addr.id === addressId);
+            if (!newDefault) return;
 
-        setAddresses(prev => prev.map(addr => ({
-            ...addr,
-            isDefault: addr.id === addressId
-        })));
+            setAddresses(prev => prev.map(addr => ({
+                ...addr,
+                isDefault: addr.id === addressId
+            })));
 
-        // Update user profile with new default address
-        await fetch('/api/v1/user', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                uid: user?.uid,
-                streetAddress: newDefault.streetAddress,
-                city: newDefault.city,
-                state: newDefault.state,
-                zipCode: newDefault.zipCode,
-                country: newDefault.country,
-                phoneNumber: newDefault.phone
-            })
-        });
+            // Update user profile with new default address
+            const response = await fetch('/api/v1/user', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    uid: user?.uid,
+                    streetAddress: newDefault.streetAddress,
+                    city: newDefault.city,
+                    state: newDefault.state,
+                    zipCode: newDefault.zipCode,
+                    country: newDefault.country,
+                    phoneNumber: newDefault.phone
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to update default address');
+            }
+            
+            toast.success('Default address updated successfully!');
+        } catch (error) {
+            console.error('Set default address error:', error);
+            toast.error('Failed to set default address. Please try again.');
+        }
     };
 
     const resetForm = () => {

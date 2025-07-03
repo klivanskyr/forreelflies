@@ -8,6 +8,7 @@ import Card from "@/components/cards/RatingCard";
 import Gallery from "@/components/Gallery";
 import SlideLink from "@/components/Links/SlideLink";
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 
 import dryflyimage from "@/../public/flies/dryfly.webp";
 import nymphflyimage from "@/../public/flies/nymph.webp";
@@ -31,8 +32,11 @@ export default function Home() {
         setTopProducts(data.data || []);
         setLoading(false);
       })
-      .catch(() => {
-        setError("Failed to load top selling flies.");
+      .catch((error) => {
+        console.error("Failed to load top selling flies:", error);
+        const errorMessage = "Failed to load top selling flies. Please refresh the page.";
+        toast.error(errorMessage);
+        setError(errorMessage);
         setLoading(false);
       });
   }, []);

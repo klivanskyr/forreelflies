@@ -52,8 +52,33 @@ export async function POST(request: NextRequest) {
         // Check if user already has a Stripe account
         const existingStripeAccountId = userDoc.data()?.stripeAccountId;
         let accountId = existingStripeAccountId;
+        let shouldCreateNewAccount = !existingStripeAccountId;
 
-        if (!existingStripeAccountId) {
+        // If there's an existing account, check if it's still valid
+        if (existingStripeAccountId) {
+            try {
+                const existingAccount = await stripe.accounts.retrieve(existingStripeAccountId);
+                console.log("🔍 Checking existing Stripe account status:", {
+                    id: existingAccount.id,
+                    details_submitted: existingAccount.details_submitted,
+                    charges_enabled: existingAccount.charges_enabled,
+                    payouts_enabled: existingAccount.payouts_enabled
+                });
+                
+                // If account is incomplete or has issues, create a new one
+                if (!existingAccount.details_submitted || existingAccount.requirements?.disabled_reason) {
+                    console.log("⚠️ Existing account has issues, will create new account");
+                    shouldCreateNewAccount = true;
+                    accountId = null;
+                }
+            } catch (error) {
+                console.log("⚠️ Existing Stripe account not found, will create new account");
+                shouldCreateNewAccount = true;
+                accountId = null;
+            }
+        }
+
+        if (shouldCreateNewAccount) {
             console.log("🆕 Creating new Stripe Connect account...");
             
             // Create an Express Connect account
