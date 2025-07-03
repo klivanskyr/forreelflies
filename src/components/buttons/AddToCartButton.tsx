@@ -6,6 +6,7 @@ import Button from "./Button";
 import { useState } from "react";
 import { useUser } from "@/contexts/UserContext";
 import { signOut } from "next-auth/react";
+import toast from "react-hot-toast";
 
 interface AddToCartButtonProps {
     product: Product;
@@ -27,6 +28,7 @@ export default function AddToCartButton({ product, quantity, className }: AddToC
         // If user is not logged in, then open login sidebar
         if (!user) {
             console.log("User not logged in, redirecting to login");
+            toast.error("Please sign in to add items to your cart");
             // Open login sidebar
             router.push("?login=true");
             setLoading(false);
@@ -45,7 +47,15 @@ export default function AddToCartButton({ product, quantity, className }: AddToC
             if (get_repsonse.status === 401) {
                 // Token expired, automatically sign out
                 console.log("Session expired, signing out...");
+                toast.error("Your session has expired. Please sign in again.");
                 await signOut({ redirect: false });
+                setLoading(false);
+                return;
+            }
+
+            if (!get_repsonse.ok) {
+                console.error("Failed to fetch cart");
+                toast.error("Failed to load cart. Please try again.");
                 setLoading(false);
                 return;
             }
@@ -71,6 +81,7 @@ export default function AddToCartButton({ product, quantity, className }: AddToC
 
                 if (response.status === 401) {
                     console.log("Session expired, signing out...");
+                    toast.error("Your session has expired. Please sign in again.");
                     await signOut({ redirect: false });
                     setLoading(false);
                     return;
@@ -78,12 +89,14 @@ export default function AddToCartButton({ product, quantity, className }: AddToC
 
                 if (response.ok) {
                     console.log("Updated cart");
+                    toast.success(`Updated ${product.name} quantity in cart`);
                     refreshUser();
                     setLoading(false);
                 } else {
                     const data = await response.json();
-                    const message = data.message;
+                    const message = data.message || data.error || "Failed to update cart";
                     console.error("Failed to update cart", message);
+                    toast.error(message);
                     setLoading(false);
                 }
             } else {
@@ -104,6 +117,7 @@ export default function AddToCartButton({ product, quantity, className }: AddToC
 
                 if (response.status === 401) {
                     console.log("Session expired, signing out...");
+                    toast.error("Your session has expired. Please sign in again.");
                     await signOut({ redirect: false });
                     setLoading(false);
                     return;
@@ -111,12 +125,14 @@ export default function AddToCartButton({ product, quantity, className }: AddToC
 
                 if (response.ok) {
                     console.log("Added to cart");
+                    toast.success(`Added ${product.name} to cart!`);
                     refreshUser();
                     setLoading(false);
                 } else {
                     const data = await response.json();
-                    const message = data.message;
+                    const message = data.message || data.error || "Failed to add to cart";
                     console.error("Failed to add to cart", message);
+                    toast.error(message);
                     setLoading(false);
                 }
             }

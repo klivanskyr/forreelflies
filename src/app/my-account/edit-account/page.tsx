@@ -5,6 +5,7 @@ import DashboardTemplate from "@/components/DashboradHelpers/DashboardTemplate";
 import { useUser } from "@/contexts/UserContext";
 import { uploadFileAndGetUrl } from "@/lib/firebase";
 import Image from 'next/image';
+import toast from "react-hot-toast";
 
 type UserProfile = {
     username: string;
@@ -42,10 +43,26 @@ export default function Page() {
         setUploadingPhoto(true);
         try {
             const file = e.target.files[0];
+            
+            // Validate file size (max 2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                toast.error('Image size must be less than 2MB');
+                return;
+            }
+            
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                toast.error('Please select a valid image file');
+                return;
+            }
+            
             const url = await uploadFileAndGetUrl(file, `users/${user.uid}/profile_${Date.now()}`);
             setProfile(prev => ({ ...prev, photoURL: url }));
+            toast.success('Profile photo updated successfully!');
             setMessage({ type: 'success', text: 'Photo uploaded successfully!' });
         } catch (error) {
+            console.error('Photo upload error:', error);
+            toast.error('Failed to upload photo. Please try again.');
             setMessage({ type: 'error', text: 'Failed to upload photo.' });
         } finally {
             setUploadingPhoto(false);
@@ -67,12 +84,17 @@ export default function Page() {
             });
 
             if (response.ok) {
+                toast.success('Profile updated successfully!');
                 setMessage({ type: 'success', text: 'Profile updated successfully!' });
             } else {
                 const data = await response.json();
-                setMessage({ type: 'error', text: data.error || 'Failed to update profile.' });
+                const errorMessage = data.error || 'Failed to update profile.';
+                toast.error(errorMessage);
+                setMessage({ type: 'error', text: errorMessage });
             }
         } catch (error) {
+            console.error('Profile update error:', error);
+            toast.error('Network error. Please check your connection and try again.');
             setMessage({ type: 'error', text: 'An error occurred while updating profile.' });
         }
     };

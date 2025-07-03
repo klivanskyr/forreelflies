@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { FaStar } from 'react-icons/fa';
+import toast from 'react-hot-toast';
 
 interface ReviewFormProps {
   type: 'product' | 'vendor';
@@ -41,7 +42,10 @@ export default function ReviewForm({ type, targetId, targetName, onSubmit, isSub
       return;
     }
 
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      toast.error('Please fix the errors below');
+      return;
+    }
 
     const reviewData = {
       [type === 'product' ? 'productId' : 'vendorId']: targetId,
@@ -61,8 +65,12 @@ export default function ReviewForm({ type, targetId, targetName, onSubmit, isSub
       setTitle('');
       setComment('');
       setErrors({});
+      toast.success('Review submitted successfully!');
     } catch (error) {
-      setErrors({ general: 'Failed to submit review. Please try again.' });
+      console.error('Review submission error:', error);
+      const errorMessage = 'Failed to submit review. Please try again.';
+      toast.error(errorMessage);
+      setErrors({ general: errorMessage });
     }
   };
 

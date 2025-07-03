@@ -5,46 +5,57 @@ import NoXRedirect from "@/components/NoXRedirect";
 import { useUser } from "@/contexts/UserContext";
 import { DbUser } from "@/lib/firebase-admin";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useRef } from "react";
+import { Suspense, useRef, useEffect, useState } from "react";
+import toast from "react-hot-toast";
 
 function VendorSignUpContent() {
     const { user, refreshUser } = useUser();
     const router = useRouter();
     const searchParams = useSearchParams();
+    const success = searchParams.get("success");
     const hasCheckedRef = useRef(false);
     const checkAttemptsRef = useRef(0);
+    const [isProcessing, setIsProcessing] = useState(false);
 
-    const success = searchParams.get("success");
-
-    // Handle success redirect logic
     useEffect(() => {
         const checkOnboardingStatus = async () => {
-            if (success === "true" && user && !hasCheckedRef.current) {
-                hasCheckedRef.current = true;
+            if (!user || hasCheckedRef.current || checkAttemptsRef.current >= 3) return;
+            
+            hasCheckedRef.current = true;
+            checkAttemptsRef.current++;
 
-                // Function to check status with retries
+            try {
                 const checkStatus = async () => {
-                    // Refresh user data
+                    console.log(`Checking onboarding status (attempt ${checkAttemptsRef.current})`);
                     await refreshUser();
-                    
-                    // If onboarding is complete, redirect
-                    if (user.vendorSignUpStatus === "onboardingCompleted" && user.stripeDetailsSubmitted) {
-                        router.push("/store-manager");
-                        return true;
-                    }
-                    
-                    // If we've tried 10 times (20 seconds), stop checking
-                    if (checkAttemptsRef.current >= 10) {
-                        return false;
-                    }
-                    
-                    // Try again in 2 seconds
-                    checkAttemptsRef.current++;
-                    setTimeout(checkStatus, 2000);
                 };
 
-                // Start checking
-                checkStatus();
+                // Check immediately, then set up intervals for retries
+                await checkStatus();
+                
+                if (success === "true" && user.vendorSignUpStatus !== "onboardingCompleted") {
+                    // Set up retry mechanism for up to 30 seconds
+                    const interval = setInterval(async () => {
+                        if (checkAttemptsRef.current >= 6) { // 6 attempts over 30 seconds
+                            clearInterval(interval);
+                            if (user.vendorSignUpStatus !== "onboardingCompleted") {
+                                toast.error("Onboarding verification is taking longer than expected. Please contact support if this persists.");
+                            }
+                            return;
+                        }
+                        
+                        checkAttemptsRef.current++;
+                        await checkStatus();
+                        
+                        if (user.vendorSignUpStatus === "onboardingCompleted") {
+                            clearInterval(interval);
+                            toast.success("Vendor account setup completed successfully!");
+                        }
+                    }, 5000); // Check every 5 seconds
+                }
+            } catch (error) {
+                console.error("Error checking onboarding status:", error);
+                toast.error("Failed to verify account status. Please refresh the page.");
             }
         };
 
@@ -55,29 +66,72 @@ function VendorSignUpContent() {
             hasCheckedRef.current = false;
             checkAttemptsRef.current = 0;
         };
-    }, [success]);
+    }, [success, user, refreshUser]);
 
     const handleStripeSignUp = async () => {
-        const createAccountResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/stripe/create-connect-account`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ uid: user?.uid })
-        });
-
-        if (!createAccountResponse.ok) {
-            console.error("Failed to create Stripe account");
+        if (!user?.uid) {
+            toast.error("You must be logged in to set up Stripe payments");
             return;
         }
 
-        const accountLinkData = await createAccountResponse.json();
-        const onboardingLink = accountLinkData.onboardingLink;
+        setIsProcessing(true);
 
-        window.location.href = onboardingLink;
+        try {
+            const createAccountResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/stripe/create-connect-account`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ uid: user.uid })
+            });
+
+            if (!createAccountResponse.ok) {
+                const errorData = await createAccountResponse.json();
+                console.error("Failed to create Stripe account:", errorData);
+                
+                if (createAccountResponse.status === 401) {
+                    toast.error("Authentication failed. Please log in and try again.");
+                    router.push("/?login=true");
+                } else if (createAccountResponse.status === 400) {
+                    toast.error("Invalid account setup request. Please contact support.");
+                } else if (createAccountResponse.status >= 500) {
+                    toast.error("Payment system temporarily unavailable. Please try again in a few minutes.");
+                } else {
+                    toast.error(`Failed to set up payment account: ${errorData.error || "Unknown error"}`);
+                }
+                return;
+            }
+
+            const accountLinkData = await createAccountResponse.json();
+            
+            if (!accountLinkData.onboardingLink) {
+                console.error("No onboarding link received:", accountLinkData);
+                toast.error("Failed to generate setup link. Please try again.");
+                return;
+            }
+
+            toast.success("Redirecting to Stripe setup...");
+            window.location.href = accountLinkData.onboardingLink;
+
+        } catch (networkError) {
+            console.error("Network error during Stripe signup:", networkError);
+            
+            if (networkError instanceof TypeError && networkError.message.includes("fetch")) {
+                toast.error("Connection error. Please check your internet connection and try again.");
+            } else {
+                toast.error("Failed to connect to payment setup. Please try again.");
+            }
+        } finally {
+            setIsProcessing(false);
+        }
     }
 
     const handleSubmitReviewApplication = async () => {
+        if (!user?.uid) {
+            toast.error("You must be logged in to submit an application");
+            return;
+        }
+        
         router.push("/vendor-signup/form");
     }
 
@@ -98,11 +152,29 @@ function VendorSignUpContent() {
                             <p className="text-sm text-yellow-700">Please complete all the required steps in the Stripe setup process to activate your vendor account.</p>
                         </div>
 
-                        <Button className="mt-3 w-[400px]" text="Continue Stripe Setup" onClick={handleStripeSignUp}/>
+                        <Button 
+                            className="mt-3 w-[400px]" 
+                            text={isProcessing ? "Setting up..." : "Continue Stripe Setup"} 
+                            onClick={handleStripeSignUp}
+                            disabled={isProcessing}
+                        />
                         <p className="text-sm text-gray-500 mt-4">If you're having trouble, you can start over with a new setup.</p>
                     </div>
                 );
-            } else if (user.vendorSignUpStatus !== "onboardingCompleted") {
+            } else if (user.vendorSignUpStatus === "onboardingCompleted") {
+                return (
+                    <div className="w-full h-full flex flex-col flex-1 justify-center items-center text-center">
+                        <h1 className="text-3xl text-green-600 font-bold mb-8">Welcome to ForReelFlies!</h1>
+                        <h2 className="text-xl font-semibold mb-2">Your vendor account is now active and ready to use.</h2>
+                        <p className="text-sm text-gray-600 mb-8">You can now start managing your store and listing products for sale.</p>
+                        <Button 
+                            className="mt-3 w-[400px]" 
+                            text="Go to Store Manager" 
+                            onClick={() => router.push("/store-manager")}
+                        />
+                    </div>
+                );
+            } else {
                 return (
                     <div className="w-full h-full flex flex-col flex-1 justify-center items-center text-center">
                         <h1 className="text-3xl text-yellow-600 font-bold mb-8">Setting Up Your Account</h1>
@@ -111,8 +183,9 @@ function VendorSignUpContent() {
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mt-8"></div>
                         <Button 
                             className="mt-8 w-[400px]" 
-                            text="Restart Setup Process" 
+                            text={isProcessing ? "Processing..." : "Restart Setup Process"} 
                             onClick={handleStripeSignUp}
+                            disabled={isProcessing}
                         />
                     </div>
                 );
@@ -145,18 +218,26 @@ function VendorSignUpContent() {
             case "approvalFormApproved":
                 return (
                     <div className="w-full h-full flex flex-col flex-1 justify-center items-center text-center">
-                        <h1 className="text-3xl text-green-600 font-bold mb-8">Congratulations on being approved!</h1>
-                        <h2 className="text-xl font-semibold mb-2">There are some final steps before your vendor account can be made.</h2>
-                        <p className="text-sm text-gray-600">To sell products on For Reel Flies, you must first set up a <span className="text-blue-500 font-semibold">Stripe</span> account.</p>
-                        <p className="text-sm text-gray-600">This will allow you to receive payments directly.</p>
-                        <p className="text-sm text-gray-600">Please note that you will need to provide some information about your business.</p>
-                        <p className="text-sm text-gray-600">Once you complete the setup process, your account will be activated.</p>
-                        <p className="text-sm text-gray-600">Then you will be able to start selling your products.</p>
+                        <h1 className="text-3xl text-green-600 font-bold mb-8">Congratulations! Your application has been approved!</h1>
+                        <h2 className="text-xl font-semibold mb-2">Next step: Set up your payment account with Stripe.</h2>
+                        <p className="text-sm text-gray-600 mb-4">This is required to receive payments from customers.</p>
+                        
+                        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg max-w-[600px] mb-8">
+                            <p className="text-sm text-blue-800 font-semibold mb-2">What happens next:</p>
+                            <ul className="text-sm text-blue-700 text-left list-disc list-inside space-y-1">
+                                <li>Click the button below to start Stripe setup</li>
+                                <li>You'll be redirected to Stripe to provide business information</li>
+                                <li>Complete identity verification and banking details</li>
+                                <li>Return here when finished to start selling</li>
+                            </ul>
+                        </div>
 
-                        <p className="text-sm text-gray-600 mt-8">Note: You will be redirected to Stripe after clicking the button.</p>
-                        <p className="text-sm text-gray-600">Once setup is completed, you will return to this page automatically.</p>
-
-                        <Button className="mt-3 w-[400px]" text="Sign Up Through Stripe" onClick={handleStripeSignUp}/>
+                        <Button 
+                            className="mt-3 w-[400px]" 
+                            text={isProcessing ? "Setting up..." : "Set Up Payment Account"} 
+                            onClick={handleStripeSignUp}
+                            disabled={isProcessing}
+                        />
                     </div>
                 )
 
@@ -165,7 +246,12 @@ function VendorSignUpContent() {
                     <div className="w-full h-full flex flex-col flex-1 justify-center items-center text-center">
                         <h1 className="text-3xl text-red-600 font-bold mb-8">Application Not Approved</h1>
                         <h2 className="text-xl font-semibold mb-2">We're sorry, but your vendor application was not approved at this time.</h2>
-                        <p className="text-sm text-gray-600">If you believe this was a mistake or would like to apply again, please contact our support team.</p>
+                        <p className="text-sm text-gray-600 mb-4">If you believe this was a mistake or would like to apply again, please contact our support team.</p>
+                        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg max-w-[600px]">
+                            <p className="text-sm text-red-800">
+                                For questions about your application status, please contact us at support@forreelflies.com
+                            </p>
+                        </div>
                     </div>
                 )
 
@@ -174,8 +260,20 @@ function VendorSignUpContent() {
                     <div className="w-full h-full flex flex-col flex-1 justify-center items-center text-center">
                         <h1 className="text-3xl text-blue-600 font-bold mb-8">Onboarding In Progress</h1>
                         <h2 className="text-xl font-semibold mb-2">Please complete your Stripe setup.</h2>
-                        <p className="text-sm text-gray-600">Your vendor account will be activated once all steps are completed.</p>
-                        <Button className="mt-3 w-[400px]" text="Continue Stripe Setup" onClick={handleStripeSignUp}/>
+                        <p className="text-sm text-gray-600 mb-4">Your vendor account will be activated once all steps are completed.</p>
+                        
+                        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg max-w-[600px] mb-8">
+                            <p className="text-sm text-blue-800">
+                                If you were in the middle of setting up your Stripe account, click below to continue where you left off.
+                            </p>
+                        </div>
+
+                        <Button 
+                            className="mt-3 w-[400px]" 
+                            text={isProcessing ? "Loading..." : "Continue Stripe Setup"} 
+                            onClick={handleStripeSignUp}
+                            disabled={isProcessing}
+                        />
                     </div>
                 )
 

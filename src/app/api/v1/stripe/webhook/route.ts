@@ -185,24 +185,193 @@ async function createShippingLabel(order: Order, vendorData: any) {
   }
 }
 
+// Helper function to handle completed Stripe onboarding
+async function handleAccountOnboardingCompleted(account: Stripe.Account) {
+    try {
+        console.log("🔍 Processing completed onboarding for account:", account.id);
+        
+        // Get user ID from account metadata
+        const userId = account.metadata?.userId;
+        if (!userId) {
+            console.error("❌ No userId found in account metadata");
+            return;
+        }
+        
+        console.log("👤 Found user ID in metadata:", userId);
+        
+        // Create a processing lock to prevent race conditions from multiple webhook events
+        const lockId = `vendor_creation_${userId}`;
+        const lockRef = doc(db, "processing_locks", lockId);
+        
+        try {
+            // Try to create the lock atomically
+            await setDoc(lockRef, {
+                userId,
+                accountId: account.id,
+                startedAt: new Date(),
+                status: "processing"
+            }, { merge: false }); // This will fail if document already exists
+            console.log("✅ Acquired vendor creation lock");
+        } catch (error) {
+            // If lock already exists, another webhook call is processing this vendor creation
+            console.log("⚠️ Vendor creation lock already exists - another webhook is handling this. Skipping.");
+            return;
+        }
+        
+        try {
+            // Check if vendor already exists
+            const existingVendorQuery = query(collection(db, "vendors"), where("ownerId", "==", userId));
+            const existingVendorSnapshot = await getDocs(existingVendorQuery);
+            
+            if (!existingVendorSnapshot.empty) {
+                console.log("⚠️ Vendor already exists for user:", userId);
+                // Update existing vendor with Stripe account ID if missing
+                const vendorDoc = existingVendorSnapshot.docs[0];
+                const vendorData = vendorDoc.data();
+                if (!vendorData.stripeAccountId) {
+                    await updateDoc(vendorDoc.ref, {
+                        stripeAccountId: account.id,
+                        updatedAt: new Date()
+                    });
+                    console.log("✅ Updated existing vendor with Stripe account ID");
+                }
+                
+                // Update user status to completed
+                await updateDoc(doc(db, "users", userId), {
+                    vendorSignUpStatus: "onboardingCompleted"
+                });
+                console.log("✅ Updated user status to onboardingCompleted");
+                
+                // Clean up the lock
+                await deleteDoc(lockRef);
+                return;
+            }
+            
+            // Get vendor request data
+            const vendorRequestDoc = await getDoc(doc(db, "vendorRequests", userId));
+            if (!vendorRequestDoc.exists()) {
+                console.error("❌ No vendor request found for user:", userId);
+                // Clean up the lock
+                await deleteDoc(lockRef);
+                return;
+            }
+            
+            const vendorRequestData = vendorRequestDoc.data();
+            console.log("📋 Found vendor request data");
+            
+            // Create vendor document
+            const vendorId = userId; // Use user ID as vendor ID
+            const vendorData = {
+                id: vendorId,
+                ownerId: userId,
+                ownerName: vendorRequestData.name,
+                products: [],
+                storeCity: vendorRequestData.storeCity,
+                storeCountry: vendorRequestData.storeCountry || "US",
+                storeDescription: vendorRequestData.storeDescription,
+                storeEmail: vendorRequestData.storeEmail,
+                storeName: vendorRequestData.storeName,
+                storePhone: vendorRequestData.storePhone,
+                storeSlug: vendorRequestData.storeSlug || vendorRequestData.storeName?.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+                storeState: vendorRequestData.storeState,
+                storeStreetAddress: vendorRequestData.storeStreetAddress,
+                storeZip: vendorRequestData.storeZip,
+                monthlyEarnings: 0,
+                allTimeEarnings: 0,
+                lastEarningsUpdate: new Date(),
+                stripeAccountId: account.id,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            };
+            
+            // Save vendor document
+            await setDoc(doc(db, "vendors", vendorId), vendorData);
+            console.log("✅ Created vendor document:", vendorId);
+            
+            // Update user status to completed
+            await updateDoc(doc(db, "users", userId), {
+                vendorSignUpStatus: "onboardingCompleted",
+                isVendor: true
+            });
+            console.log("✅ Updated user status to onboardingCompleted");
+            
+            console.log("🎉 Vendor onboarding completed successfully!");
+            
+            // Clean up the lock
+            await deleteDoc(lockRef);
+            console.log("✅ Vendor creation lock cleaned up");
+            
+        } catch (processingError) {
+            console.error("❌ Error during vendor creation processing:", processingError);
+            // Clean up the lock in case of error
+            try {
+                await deleteDoc(lockRef);
+                console.log("✅ Vendor creation lock cleaned up after error");
+            } catch (lockCleanupError) {
+                console.error("❌ Error cleaning up vendor creation lock:", lockCleanupError);
+            }
+            throw processingError; // Re-throw to trigger outer catch
+        }
+        
+    } catch (error) {
+        console.error("❌ Error handling account onboarding completion:", error);
+    }
+}
+
 export async function POST(request: NextRequest) {
+    // 🔍 PRODUCTION DEBUGGING - Add comprehensive logging
+    console.log("🔍 WEBHOOK DEBUG - Request received");
+    console.log("🔍 Timestamp:", new Date().toISOString());
+    console.log("🔍 Request URL:", request.url);
+    console.log("🔍 Request method:", request.method);
+    
+    // Log headers (but mask sensitive data)
+    const headers = Object.fromEntries(request.headers.entries());
+    console.log("🔍 Headers:", {
+        ...headers,
+        'stripe-signature': headers['stripe-signature'] ? '[PRESENT]' : '[MISSING]'
+    });
+    
+    // Log environment variables presence
+    console.log("🔍 Environment check:", {
+        STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ? '[PRESENT]' : '[MISSING]',
+        STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET ? '[PRESENT]' : '[MISSING]',
+        NODE_ENV: process.env.NODE_ENV
+    });
+
     const payload = await request.text();
+    console.log("🔍 Payload length:", payload.length);
+    console.log("🔍 Payload preview:", payload.substring(0, 200) + "...");
+    
     const sig = request.headers.get('stripe-signature');
 
     if (!sig || !process.env.STRIPE_WEBHOOK_SECRET) {
+        console.error('❌ WEBHOOK DEBUG - Missing signature or webhook secret');
+        console.error('❌ Signature present:', !!sig);
+        console.error('❌ Webhook secret present:', !!process.env.STRIPE_WEBHOOK_SECRET);
         return NextResponse.json({ error: 'Missing signature or webhook secret' }, { status: 400 });
     }
 
     let event: Stripe.Event;
 
     try {
+        console.log("🔍 WEBHOOK DEBUG - Attempting to construct event");
         event = stripe.webhooks.constructEvent(payload, sig, process.env.STRIPE_WEBHOOK_SECRET);
+        console.log("✅ WEBHOOK DEBUG - Event constructed successfully");
     } catch (err) {
-        console.error('❌ Webhook signature verification failed:', err);
+        console.error('❌ WEBHOOK DEBUG - Webhook signature verification failed:', err);
+        console.error('❌ Error type:', err instanceof Error ? err.constructor.name : typeof err);
+        console.error('❌ Error message:', err instanceof Error ? err.message : String(err));
+        console.error('❌ Webhook secret length:', process.env.STRIPE_WEBHOOK_SECRET?.length || 0);
+        console.error('❌ Webhook secret starts with whsec_:', process.env.STRIPE_WEBHOOK_SECRET?.startsWith('whsec_') || false);
+        console.error('❌ Signature length:', sig?.length || 0);
+        console.error('❌ Payload length:', payload.length);
         return NextResponse.json({ error: 'Webhook Error' }, { status: 400 });
     }
 
     console.log('✅ Webhook received:', event.type);
+    console.log('✅ Event ID:', event.id);
+    console.log('✅ Event created:', new Date(event.created * 1000).toISOString());
 
     try {
         // Log additional details based on event type
@@ -583,11 +752,107 @@ export async function POST(request: NextRequest) {
         else if (event.type === 'account.updated') {
             const account = eventObject as Stripe.Account;
             console.log("Account updated:", account.id);
+            console.log("🔍 Account status:", {
+                details_submitted: account.details_submitted,
+                charges_enabled: account.charges_enabled,
+                payouts_enabled: account.payouts_enabled,
+                requirements: account.requirements?.currently_due?.length || 0,
+                capabilities: account.capabilities ? Object.keys(account.capabilities) : []
+            });
+            
+            // Check if this account has completed onboarding
+            if (account.details_submitted && account.charges_enabled && account.payouts_enabled) {
+                console.log("✅ Account onboarding completed, checking if vendor needs to be created");
+                await handleAccountOnboardingCompleted(account);
+            } else {
+                console.log("⏳ Account onboarding not yet complete");
+            }
         }
         // Handle capability updates
         else if (event.type === 'capability.updated') {
             const capability = eventObject as Stripe.Capability;
-            console.log("Capability updated:", capability.id);
+            console.log("Capability updated:", capability.id, "status:", capability.status);
+            
+            // If card_payments capability is now active, check if we need to create vendor
+            if (capability.id === 'card_payments' && capability.status === 'active') {
+                console.log("✅ Card payments capability activated, checking account status");
+                try {
+                    const accountId = typeof capability.account === 'string' ? capability.account : capability.account.id;
+                    const account = await stripe.accounts.retrieve(accountId);
+                    console.log("🔍 Retrieved account for card_payments capability:", {
+                        id: account.id,
+                        details_submitted: account.details_submitted,
+                        charges_enabled: account.charges_enabled,
+                        payouts_enabled: account.payouts_enabled
+                    });
+                    if (account.details_submitted && account.charges_enabled && account.payouts_enabled) {
+                        console.log("✅ Full account onboarding completed, creating vendor");
+                        await handleAccountOnboardingCompleted(account);
+                    } else {
+                        console.log("⏳ Account not fully ready yet after card_payments activation");
+                    }
+                } catch (error) {
+                    console.error("❌ Error retrieving account for capability update:", error);
+                }
+            }
+            
+            // If transfers capability is now active, check if we need to create vendor
+            if (capability.id === 'transfers' && capability.status === 'active') {
+                console.log("✅ Transfers capability activated, checking account status");
+                try {
+                    const accountId = typeof capability.account === 'string' ? capability.account : capability.account.id;
+                    const account = await stripe.accounts.retrieve(accountId);
+                    console.log("🔍 Retrieved account for transfers capability:", {
+                        id: account.id,
+                        details_submitted: account.details_submitted,
+                        charges_enabled: account.charges_enabled,
+                        payouts_enabled: account.payouts_enabled
+                    });
+                    if (account.details_submitted && account.charges_enabled && account.payouts_enabled) {
+                        console.log("✅ Full account onboarding completed, creating vendor");
+                        await handleAccountOnboardingCompleted(account);
+                    } else {
+                        console.log("⏳ Account not fully ready yet after transfers activation");
+                    }
+                } catch (error) {
+                    console.error("❌ Error retrieving account for capability update:", error);
+                }
+            }
+        }
+        // Handle external account creation (bank account connected)
+        else if (event.type === 'account.external_account.created') {
+            const externalAccount = eventObject as any;
+            console.log("External account created:", externalAccount.id, "for account:", externalAccount.account);
+            
+            // When a bank account is connected, check if onboarding is now complete
+            try {
+                const accountId = externalAccount.account;
+                const account = await stripe.accounts.retrieve(accountId);
+                console.log("🔍 Checking account after external account creation:", {
+                    id: account.id,
+                    details_submitted: account.details_submitted,
+                    charges_enabled: account.charges_enabled,
+                    payouts_enabled: account.payouts_enabled
+                });
+                if (account.details_submitted && account.charges_enabled && account.payouts_enabled) {
+                    console.log("✅ Account onboarding completed after external account creation");
+                    await handleAccountOnboardingCompleted(account);
+                }
+            } catch (error) {
+                console.error("❌ Error checking account after external account creation:", error);
+            }
+        }
+        // Handle person creation (identity verification)
+        else if (event.type === 'person.created') {
+            const person = eventObject as any;
+            console.log("Person created:", person.id, "for account:", person.account);
+            // Just log for now, person creation alone doesn't complete onboarding
+        }
+        // Handle financial connections account creation
+        else if (event.type === 'financial_connections.account.created') {
+            const financialAccount = eventObject as any;
+            console.log("Financial connections account created:", financialAccount.id);
+            // This is related to bank account verification, but doesn't directly complete onboarding
         }
         // Log unhandled event types
         else {
@@ -597,6 +862,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true });
     } catch (error) {
         console.error(`❌ Error processing webhook ${event.type}:`, error);
+        console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
         return NextResponse.json(
             { error: 'Webhook handler failed' },
             { status: 500 }

@@ -9,6 +9,7 @@ import { ProductInfo } from '@/components/ProductInfo'
 import { useParams } from 'next/navigation'
 import ProductReviews from '@/components/ProductReviews'
 import Image from 'next/image'
+import toast from 'react-hot-toast'
 
 const StarRating = ({ rating, size = "sm" }: { rating: number, size?: "xs" | "sm" | "lg" }) => {
     const stars = []
@@ -58,6 +59,9 @@ export default function ProductPage() {
                         totalReviews: productData.reviewSummary?.totalReviews || 0,
                         ratingDistribution: productData.reviewSummary?.ratingDistribution || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
                     })
+                } else {
+                    throw new Error('Product not found')
+                }
                     
                     // Fetch vendor reviews
                     try {
@@ -78,6 +82,7 @@ export default function ProductPage() {
                 }
             } catch (error) {
                 console.error('Error fetching product data:', error)
+                toast.error('Failed to load product. Please try again or go back to shop.')
             } finally {
                 setLoading(false)
             }

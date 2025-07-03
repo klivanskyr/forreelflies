@@ -10,6 +10,7 @@ import { TextLink } from "../Links";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { FaStore } from "react-icons/fa";
+import toast from "react-hot-toast";
 
 type Section = "login" | "register";
 
@@ -33,6 +34,7 @@ export default function LoginSidebar({ setOpen, open }: { setOpen: (open: boolea
         setIsSubmitting(true);
         
         if (login.email === "" || login.password === "") {
+            toast.error("Please fill in all fields");
             setError("Please fill in all fields");
             setIsSubmitting(false);
             return;
@@ -46,6 +48,7 @@ export default function LoginSidebar({ setOpen, open }: { setOpen: (open: boolea
             });
 
             if (result?.error) {
+                toast.error("Invalid credentials. Please check your email and password.");
                 setError("Try Again: Invalid Credentials");
                 setIsSubmitting(false);
                 return;
@@ -57,6 +60,7 @@ export default function LoginSidebar({ setOpen, open }: { setOpen: (open: boolea
             setIsSubmitting(false);
         } catch (error) {
             console.error(error);
+            toast.error("Network error. Please check your connection and try again.");
             setError("An error occurred, please try again");
             setIsSubmitting(false);
         }
@@ -66,11 +70,13 @@ export default function LoginSidebar({ setOpen, open }: { setOpen: (open: boolea
         e.preventDefault();
 
         if (register.email === "" || register.password === "" || register.confirmPassword === "") {
+            toast.error("Please fill in all fields");
             setError("Please fill in all fields");
             return;
         }
 
         if (register.password !== register.confirmPassword) {
+            toast.error("Passwords do not match");
             setError("Passwords do not match");
             return;
         }
@@ -87,9 +93,13 @@ export default function LoginSidebar({ setOpen, open }: { setOpen: (open: boolea
         });
 
         if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData.error || "Failed to create account. Please try again.";
+            toast.error(errorMessage);
             setError("An error occurred, please try again");
             return;
         } else {
+            toast.success("Account created successfully! Welcome to ForReelFlies!");
             setError("Account created successfully.");
             setRegister({ email: "", password: "", confirmPassword: "" });
             await signIn("credentials", {

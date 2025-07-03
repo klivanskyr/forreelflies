@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { FaHome, FaBuilding, FaStar } from 'react-icons/fa'
+import toast from 'react-hot-toast'
 
 type Address = {
     id: string;
@@ -87,14 +88,19 @@ export default function ShippingAddressModal({ isOpen, onClose, onAddressAdded }
             })
 
             if (!response.ok) {
-                throw new Error('Failed to update address')
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Failed to update address')
             }
 
             setAddresses(prev => [...prev, newAddress])
+            toast.success('Address added successfully!');
             onAddressAdded()
             setShowAddForm(false)
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to save address')
+            const errorMessage = err instanceof Error ? err.message : 'Failed to save address';
+            console.error('Address save error:', err);
+            toast.error(errorMessage);
+            setError(errorMessage)
         } finally {
             setLoading(false)
         }
@@ -124,13 +130,18 @@ export default function ShippingAddressModal({ isOpen, onClose, onAddressAdded }
             });
 
             if (!response.ok) {
-                throw new Error('Failed to update address');
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Failed to update address');
             }
 
+            toast.success('Address selected successfully!');
             onAddressAdded();
             onClose();
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to select address');
+            const errorMessage = err instanceof Error ? err.message : 'Failed to select address';
+            console.error('Address selection error:', err);
+            toast.error(errorMessage);
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }

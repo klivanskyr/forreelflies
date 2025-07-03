@@ -5,6 +5,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { FaCheckCircle, FaTruck, FaReceipt, FaStore } from 'react-icons/fa';
+import toast from 'react-hot-toast';
 
 type OrderSummary = {
     sessionId: string;
@@ -38,7 +39,9 @@ function CartSuccessContent() {
 
     useEffect(() => {
         if (!sessionId) {
-            setError('No session ID provided');
+            const errorMessage = 'No session ID provided';
+            toast.error('Order confirmation unavailable. Please check your email for order details.');
+            setError(errorMessage);
             setLoading(false);
             return;
         }
@@ -55,7 +58,9 @@ function CartSuccessContent() {
                 setOrderSummary(data);
             } catch (err) {
                 console.error('Error fetching order summary:', err);
-                setError('Failed to load order details');
+                const errorMessage = 'Failed to load order details';
+                toast.error('Unable to load order confirmation. Please check your email for order details.');
+                setError(errorMessage);
             } finally {
                 setLoading(false);
             }

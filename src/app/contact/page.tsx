@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import emailjs from '@emailjs/browser';
+import toast from 'react-hot-toast';
 
 function Card({ icon, title, content }: { icon: React.ReactNode, title: string, content: string }) {
     return (
@@ -44,7 +45,9 @@ export default function Page() {
         
         // Validate required fields
         if (!formData.name || !formData.email || !formData.subject || !formData.message) {
-            setError('Please fill in all required fields.');
+            const errorMessage = 'Please fill in all required fields.';
+            toast.error(errorMessage);
+            setError(errorMessage);
             return;
         }
 
@@ -73,6 +76,7 @@ export default function Page() {
                 "gWJ3uFncMXWrKUMgw"
             );
             
+            toast.success('Message sent successfully! We\'ll get back to you soon.');
             setSubmitSuccess(true);
             setFormData({ name: '', email: '', subject: '', message: '' });
             
@@ -83,7 +87,9 @@ export default function Page() {
             
         } catch (error) {
             console.error('Error submitting message:', error);
-            setError('Failed to send message. Please try again.');
+            const errorMessage = 'Failed to send message. Please try again.';
+            toast.error(errorMessage);
+            setError(errorMessage);
         } finally {
             setIsSubmitting(false);
         }
