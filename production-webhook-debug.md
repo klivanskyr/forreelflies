@@ -3,17 +3,26 @@
 ## 1. Stripe Dashboard Configuration
 
 ### Check Production Webhook Setup:
+You now need **TWO** separate webhook endpoints in Stripe Dashboard:
+
+**Webhook 1 - Personal Account Events (Checkout/Orders):**
 1. Login to Stripe Dashboard
 2. Switch to **Live mode** (not Test mode)
 3. Go to **Developers → Webhooks**
-4. Verify webhook endpoint exists: `https://your-production-domain.com/api/v1/stripe/webhook`
-5. Check events: Must include `checkout.session.completed`
+4. Create/verify webhook endpoint: `https://your-production-domain.com/api/v1/stripe/webhook`
+5. Check events: Must include `checkout.session.completed`, `payment_intent.succeeded`, `charge.succeeded`
 6. Status should be **Enabled**
 
-### Get Production Webhook Secret:
-1. Click on your production webhook
-2. Copy the **Signing secret** (starts with `whsec_`)
-3. This goes in your production `STRIPE_WEBHOOK_SECRET` env var
+**Webhook 2 - Connected Account Events (Vendor Onboarding):**
+1. In Stripe Dashboard, go to **Connect → Webhooks**
+2. Create/verify webhook endpoint: `https://your-production-domain.com/api/v1/stripe/webhook`
+3. Check events: Must include `account.updated`, `capability.updated`, `account.external_account.created`, `person.created`
+4. Status should be **Enabled**
+
+### Get Production Webhook Secrets:
+1. Click on your **personal account** webhook → Copy the **Signing secret** (starts with `whsec_`)
+2. Click on your **connected account** webhook → Copy the **Signing secret** (starts with `whsec_`)
+3. These go in your production environment variables
 
 ## 2. Environment Variables Check
 
@@ -21,7 +30,8 @@
 ```env
 # These must be LIVE keys, not test keys
 STRIPE_SECRET_KEY=sk_live_...
-STRIPE_WEBHOOK_SECRET=whsec_... # From production webhook in dashboard
+STRIPE_WEBHOOK_SECRET_PERSONAL=whsec_... # From personal account webhook
+STRIPE_WEBHOOK_SECRET_CONNECTED=whsec_... # From connected account webhook
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
 
 # Other required vars
@@ -44,7 +54,7 @@ curl -X POST https://your-production-domain.com/api/v1/stripe/webhook \
   -H "Content-Type: application/json" \
   -d '{"test": "data"}'
 ```
-Expected response: `{"error": "Missing signature or webhook secret"}` (confirms POST works)
+Expected response: `{"error": "Missing signature or webhook secrets"}` (confirms POST works)
 
 ## 4. Check Webhook Logs
 
@@ -86,7 +96,7 @@ stripe trigger checkout.session.completed --live
 ## 7. Common Issues & Solutions
 
 ### Issue: Webhook secret mismatch
-**Solution**: Copy the exact webhook secret from your production webhook in Stripe Dashboard
+**Solution**: Copy the exact webhook secrets from both your personal and connected account webhooks in Stripe Dashboard
 
 ### Issue: Using test keys in production
 **Solution**: Switch to live keys (sk_live_, pk_live_)
@@ -136,7 +146,7 @@ stripe trigger checkout.session.completed \
 - [ ] SSL certificate valid
 - [ ] No firewall blocking webhook requests
 - [ ] Application deployed and running
-- [ ] Webhook secret matches between Stripe and your app
+- [ ] Webhook secrets match between Stripe and your app (both personal and connected)
 - [ ] Using live Stripe keys (not test keys)
 - [ ] Checked Stripe webhook delivery logs
 - [ ] Checked application logs for errors
@@ -156,7 +166,8 @@ export async function POST(request: NextRequest) {
     
     const sig = request.headers.get('stripe-signature');
     console.log("Signature present:", !!sig);
-    console.log("Webhook secret present:", !!process.env.STRIPE_WEBHOOK_SECRET);
+    console.log("Personal webhook secret present:", !!process.env.STRIPE_WEBHOOK_SECRET_PERSONAL);
+    console.log("Connected webhook secret present:", !!process.env.STRIPE_WEBHOOK_SECRET_CONNECTED);
     
     // ... rest of your webhook code
 }

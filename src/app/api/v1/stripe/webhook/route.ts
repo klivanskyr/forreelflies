@@ -335,7 +335,8 @@ export async function POST(request: NextRequest) {
     // Log environment variables presence
     console.log("🔍 Environment check:", {
         STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY ? '[PRESENT]' : '[MISSING]',
-        STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET ? '[PRESENT]' : '[MISSING]',
+        STRIPE_WEBHOOK_SECRET_PERSONAL: process.env.STRIPE_WEBHOOK_SECRET_PERSONAL ? '[PRESENT]' : '[MISSING]',
+        STRIPE_WEBHOOK_SECRET_CONNECTED: process.env.STRIPE_WEBHOOK_SECRET_CONNECTED ? '[PRESENT]' : '[MISSING]',
         NODE_ENV: process.env.NODE_ENV
     });
 
@@ -345,33 +346,71 @@ export async function POST(request: NextRequest) {
     
     const sig = request.headers.get('stripe-signature');
 
-    if (!sig || !process.env.STRIPE_WEBHOOK_SECRET) {
-        console.error('❌ WEBHOOK DEBUG - Missing signature or webhook secret');
+    if (!sig || (!process.env.STRIPE_WEBHOOK_SECRET_PERSONAL && !process.env.STRIPE_WEBHOOK_SECRET_CONNECTED)) {
+        console.error('❌ WEBHOOK DEBUG - Missing signature or webhook secrets');
         console.error('❌ Signature present:', !!sig);
-        console.error('❌ Webhook secret present:', !!process.env.STRIPE_WEBHOOK_SECRET);
-        return NextResponse.json({ error: 'Missing signature or webhook secret' }, { status: 400 });
+        console.error('❌ Personal webhook secret present:', !!process.env.STRIPE_WEBHOOK_SECRET_PERSONAL);
+        console.error('❌ Connected webhook secret present:', !!process.env.STRIPE_WEBHOOK_SECRET_CONNECTED);
+        return NextResponse.json({ error: 'Missing signature or webhook secrets' }, { status: 400 });
     }
 
     let event: Stripe.Event;
+    let webhookSecret: string;
 
+    // First, try to construct the event with both secrets to determine which one works
+    // This is necessary because we don't know the event type until after verification
     try {
-        console.log("🔍 WEBHOOK DEBUG - Attempting to construct event");
-        event = stripe.webhooks.constructEvent(payload, sig, process.env.STRIPE_WEBHOOK_SECRET);
-        console.log("✅ WEBHOOK DEBUG - Event constructed successfully");
-    } catch (err) {
-        console.error('❌ WEBHOOK DEBUG - Webhook signature verification failed:', err);
-        console.error('❌ Error type:', err instanceof Error ? err.constructor.name : typeof err);
-        console.error('❌ Error message:', err instanceof Error ? err.message : String(err));
-        console.error('❌ Webhook secret length:', process.env.STRIPE_WEBHOOK_SECRET?.length || 0);
-        console.error('❌ Webhook secret starts with whsec_:', process.env.STRIPE_WEBHOOK_SECRET?.startsWith('whsec_') || false);
-        console.error('❌ Signature length:', sig?.length || 0);
-        console.error('❌ Payload length:', payload.length);
-        return NextResponse.json({ error: 'Webhook Error' }, { status: 400 });
+        console.log("🔍 WEBHOOK DEBUG - Attempting to construct event with personal secret");
+        if (process.env.STRIPE_WEBHOOK_SECRET_PERSONAL) {
+            event = stripe.webhooks.constructEvent(payload, sig, process.env.STRIPE_WEBHOOK_SECRET_PERSONAL);
+            webhookSecret = 'PERSONAL';
+            console.log("✅ WEBHOOK DEBUG - Event constructed successfully with PERSONAL secret");
+        } else {
+            throw new Error('Personal webhook secret not available');
+        }
+    } catch (personalErr) {
+        console.log("⚠️ WEBHOOK DEBUG - Personal secret failed, trying connected secret");
+        try {
+            if (process.env.STRIPE_WEBHOOK_SECRET_CONNECTED) {
+                event = stripe.webhooks.constructEvent(payload, sig, process.env.STRIPE_WEBHOOK_SECRET_CONNECTED);
+                webhookSecret = 'CONNECTED';
+                console.log("✅ WEBHOOK DEBUG - Event constructed successfully with CONNECTED secret");
+            } else {
+                throw new Error('Connected webhook secret not available');
+            }
+        } catch (connectedErr) {
+            console.error('❌ WEBHOOK DEBUG - Both webhook secrets failed');
+            console.error('❌ Personal error:', personalErr instanceof Error ? personalErr.message : String(personalErr));
+            console.error('❌ Connected error:', connectedErr instanceof Error ? connectedErr.message : String(connectedErr));
+            console.error('❌ Personal secret length:', process.env.STRIPE_WEBHOOK_SECRET_PERSONAL?.length || 0);
+            console.error('❌ Connected secret length:', process.env.STRIPE_WEBHOOK_SECRET_CONNECTED?.length || 0);
+            console.error('❌ Signature length:', sig?.length || 0);
+            console.error('❌ Payload length:', payload.length);
+            return NextResponse.json({ error: 'Webhook signature verification failed' }, { status: 400 });
+        }
     }
 
     console.log('✅ Webhook received:', event.type);
     console.log('✅ Event ID:', event.id);
     console.log('✅ Event created:', new Date(event.created * 1000).toISOString());
+    console.log('✅ Webhook secret used:', webhookSecret);
+
+    // Validate that the correct webhook secret was used for the event type
+    const isCheckoutEvent = event.type === 'checkout.session.completed';
+    const isPaymentEvent = event.type.startsWith('payment_intent.') || event.type.startsWith('charge.') || event.type.startsWith('payment.');
+    const isAccountEvent = event.type.startsWith('account.') || event.type.startsWith('capability.') || event.type.startsWith('person.') || event.type === 'financial_connections.account.created';
+    
+    if ((isCheckoutEvent || isPaymentEvent) && webhookSecret !== 'PERSONAL') {
+        console.error(`❌ Wrong webhook secret used for ${event.type}. Expected PERSONAL, got ${webhookSecret}`);
+        return NextResponse.json({ error: 'Wrong webhook endpoint for this event type' }, { status: 400 });
+    }
+    
+    if (isAccountEvent && webhookSecret !== 'CONNECTED') {
+        console.error(`❌ Wrong webhook secret used for ${event.type}. Expected CONNECTED, got ${webhookSecret}`);
+        return NextResponse.json({ error: 'Wrong webhook endpoint for this event type' }, { status: 400 });
+    }
+    
+    console.log('✅ Webhook secret validation passed');
 
     try {
         // Log additional details based on event type

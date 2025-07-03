@@ -3,7 +3,11 @@
 ## Problem
 When you complete a checkout locally, no orders are created because Stripe webhooks can't reach your localhost server.
 
-## Solution: Use Stripe CLI
+## Solution: Use Stripe CLI with Dual Webhook Setup
+
+The application now uses two different webhook secrets:
+- **PERSONAL**: For checkout and payment events (order creation)
+- **CONNECTED**: For account onboarding and vendor creation events
 
 ### 1. Install Stripe CLI
 Download and install the Stripe CLI from: https://stripe.com/docs/stripe-cli
@@ -14,24 +18,24 @@ stripe login
 ```
 
 ### 3. Forward webhooks to your local server
+You'll need to run TWO separate Stripe CLI instances:
+
+**Terminal 1 - For Personal Account Events (Checkout/Orders):**
 ```bash
-stripe listen --forward-to localhost:3000/api/v1/stripe/webhook
+stripe listen --forward-to localhost:3000/api/v1/stripe/webhook --events checkout.session.completed,payment_intent.succeeded,charge.succeeded
 ```
 
-This command will:
-- Start listening for webhook events from your Stripe account
-- Forward them to your local development server
-- Provide you with a webhook signing secret
+**Terminal 2 - For Connected Account Events (Vendor Onboarding):**
+```bash
+stripe listen --forward-to localhost:3000/api/v1/stripe/webhook --events account.updated,capability.updated,account.external_account.created,person.created --connect
+```
 
 ### 4. Update your .env.local file
-The Stripe CLI will output a webhook signing secret like:
-```
-whsec_1234567890abcdef...
-```
+Each Stripe CLI instance will output a different webhook signing secret. Update your `.env.local` file:
 
-Update your `.env.local` file:
 ```env
-STRIPE_WEBHOOK_SECRET=whsec_1234567890abcdef...
+STRIPE_WEBHOOK_SECRET_PERSONAL=whsec_1234567890abcdef...  # From Terminal 1
+STRIPE_WEBHOOK_SECRET_CONNECTED=whsec_fedcba0987654321... # From Terminal 2
 ```
 
 ### 5. Restart your development server
@@ -40,10 +44,29 @@ npm run dev
 ```
 
 ## Testing
+
+### 1. Test Configuration
+```bash
+node test-webhook-secrets.js
+```
+
+This will verify that both webhook secrets are properly configured.
+
+### 2. Test Checkout Events (Personal Account)
 1. Complete a checkout in your app
-2. You should see the webhook event in the Stripe CLI terminal
+2. You should see the webhook event in Terminal 1 (personal account CLI)
 3. Orders should be created in Firestore
 4. Check the store manager orders page to verify
+
+### 3. Test Vendor Onboarding Events (Connected Account)
+1. Complete vendor signup process
+2. You should see account events in Terminal 2 (connected account CLI)
+3. Vendor should be created in Firestore after onboarding completion
+
+### 4. Troubleshooting
+- If events aren't being received, check that both CLI instances are running
+- Verify webhook secrets match between CLI output and .env.local
+- Check that the correct events are being forwarded by each CLI instance
 
 ## Alternative: Temporary Testing Endpoint
 
