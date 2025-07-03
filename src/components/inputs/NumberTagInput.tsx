@@ -10,6 +10,7 @@ interface NumberTagInputProps {
     placeholder?: string;
     min?: number;
     max?: number;
+    disabled?: boolean;
 }
 
 export default function NumberTagInput({ 
@@ -18,13 +19,16 @@ export default function NumberTagInput({
     label, 
     placeholder = "Enter a number and press Enter",
     min = 1,
-    max = 999
+    max = 999,
+    disabled = false
 }: NumberTagInputProps) {
     const [input, setInput] = useState<string>("");
     const [error, setError] = useState<string>("");
     
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        
+        if (disabled) return;
         
         const trimmedInput = input.trim();
         if (!trimmedInput) return;
@@ -60,6 +64,7 @@ export default function NumberTagInput({
     }
     
     const handleRemove = (numberToRemove: number) => {
+        if (disabled) return;
         onChange(selectedNumbers.filter(num => num !== numberToRemove));
     }
 
@@ -79,6 +84,7 @@ export default function NumberTagInput({
                     type="number"
                     min={min}
                     max={max}
+                    disabled={disabled}
                 />
             </form>
             
@@ -90,9 +96,9 @@ export default function NumberTagInput({
                 {selectedNumbers.map(number => (
                     <div 
                         key={number} 
-                        className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full hover:bg-red-100 hover:text-red-800 cursor-pointer transition-colors flex items-center gap-1" 
+                        className={`bg-blue-100 text-blue-800 px-3 py-1 rounded-full transition-colors flex items-center gap-1 ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-100 hover:text-red-800 cursor-pointer'}`} 
                         onClick={() => handleRemove(number)}
-                        title="Click to remove"
+                        title={disabled ? "Disabled" : "Click to remove"}
                     >
                         <span>{number}</span>
                         <span className="text-xs">×</span>
