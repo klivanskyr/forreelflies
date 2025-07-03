@@ -59,9 +59,6 @@ export default function ProductPage() {
                         totalReviews: productData.reviewSummary?.totalReviews || 0,
                         ratingDistribution: productData.reviewSummary?.ratingDistribution || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
                     })
-                } else {
-                    throw new Error('Product not found')
-                }
                     
                     // Fetch vendor reviews
                     try {
@@ -77,14 +74,16 @@ export default function ProductPage() {
                             }
                         }
                     } catch (err) {
-                        console.log('Vendor reviews not available')
+                        console.log('Vendor reviews not available');
                     }
+                } else {
+                    throw new Error('Product not found')
                 }
             } catch (error) {
-                console.error('Error fetching product data:', error)
-                toast.error('Failed to load product. Please try again or go back to shop.')
+                console.error('Error fetching product data:', error);
+                toast.error('Failed to load product. Please try again or go back to shop.');
             } finally {
-                setLoading(false)
+                setLoading(false);
             }
         }
 
