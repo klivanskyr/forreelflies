@@ -10,7 +10,7 @@ import { TextLink } from "../Links";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { FaStore } from "react-icons/fa";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 type Section = "login" | "register";
 
@@ -254,12 +254,16 @@ export default function LoginSidebar({ setOpen, open }: { setOpen: (open: boolea
 
                 {/* Vendor Link */}
                 <div className="mt-auto pt-6 border-t text-center">
-                    <TextLink
-                        href="/vendor-signup"
-                        text="Become a Vendor"
-                        className="inline-flex items-center gap-2 text-green-600 hover:text-green-700 font-medium"
-                        startingIcon={<FaStore className="w-4 h-4" />}
-                    />
+                    <button
+                        onClick={() => {
+                            setOpen(false);
+                            router.push("/vendor-signup");
+                        }}
+                        className="inline-flex items-center gap-2 text-green-600 hover:text-green-700 font-medium cursor-pointer"
+                    >
+                        <FaStore className="w-4 h-4" />
+                        Become a Vendor
+                    </button>
                 </div>
             </div>
         </Sidebar>

@@ -26,7 +26,7 @@ const classNames = {
 
 export default function StoreManagerSidebar({ className="" }:{ className?: string }) {
     return (
-        <div className={`${className} w-64 bg-white rounded-lg shadow-sm border p-4`}>
+        <div className={`${className} w-64 bg-white rounded-lg shadow-card border border-gray-200 p-4`}>
             <div className="space-y-2">
                 <PathHighlightTextLink 
                     classNames={classNames}

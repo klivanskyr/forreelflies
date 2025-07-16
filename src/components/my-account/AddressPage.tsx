@@ -225,11 +225,6 @@ export default function AddressPage() {
                     <FaHome className="w-12 h-12 mx-auto text-gray-400 mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">No addresses yet</h3>
                     <p className="text-gray-600 mb-4">Add your first shipping address to speed up checkout</p>
-                    <Button
-                        text="Add Your First Address"
-                        onClick={handleAddNew}
-                        className="bg-green-600 hover:bg-green-700"
-                    />
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -8,7 +8,7 @@ import Card from "@/components/cards/RatingCard";
 import Gallery from "@/components/Gallery";
 import SlideLink from "@/components/Links/SlideLink";
 import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 import dryflyimage from "@/../public/flies/dryfly.webp";
 import nymphflyimage from "@/../public/flies/nymph.webp";

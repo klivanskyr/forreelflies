@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, ReactNode, useMemo, useCallback, useRef } from 'react';
 import { SessionProvider, useSession } from 'next-auth/react';
 import type { Session } from 'next-auth';
 
@@ -15,17 +15,28 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 
 function UserContextProvider({ children }: { children: ReactNode }) {
   const { data: session, status, update } = useSession();
+  const lastRefreshRef = useRef<number>(0);
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
+    const now = Date.now();
+    // Prevent refreshing more frequently than every 2 seconds
+    if (now - lastRefreshRef.current < 2000) {
+      console.log('Skipping refreshUser call - too frequent');
+      return;
+    }
+    
+    lastRefreshRef.current = now;
+    console.log('Refreshing user session...');
     await update();
-  };
+  }, [update]);
 
-  const contextValue: UserContextType = {
+  // Memoize the context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
     user: session?.user || null,
     isLoading: status === 'loading',
     setIsLoading: () => {}, // No-op since NextAuth handles loading state
     refreshUser,
-  };
+  }), [session?.user, status, refreshUser]);
 
   return (
     <UserContext.Provider value={contextValue}>
@@ -36,7 +47,11 @@ function UserContextProvider({ children }: { children: ReactNode }) {
 
 export default function UserProvider({ children }: { children: ReactNode }) {
   return (
-    <SessionProvider>
+    <SessionProvider 
+      refetchInterval={5 * 60 * 1000} 
+      refetchOnWindowFocus={false}
+      refetchWhenOffline={false}
+    >
       <UserContextProvider>
         {children}
       </UserContextProvider>

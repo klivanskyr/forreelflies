@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Button from "./buttons/Button";
 import StoreManagerProductModal, { ProductInput } from "./storeManagerHelpers/StoreManagerProductModal";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
+import { FaPlus } from "react-icons/fa";
 
 export default function StoreManagerProductsHeader({ vendorId, onProductAdded }: { vendorId: string; onProductAdded?: () => void }) {
     const [modalOpen, setModalOpen] = useState<boolean>(false);
@@ -36,110 +37,7 @@ export default function StoreManagerProductsHeader({ vendorId, onProductAdded }:
         return isNaN(parsedFloat) ? 0 : parsedFloat;
     }
 
-    const validateProductData = () => {
-        const price = stringtofloat(input.price);
-        const shippingHeight = stringtofloat(input.shippingHeight);
-        const shippingLength = stringtofloat(input.shippingLength);
-        const shippingWeight = stringtofloat(input.shippingWeight);
-        const shippingWidth = stringtofloat(input.shippingWidth);
-
-        // Check required fields
-        if (!input.name.trim()) {
-            toast.error("Product name is required");
-            return false;
-        }
-
-        if (input.name.length < 3) {
-            toast.error("Product name must be at least 3 characters long");
-            return false;
-        }
-
-        if (price <= 0) {
-            toast.error("Product price must be greater than $0");
-            return false;
-        }
-
-        if (price > 10000) {
-            toast.error("Product price cannot exceed $10,000");
-            return false;
-        }
-
-        // Validate shipping dimensions
-        if (shippingHeight <= 0) {
-            toast.error("Shipping height must be greater than 0 inches");
-            return false;
-        }
-
-        if (shippingLength <= 0) {
-            toast.error("Shipping length must be greater than 0 inches");
-            return false;
-        }
-
-        if (shippingWeight <= 0) {
-            toast.error("Shipping weight must be greater than 0 pounds");
-            return false;
-        }
-
-        if (shippingWidth <= 0) {
-            toast.error("Shipping width must be greater than 0 inches");
-            return false;
-        }
-
-        // Validate reasonable shipping dimensions
-        if (shippingHeight > 100 || shippingLength > 100 || shippingWidth > 100) {
-            toast.error("Shipping dimensions cannot exceed 100 inches");
-            return false;
-        }
-
-        if (shippingWeight > 150) {
-            toast.error("Shipping weight cannot exceed 150 pounds");
-            return false;
-        }
-
-        // Validate quantity options
-        if (input.quantityOptions.length === 0) {
-            toast.error("At least one quantity option is required (e.g., 1, 3, 6, 12)");
-            return false;
-        }
-
-        // Validate discount if provided
-        if (input.originalPrice) {
-            const originalPrice = stringtofloat(input.originalPrice);
-            if (originalPrice <= price) {
-                toast.error("Original price must be higher than current price for discounts");
-                return false;
-            }
-        }
-
-        // Validate stock quantity if tracking is enabled
-        if (input.trackQuantity) {
-            const stockQuantity = parseInt(input.stockQuantity);
-            if (isNaN(stockQuantity) || stockQuantity < 0) {
-                toast.error("Stock quantity must be a valid number (0 or greater)");
-                return false;
-            }
-
-            if (input.lowStockThreshold) {
-                const threshold = parseInt(input.lowStockThreshold);
-                if (isNaN(threshold) || threshold < 0) {
-                    toast.error("Low stock threshold must be a valid number (0 or greater)");
-                    return false;
-                }
-                if (threshold > stockQuantity) {
-                    toast.error("Low stock threshold cannot be higher than current stock quantity");
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    };
-    
     const handleSubmit = async (imageUrls: string[]) => {
-        if (!validateProductData()) {
-            return;
-        }
-
         setIsSubmitting(true);
 
         try {
@@ -255,48 +153,25 @@ export default function StoreManagerProductsHeader({ vendorId, onProductAdded }:
         }
     };
 
-    const handleOpenModal = () => {
-        setModalOpen(true);
-        setInput({ 
-            name: "", 
-            shortDescription: "", 
-            longDescription: "", 
-            isDraft: false, 
-            price: "", 
-            stockStatus: "unknown", 
-            tags: [], 
-            catagories: [], 
-            images: [], 
-            quantityOptions: [], 
-            shippingHeight: "", 
-            shippingLength: "", 
-            shippingWeight: "", 
-            shippingWidth: "", 
-            originalPrice: "", 
-            discountPercentage: "", 
-            stockQuantity: "", 
-            lowStockThreshold: "", 
-            trackQuantity: false 
-        });
-    };
-
     return (
-        <div className="flex flex-row w-full justify-between py-2 pr-4 pl-2">
-            <h1 className="text-2xl font-semibold">Products</h1>
+        <div className="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 bg-white border-b border-gray-200">
+            <h1 className="text-2xl font-bold text-greenPrimary">Products</h1>
+            
             <Button 
                 text="Add Product" 
-                onClick={handleOpenModal}
-                disabled={isSubmitting}
+                onClick={() => setModalOpen(true)} 
+                color="green"
             />
+
             <StoreManagerProductModal 
-                handleSubmit={handleSubmit} 
+                handleSubmit={handleSubmit}
                 isSubmitting={isSubmitting}
-                input={input} 
-                modalOpen={modalOpen} 
-                setModalOpen={setModalOpen} 
-                setInput={setInput} 
-                vendorId={vendorId} 
+                input={input}
+                setInput={setInput}
+                modalOpen={modalOpen}
+                setModalOpen={setModalOpen}
+                vendorId={vendorId}
             />
         </div>
-    )
+    );
 }

@@ -24,7 +24,11 @@ export async function requireRole(request: NextRequest, role: Role | Role[]) {
       return false;
     });
 
+    console.log("🔍 requireRole - User:", user.uid, "isVendor:", user.isVendor, "isAdmin:", user.isAdmin);
+    console.log("🔍 requireRole - Required roles:", roles, "Has required role:", hasRequiredRole);
+
     if (!hasRequiredRole) {
+      console.log("❌ requireRole - Access denied for user:", user.uid);
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

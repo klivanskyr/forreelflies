@@ -9,7 +9,7 @@ import { ProductInfo } from '@/components/ProductInfo'
 import { useParams } from 'next/navigation'
 import ProductReviews from '@/components/ProductReviews'
 import Image from 'next/image'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 const StarRating = ({ rating, size = "sm" }: { rating: number, size?: "xs" | "sm" | "lg" }) => {
     const stars = []

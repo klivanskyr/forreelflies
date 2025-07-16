@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 function CheckoutSuccess(): JSX.Element {
     const searchParams = useSearchParams();

@@ -6,7 +6,7 @@ import { DbUser } from "@/lib/firebase-admin";
 import { Product, Rate } from "@/app/types/types";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 export default function CalculateShippingButton({ user, products }: { user: DbUser, products: Product[] }) {
     const router = useRouter();

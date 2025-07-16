@@ -132,7 +132,7 @@ export async function PATCH(request: NextRequest): Promise<NextResponse> {
         // Update vendor request status
         await setDoc(doc(db, "vendorRequests", uid), { isApproved: false, denied: true }, { merge: true });
         // Update user status
-        await setDoc(doc(db, "users", uid), { vendorSignUpStatus: "denied" }, { merge: true });
+        await setDoc(doc(db, "users", uid), { vendorSignUpStatus: "approvalFormRejected" }, { merge: true });
         return NextResponse.json({ message: "Vendor request denied" }, { status: 200 });
     } catch (error) {
         if (error instanceof Error) {

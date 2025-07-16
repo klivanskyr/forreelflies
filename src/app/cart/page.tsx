@@ -13,7 +13,7 @@ import { useSession, signOut, getSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { FaMinus, FaPlus, FaTrash } from "react-icons/fa";
 import Dropdown from "@/components/inputs/Dropdown";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 export type CartId = {
     id: string,
@@ -54,6 +54,9 @@ export default function Page() {
             setLoading(false);
             return;
         }
+
+        // Debounce: don't fetch if we're already loading
+        if (loading) return;
 
         const fetchCartData = async () => {
             try {
@@ -179,8 +182,13 @@ export default function Page() {
             }
         };
 
-        fetchCartData();
-    }, [session, status]);
+        // Add a small delay to prevent rapid successive calls
+        const timeoutId = setTimeout(() => {
+            fetchCartData();
+        }, 100);
+
+        return () => clearTimeout(timeoutId);
+    }, [session?.user?.uid, status]); // Only depend on uid and status, not entire session object
 
     const handleAddressAdded = async () => {
         console.log("Address added, updating session...");

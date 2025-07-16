@@ -5,7 +5,7 @@ import { useUser } from "@/contexts/UserContext";
 import { useEffect, useState, useMemo } from "react";
 import { FaSearch, FaSort, FaSortUp, FaSortDown, FaDownload, FaShippingFast, FaEye, FaFilter, FaExternalLinkAlt } from "react-icons/fa";
 import { Order } from "@/app/types/types";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 type SortField = 'purchaseDate' | 'amount' | 'payoutStatus' | 'customerName' | 'products';
 type SortDirection = 'asc' | 'desc';
@@ -56,9 +56,14 @@ export default function Page() {
 
     useEffect(() => {
         if (user) {
-            fetchOrders();
+            // Add debouncing to prevent excessive calls
+            const timeoutId = setTimeout(() => {
+                fetchOrders();
+            }, 100);
+            
+            return () => clearTimeout(timeoutId);
         }
-    }, [user]);
+    }, [user?.uid]); // Only depend on uid, not entire user object
 
     // Filtered and sorted orders
     const filteredOrders = useMemo(() => {

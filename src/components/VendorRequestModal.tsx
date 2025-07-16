@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 interface VendorRequest {
   uid: string;
@@ -19,8 +19,8 @@ interface VendorRequest {
   isApproved: boolean;
   denied: boolean;
   vendorSignUpStatus?: string;
-  createdAt: Date;
-  approvedAt?: Date;
+  createdAt: Date | any;
+  approvedAt?: Date | any;
 }
 
 interface VendorRequestModalProps {
@@ -29,7 +29,22 @@ interface VendorRequestModalProps {
   onClose: () => void;
 }
 
-const formatDate = (date: Date) => {
+const formatDate = (date: Date | any) => {
+  // Handle Firestore timestamp objects
+  if (date && typeof date === 'object' && date.seconds) {
+    date = new Date(date.seconds * 1000);
+  }
+  
+  // Handle string dates
+  if (typeof date === 'string') {
+    date = new Date(date);
+  }
+  
+  // Validate the date
+  if (!date || isNaN(date.getTime())) {
+    return 'Invalid date';
+  }
+  
   return new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
     month: 'long',

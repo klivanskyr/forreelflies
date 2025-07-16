@@ -81,19 +81,24 @@ export default function Page() {
         }
 
         if (user) {
-            getVendor(user).then((data) => {
-                if (data) {
-                    setVendor(data);
-                    // Initialize store profile states - use type assertion for optional properties
-                    setBannerImageUrl((data as any).bannerImageUrl || "");
-                    setProfileImageUrl((data as any).profileImageUrl || "");
-                    setBio((data as any).bio || "");
-                    setSocialLinks((data as any).socialLinks || []);
-                }
-                setLoading(false);
-            });
+            // Add debouncing to prevent excessive calls
+            const timeoutId = setTimeout(() => {
+                getVendor(user).then((data) => {
+                    if (data) {
+                        setVendor(data);
+                        // Initialize store profile states - use type assertion for optional properties
+                        setBannerImageUrl((data as any).bannerImageUrl || "");
+                        setProfileImageUrl((data as any).profileImageUrl || "");
+                        setBio((data as any).bio || "");
+                        setSocialLinks((data as any).socialLinks || []);
+                    }
+                    setLoading(false);
+                });
+            }, 100);
+            
+            return () => clearTimeout(timeoutId);
         }
-    }, [user]);
+    }, [user?.uid]); // Only depend on uid, not entire user object
 
     const tabs = ['Store Profile', 'Theme', 'Layout', 'Branding', 'Homepage'];
 

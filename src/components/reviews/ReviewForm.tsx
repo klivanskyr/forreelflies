@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { FaStar } from 'react-icons/fa';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 interface ReviewFormProps {
   type: 'product' | 'vendor';

@@ -39,7 +39,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
                     return {
                         ...vendor,
                         id: doc.id,
-                        ownerUid: undefined,
+                        ownerId: undefined,
                         ownerName: undefined,
                     };
                 });
@@ -82,11 +82,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
             const vendor = vendorDoc.data();
 
-            // Remove ownerUid and ownerName from the response
+            // Remove ownerId and ownerName from the response
             const cleanedVendor = {
                 ...vendor,
                 id: vendorDoc.id,
-                ownerUid: undefined,
+                ownerId: undefined,
                 ownerName: undefined,
             }
 
@@ -101,11 +101,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
             const vendor = vendorDoc.data();
 
-            // Remove ownerUid and ownerName from the response
+            // Remove ownerId and ownerName from the response
             const cleanedVendor = {
                 ...vendor,
                 id: vendorDoc.id,
-                ownerUid: undefined,
+                ownerId: undefined,
                 ownerName: undefined,
             }
 

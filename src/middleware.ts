@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
- 
+
 // This function can be marked `async` if using `await` inside
 export async function middleware(request: NextRequest) {
-
     // Shop default params
     const DEFAULT_PARAMS = {
         sort: "latest",
@@ -28,7 +27,9 @@ export async function middleware(request: NextRequest) {
     }
 }
  
-// // See "Matching Paths" below to learn more
-// export const config = {
-//   matcher: '/about/:path*',
-// }
+// See "Matching Paths" below to learn more
+export const config = {
+  matcher: [
+    '/shop/:path*'
+  ],
+}

@@ -225,16 +225,25 @@ async function handleAccountOnboardingCompleted(account: Stripe.Account) {
             
             if (!existingVendorSnapshot.empty) {
                 console.log("⚠️ Vendor already exists for user:", userId);
-                // Update existing vendor with Stripe account ID if missing
+                // Update existing vendor with Stripe account ID and onboarding status
                 const vendorDoc = existingVendorSnapshot.docs[0];
                 const vendorData = vendorDoc.data();
+                
+                const updateData: any = {
+                    updatedAt: new Date()
+                };
+                
                 if (!vendorData.stripeAccountId) {
-                    await updateDoc(vendorDoc.ref, {
-                        stripeAccountId: account.id,
-                        updatedAt: new Date()
-                    });
+                    updateData.stripeAccountId = account.id;
                     console.log("✅ Updated existing vendor with Stripe account ID");
                 }
+                
+                if (!vendorData.hasStripeOnboarding) {
+                    updateData.hasStripeOnboarding = true;
+                    console.log("✅ Updated existing vendor with Stripe onboarding status");
+                }
+                
+                await updateDoc(vendorDoc.ref, updateData);
                 
                 // Update user status to completed
                 await updateDoc(doc(db, "users", userId), {
@@ -280,6 +289,7 @@ async function handleAccountOnboardingCompleted(account: Stripe.Account) {
                 allTimeEarnings: 0,
                 lastEarningsUpdate: new Date(),
                 stripeAccountId: account.id,
+                hasStripeOnboarding: true,
                 createdAt: new Date(),
                 updatedAt: new Date()
             };

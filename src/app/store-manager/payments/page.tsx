@@ -59,7 +59,12 @@ export default function Page() {
             }
         };
 
-        fetchTransactions();
+        // Add debouncing to prevent excessive calls
+        const timeoutId = setTimeout(() => {
+            fetchTransactions();
+        }, 100);
+        
+        return () => clearTimeout(timeoutId);
     }, [session?.user?.uid, selectedPeriod, status]);
 
     const getStatusColor = (status: string) => {

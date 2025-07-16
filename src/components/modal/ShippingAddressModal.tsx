@@ -42,20 +42,25 @@ export default function ShippingAddressModal({ isOpen, onClose, onAddressAdded }
         // In a real app, fetch addresses from API
         // For now, create a mock address if user has address data
         if (session?.user?.streetAddress) {
-            setAddresses([{
-                id: '1',
-                label: 'Home',
-                isDefault: true,
-                name: session.user.username || '',
-                streetAddress: session.user.streetAddress,
-                city: session.user.city || '',
-                state: session.user.state || '',
-                zipCode: session.user.zipCode || '',
-                country: session.user.country || 'US',
-                phone: session.user.phoneNumber || ''
-            }]);
+            // Add debouncing to prevent excessive calls
+            const timeoutId = setTimeout(() => {
+                setAddresses([{
+                    id: '1',
+                    label: 'Home',
+                    isDefault: true,
+                    name: session.user.username || '',
+                    streetAddress: session.user.streetAddress,
+                    city: session.user.city || '',
+                    state: session.user.state || '',
+                    zipCode: session.user.zipCode || '',
+                    country: session.user.country || 'US',
+                    phone: session.user.phoneNumber || ''
+                }]);
+            }, 100);
+            
+            return () => clearTimeout(timeoutId);
         }
-    }, [session]);
+    }, [session?.user?.streetAddress, session?.user?.username, session?.user?.city, session?.user?.state, session?.user?.zipCode, session?.user?.country, session?.user?.phoneNumber]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()

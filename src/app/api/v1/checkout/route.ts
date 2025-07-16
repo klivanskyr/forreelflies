@@ -20,7 +20,7 @@ async function validateShippoConnectivity(): Promise<{ success: boolean; error?:
 
 export type VendorItem = {
     vendorId: string;
-    stripeAccountId: string;
+    stripeAccountId?: string;
     cartItems: CartItem[];
     shippingFee: number;
 };
@@ -41,7 +41,7 @@ type LineItem = {
 // Minimal vendor details for Stripe metadata (under 500 chars)
 type VendorMetadata = {
     vendorId: string;
-    stripeAccountId: string;
+    stripeAccountId?: string;
     productTotal: number;
     amount: number;
     shippingFee: number;
@@ -51,7 +51,7 @@ type VendorMetadata = {
 // Full vendor details for Firestore storage
 type VendorDetails = {
     vendorId: string;
-    stripeAccountId: string;
+    stripeAccountId?: string;
     productTotal: number;
     amount: number;
     shippingFee: number;
@@ -123,13 +123,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                     }
                     
                     const vendorData = vendorDoc.data();
-                    if (!vendorData.stripeAccountId) {
-                        console.log("❌ Vendor has not completed Stripe onboarding");
-                        return NextResponse.json({ error: `Vendor ${vendor.vendorId} has not completed Stripe onboarding` }, { status: 400 });
+                    if (vendorData.stripeAccountId) {
+                        vendor.stripeAccountId = vendorData.stripeAccountId;
+                        console.log("✅ Found Stripe account ID:", vendor.stripeAccountId);
+                    } else {
+                        console.log("⚠️ Vendor has not completed Stripe onboarding - order will be created but vendor cannot withdraw funds");
+                        vendor.stripeAccountId = undefined;
                     }
-                    
-                    vendor.stripeAccountId = vendorData.stripeAccountId;
-                    console.log("✅ Found Stripe account ID:", vendor.stripeAccountId);
                 } catch (error) {
                     console.error(`❌ Error fetching vendor ${vendor.vendorId}:`, error);
                     return NextResponse.json({ error: `Failed to fetch vendor ${vendor.vendorId} information` }, { status: 500 });

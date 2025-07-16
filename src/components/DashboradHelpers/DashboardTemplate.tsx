@@ -24,7 +24,13 @@ export default function DashboardTemplate({ children }: { children: React.ReactN
                             </div>
                             <div>
                                 <h2 className="text-lg font-semibold text-gray-900 truncate">{user.email}</h2>
-                                <p className="text-sm text-gray-500">Customer Account</p>
+                                <p className="text-sm text-gray-500">
+                                    {user.vendorSignUpStatus === "vendorActive" || 
+                                     user.vendorSignUpStatus === "onboardingStarted" || 
+                                     user.vendorSignUpStatus === "onboardingCompleted" 
+                                        ? "Vendor Account" 
+                                        : "Customer Account"}
+                                </p>
                             </div>
                         </div>
                     </div>

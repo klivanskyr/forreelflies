@@ -3,7 +3,7 @@ import { Navbar } from "@/components/Navbar";
 import DevelopmentBanner from "@/components/DevelopmentBanner";
 import UserProvider from "@/contexts/UserContext";
 import type { Metadata } from "next";
-import { Toaster } from "react-hot-toast";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -28,22 +28,12 @@ export default function RootLayout({
           <Footer />
           <Toaster 
             position="top-right"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: '#363636',
-                color: '#fff',
-              },
-              success: {
-                style: {
-                  background: '#10B981',
-                },
-              },
-              error: {
-                style: {
-                  background: '#EF4444',
-                },
-              },
+            duration={4000}
+            closeButton={true}
+            richColors={true}
+            theme="light"
+            style={{
+              fontSize: '14px',
             }}
           />
         </UserProvider>

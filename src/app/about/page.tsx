@@ -7,10 +7,15 @@ import { ButtonLink } from "@/components/Links";
 import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { FaFish, FaUsers, FaStore, FaHeart } from "react-icons/fa";
+import { useUser } from "@/contexts/UserContext";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 export default function Page() {
     const [aboutImage, setAboutImage] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
+    const { user } = useUser();
+    const router = useRouter();
 
     useEffect(() => {
         (async () => {
@@ -26,6 +31,15 @@ export default function Page() {
             setLoading(false);
         })();
     }, []);
+
+    const handleBecomeVendorClick = () => {
+        if (!user) {
+            toast.error("Please sign in to become a vendor");
+            router.push("?login=true");
+            return;
+        }
+        router.push("/vendor-signup");
+    };
 
     return (
         <div className="flex flex-col">
@@ -95,7 +109,12 @@ export default function Page() {
                                     <h2 className="text-2xl font-bold text-gray-900">Join Our Network</h2>
                                 </div>
                                 <p className="text-xl text-gray-700 leading-relaxed flex-1">
-                                    Join us and <Link href="/vendor-signup" className="text-green-600 font-semibold hover:text-green-700 underline decoration-2 underline-offset-2">Become a Vendor</Link> and experience the thrill of connecting with your clients to best meet their needs.
+                                    Join us and <button 
+                                        onClick={handleBecomeVendorClick}
+                                        className="text-green-600 font-semibold hover:text-green-700 underline decoration-2 underline-offset-2 cursor-pointer"
+                                    >
+                                        Become a Vendor
+                                    </button> and share your passion for fly tying with anglers everywhere.
                                 </p>
                             </div>
                         </div>
@@ -104,15 +123,16 @@ export default function Page() {
                     {/* Call to Action Section */}
                     <div className="bg-white rounded-2xl shadow-2xl p-12 text-center border border-gray-100">
                         <div className="max-w-3xl mx-auto">
-                            <h3 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900">Sell your product with us!</h3>
+                            <h3 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900">Share Your Passion!</h3>
                             <p className="text-xl mb-8 text-gray-700 leading-relaxed">
-                                Ready to share your passion for fly tying with anglers everywhere? Join our community of skilled artisans and start selling your flies today.
+                                Ready to share your passion for fly tying with anglers everywhere? Join our community of skilled fly tiers and start selling your creations today.
                             </p>
-                            <ButtonLink 
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-xl font-semibold rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 inline-block" 
-                                href="/vendor-signup" 
-                                text="Become a Vendor" 
-                            />
+                            <button 
+                                onClick={handleBecomeVendorClick}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-xl font-semibold rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 inline-block"
+                            >
+                                Become a Vendor
+                            </button>
                         </div>
                     </div>
                 </div>

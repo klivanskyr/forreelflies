@@ -1,47 +1,82 @@
 'use client';
 
 import { useSession, signOut } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { FiShoppingCart } from "react-icons/fi";
 
 export default function CartIcon() {
     const { data: session } = useSession();
     const [numItemsInCart, setNumItemsInCart] = useState(0);
+    const [isLoading, setIsLoading] = useState(false);
+    const lastFetchTime = useRef<number>(0);
+    const fetchTimeoutRef = useRef<NodeJS.Timeout>();
 
-    useEffect(() => {
-        const fetchCartItemsAmount = async () => {
-            if (session?.user?.uid) {
-                try {
-                    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/cart?id=${session.user.uid}`, {
-                        method: "GET",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                    });
+    const fetchCartItemsAmount = useCallback(async () => {
+        if (!session?.user?.uid || isLoading) return;
 
-                    if (response.status === 401) {
-                        // Token expired, automatically sign out
-                        console.log("Session expired, signing out...");
-                        await signOut({ redirect: false });
-                        return;
-                    }
+        // Debounce: don't fetch more than once every 2 seconds
+        const now = Date.now();
+        if (now - lastFetchTime.current < 2000) {
+            return;
+        }
 
-                    if (response.ok) {
-                        const json = await response.json();
-                        const data = json.data;
-                        if (data) {
-                            setNumItemsInCart(data.length);
-                        }
-                    }
-                } catch (error) {
-                    console.error("Error fetching cart items:", error);
+        try {
+            setIsLoading(true);
+            lastFetchTime.current = now;
+
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/cart?id=${session.user.uid}`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+
+            if (response.status === 401) {
+                // Token expired, automatically sign out
+                console.log("Session expired, signing out...");
+                await signOut({ redirect: false });
+                return;
+            }
+
+            if (response.ok) {
+                const json = await response.json();
+                const data = json.data;
+                if (data) {
+                    setNumItemsInCart(data.length);
                 }
             }
-        };
+        } catch (error) {
+            console.error("Error fetching cart items:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [session?.user?.uid, isLoading]);
 
-        fetchCartItemsAmount();
-    }, [session?.user?.uid]);
+    useEffect(() => {
+        // Clear any existing timeout
+        if (fetchTimeoutRef.current) {
+            clearTimeout(fetchTimeoutRef.current);
+        }
+
+        // Only fetch if we have a session
+        if (session?.user?.uid) {
+            // Add a small delay to prevent rapid successive calls
+            fetchTimeoutRef.current = setTimeout(() => {
+                fetchCartItemsAmount();
+            }, 100);
+        } else {
+            // Clear cart count when no session
+            setNumItemsInCart(0);
+        }
+
+        // Cleanup timeout on unmount
+        return () => {
+            if (fetchTimeoutRef.current) {
+                clearTimeout(fetchTimeoutRef.current);
+            }
+        };
+    }, [session?.user?.uid, fetchCartItemsAmount]);
 
     return (
         <Link href="/cart" className="relative">
