@@ -7,13 +7,21 @@ import { FaRegHeart as WishlistIcon } from "react-icons/fa";
 import { IoSettingsOutline as SettingsIcon } from "react-icons/io5";
 import { MdLogout as LogoutIcon } from "react-icons/md";
 import { MdLocationOn as AddressIcon } from "react-icons/md";
+import { FaStore as StoreIcon } from "react-icons/fa";
 
 import { TextLink } from "@/components/Links";
 import SignOutButton from "@/components/buttons/SignOutButton";
+import { useUser } from "@/contexts/UserContext";
 
 export default function DashboardSidebar(): JSX.Element {
   const router = useRouter();
   const path = usePathname();
+  const { user } = useUser();
+
+  // Check if user is an approved vendor
+  const isApprovedVendor = user?.vendorSignUpStatus === "vendorActive" || 
+                          user?.vendorSignUpStatus === "onboardingStarted" || 
+                          user?.vendorSignUpStatus === "onboardingCompleted";
 
   const navLinks = [
     { 
@@ -30,7 +38,13 @@ export default function DashboardSidebar(): JSX.Element {
         { href: "/my-account/orders", label: "Orders", icon: OrdersIcon },
         { href: "/my-account/wishlist", label: "Wishlist", icon: WishlistIcon },
       ]
-    }
+    },
+    ...(isApprovedVendor ? [{
+      section: "Vendor",
+      links: [
+        { href: "/store-manager", label: "Store Manager", icon: StoreIcon },
+      ]
+    }] : [])
   ];
 
   return (

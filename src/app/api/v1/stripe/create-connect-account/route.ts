@@ -122,12 +122,17 @@ export async function POST(request: NextRequest) {
             });
 
             // SAVE THE ACCOUNT ID TO FIRESTORE
-            console.log("💾 Saving Stripe account ID to user document...");
+            console.log("💾 Saving Stripe account ID to user and vendor documents...");
             await setDoc(doc(db, "users", uid), { 
                 stripeAccountId: accountId,
                 vendorSignUpStatus: "onboardingStarted"
             }, { merge: true });
-            console.log("✅ User document updated with Stripe account ID");
+            
+            // Also update the vendor document with the Stripe account ID
+            await setDoc(doc(db, "vendors", uid), { 
+                stripeAccountId: accountId
+            }, { merge: true });
+            console.log("✅ User and vendor documents updated with Stripe account ID");
         } else {
             console.log("ℹ️ User already has Stripe account:", existingStripeAccountId);
         }
@@ -136,15 +141,15 @@ export async function POST(request: NextRequest) {
         console.log("🔗 Creating account link for onboarding...");
         const accountLink = await stripe.accountLinks.create({
             account: accountId,
-            refresh_url: `${process.env.NEXT_PUBLIC_URL}/vendor-signup?refresh=true`,
-            return_url: `${process.env.NEXT_PUBLIC_URL}/vendor-signup?success=true`,
+            refresh_url: `${process.env.NEXT_PUBLIC_URL}/store-manager`,
+            return_url: `${process.env.NEXT_PUBLIC_URL}/store-manager`,
             type: "account_onboarding",
             collect: "currently_due",
         });
 
         console.log("✅ Account link created");
-        console.log("Return URL:", `${process.env.NEXT_PUBLIC_URL}/vendor-signup?success=true`);
-        console.log("Refresh URL:", `${process.env.NEXT_PUBLIC_URL}/vendor-signup?refresh=true`);
+        console.log("Return URL:", `${process.env.NEXT_PUBLIC_URL}/store-manager`);
+        console.log("Refresh URL:", `${process.env.NEXT_PUBLIC_URL}/store-manager`);
         console.log("Onboarding URL:", accountLink.url);
         console.log("=== STRIPE CONNECT ACCOUNT CREATION COMPLETE ===");
 

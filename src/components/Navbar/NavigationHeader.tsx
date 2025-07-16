@@ -11,11 +11,18 @@ import NavSearchTopBar from "./NavSearchTopBar";
 import ProfileButtonAndBar from "./ProfileButtonAndBar";
 import CartIcon from "./CartIcon";
 import { useSession } from "next-auth/react";
+import { useUser } from "@/contexts/UserContext";
 import { FaBars, FaTimes } from "react-icons/fa";
 
 export default function NavigationHeader({ isScrolled }: { isScrolled: boolean }) {
     const { data: session } = useSession();
+    const { user } = useUser();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    
+    // Check if user is an approved vendor
+    const isApprovedVendor = user?.vendorSignUpStatus === "vendorActive" || 
+                            user?.vendorSignUpStatus === "onboardingStarted" || 
+                            user?.vendorSignUpStatus === "onboardingCompleted";
     
     return (
         <>
@@ -49,7 +56,7 @@ export default function NavigationHeader({ isScrolled }: { isScrolled: boolean }
                     <NavSearchTopBar />
                     <CartIcon />
                     {session?.user 
-                        ? <ProfileButtonAndBar isVendor={session.user.isVendor || false} /> 
+                        ? <ProfileButtonAndBar isVendor={isApprovedVendor} /> 
                         : <SigninButtonAndBar />
                     }
                 </div>
@@ -141,7 +148,7 @@ export default function NavigationHeader({ isScrolled }: { isScrolled: boolean }
                         <NavSearchTopBar />
                         <CartIcon />
                         {session?.user 
-                            ? <ProfileButtonAndBar isVendor={session.user.isVendor || false} /> 
+                            ? <ProfileButtonAndBar isVendor={isApprovedVendor} /> 
                             : <SigninButtonAndBar />
                         }
                     </div>

@@ -5,7 +5,7 @@ import DashboardTemplate from "@/components/DashboradHelpers/DashboardTemplate";
 import { useUser } from "@/contexts/UserContext";
 import { uploadFileAndGetUrl } from "@/lib/firebase";
 import Image from 'next/image';
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 type UserProfile = {
     username: string;

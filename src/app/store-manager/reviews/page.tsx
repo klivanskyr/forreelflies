@@ -43,7 +43,12 @@ export default function Page() {
 
     useEffect(() => {
         if (session?.user?.uid) {
-            fetchReviews();
+            // Add debouncing to prevent excessive calls
+            const timeoutId = setTimeout(() => {
+                fetchReviews();
+            }, 100);
+            
+            return () => clearTimeout(timeoutId);
         }
     }, [session?.user?.uid]);
 

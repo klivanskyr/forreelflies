@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import emailjs from '@emailjs/browser';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 function Card({ icon, title, content }: { icon: React.ReactNode, title: string, content: string }) {
     return (

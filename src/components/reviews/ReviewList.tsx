@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { FaStar, FaStarHalfAlt, FaRegStar, FaThumbsUp, FaUser } from 'react-icons/fa';
 import { ProductReview, VendorReview, ReviewSummary } from '@/app/types/types';
 import Image from 'next/image';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 interface ReviewListProps {
   type: 'product' | 'vendor';

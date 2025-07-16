@@ -20,7 +20,12 @@ export default function VendorReviews({ vendorId, vendorName }: VendorReviewsPro
 
   useEffect(() => {
     if (session?.user?.uid) {
-      checkIfUserHasReviewed();
+      // Add debouncing to prevent excessive calls
+      const timeoutId = setTimeout(() => {
+        checkIfUserHasReviewed();
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [session?.user?.uid, vendorId]);
 

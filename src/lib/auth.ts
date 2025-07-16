@@ -6,6 +6,26 @@ import { doc, getDoc } from "firebase/firestore"
 import { db } from "./firebase"
 import { VendorSignUpStatus } from "@/app/types/types"
 
+// Simple in-memory rate limiter
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+
+function rateLimit(ip: string, limit: number = 20, windowMs: number = 60000): boolean {
+  const now = Date.now();
+  const record = rateLimitMap.get(ip);
+  
+  if (!record || now > record.resetTime) {
+    rateLimitMap.set(ip, { count: 1, resetTime: now + windowMs });
+    return true;
+  }
+  
+  if (record.count >= limit) {
+    return false;
+  }
+  
+  record.count++;
+  return true;
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -51,7 +71,9 @@ export const authOptions: NextAuthOptions = {
             country: userData.country,
             photoURL: userData.photoURL,
             isAdmin: userData.isAdmin || false,
-            isVendor: (userData.vendorSignUpStatus || "notStarted") === 'onboardingCompleted'
+            isVendor: (userData.vendorSignUpStatus || "notStarted") === 'vendorActive' || 
+                     (userData.vendorSignUpStatus || "notStarted") === 'onboardingStarted' || 
+                     (userData.vendorSignUpStatus || "notStarted") === 'onboardingCompleted'
           }
         } catch (error) {
           console.error("Auth error:", error)
@@ -76,6 +98,8 @@ export const authOptions: NextAuthOptions = {
         token.photoURL = user.photoURL
         token.isAdmin = user.isAdmin
         token.isVendor = user.isVendor
+        // Add timestamp for caching
+        token.lastUpdated = Date.now()
       }
 
       // Handle session updates
@@ -86,8 +110,12 @@ export const authOptions: NextAuthOptions = {
       return token
     },
     async session({ session, token }) {
-      // Fetch fresh user data from Firestore to ensure we have the latest info
-      if (token?.uid) {
+      // Always fetch fresh data for vendor status to ensure UI updates immediately
+      const shouldFetchFresh = !token.lastUpdated || 
+        (Date.now() - (token.lastUpdated as number)) > 5 * 60 * 1000 || // 5 minutes
+        !token.vendorSignUpStatus // Force fetch if vendor status is missing
+
+      if (token?.uid && shouldFetchFresh) {
         try {
           const userDoc = await getDoc(doc(db, "users", token.uid as string))
           
@@ -106,7 +134,12 @@ export const authOptions: NextAuthOptions = {
             session.user.country = userData.country || token.country as string
             session.user.photoURL = userData.photoURL || token.photoURL as string
             session.user.isAdmin = userData.isAdmin || false
-            session.user.isVendor = (userData.vendorSignUpStatus || "notStarted") === 'onboardingCompleted'
+            session.user.isVendor = (userData.vendorSignUpStatus || "notStarted") === 'vendorActive' || 
+                                   (userData.vendorSignUpStatus || "notStarted") === 'onboardingStarted' || 
+                                   (userData.vendorSignUpStatus || "notStarted") === 'onboardingCompleted'
+            
+            // Update token with fresh data and timestamp
+            token.lastUpdated = Date.now()
           } else {
             // Fallback to token data if document doesn't exist
             session.user.uid = token.uid as string
@@ -138,6 +171,20 @@ export const authOptions: NextAuthOptions = {
           session.user.isAdmin = token.isAdmin as boolean
           session.user.isVendor = token.isVendor as boolean
         }
+      } else {
+        // Use cached token data
+        session.user.uid = token.uid as string
+        session.user.username = token.username as string
+        session.user.vendorSignUpStatus = token.vendorSignUpStatus as VendorSignUpStatus
+        session.user.phoneNumber = token.phoneNumber as string
+        session.user.streetAddress = token.streetAddress as string
+        session.user.city = token.city as string
+        session.user.state = token.state as string
+        session.user.zipCode = token.zipCode as string
+        session.user.country = token.country as string
+        session.user.photoURL = token.photoURL as string
+        session.user.isAdmin = token.isAdmin as boolean
+        session.user.isVendor = token.isVendor as boolean
       }
       return session
     }
@@ -146,7 +193,8 @@ export const authOptions: NextAuthOptions = {
     signIn: '/auth/signin', // Optional: custom sign in page
   },
   session: {
-    strategy: "jwt"
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET,
 } 

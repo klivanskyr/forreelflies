@@ -7,7 +7,7 @@ import VendorRequestModal from "@/components/VendorRequestModal";
 import Image from 'next/image';
 import { FaSearch, FaEdit, FaTimes, FaSort, FaSortUp, FaSortDown } from 'react-icons/fa';
 import { Order, FirestoreTimestamp, PayoutStatus } from "@/app/types/types";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 const SECTIONS = [
   { value: "vendor-requests", label: "Vendor Requests" },
@@ -235,9 +235,11 @@ export default function AdminPage() {
       body: JSON.stringify({ uid }),
     });
     if (res.ok) {
-      setVendorMessage("Vendor approved!");
+      setVendorMessage("Vendor approved! The user will need to refresh their page to see the updated status.");
       // Refresh the vendor requests list to show updated status
       fetchVendorRequests();
+      
+
     } else {
       setVendorMessage("Failed to approve vendor");
     }

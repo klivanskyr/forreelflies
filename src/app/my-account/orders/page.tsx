@@ -82,8 +82,13 @@ export default function Page() {
             setLoading(false);
         };
 
-        fetchOrders();
-    }, [session]);
+        // Add debouncing to prevent excessive calls
+        const timeoutId = setTimeout(() => {
+            fetchOrders();
+        }, 100);
+        
+        return () => clearTimeout(timeoutId);
+    }, [session?.user?.uid]); // Only depend on uid, not entire session object
 
     return (
         <DashboardTemplate>

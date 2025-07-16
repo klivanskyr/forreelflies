@@ -1,12 +1,12 @@
 'use client';
 
-import { Product } from "@/app/types/types";
-import { useRouter } from "next/navigation";
-import Button from "./Button";
 import { useState } from "react";
+import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { Product } from "@/app/types/types";
+import { toast } from "sonner";
+import Button from "./Button";
 import { useUser } from "@/contexts/UserContext";
-import { signOut } from "next-auth/react";
-import toast from "react-hot-toast";
 
 interface AddToCartButtonProps {
     product: Product;

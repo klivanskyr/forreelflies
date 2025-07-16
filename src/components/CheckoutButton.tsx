@@ -4,7 +4,7 @@ import { VendorItem } from "@/app/api/v1/checkout/route";
 import Button from "./buttons/Button";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 export default function CheckoutButton({ vendorItems }: { vendorItems: VendorItem[] }) {
     const router = useRouter();

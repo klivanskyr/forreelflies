@@ -72,9 +72,12 @@ export async function POST(request: NextRequest) {
 
         const vendorData = vendorDoc.data();
         const stripeAccountId = vendorData.stripeAccountId;
+        const hasStripeOnboarding = vendorData.hasStripeOnboarding;
 
-        if (!stripeAccountId) {
-            return NextResponse.json({ error: "Vendor Stripe account not found" }, { status: 400 });
+        if (!stripeAccountId || !hasStripeOnboarding) {
+            return NextResponse.json({ 
+                error: "You must complete Stripe onboarding before you can withdraw funds. Please set up your payment processing in the store manager." 
+            }, { status: 400 });
         }
 
         // Calculate withdrawal amount (deduct platform fee)

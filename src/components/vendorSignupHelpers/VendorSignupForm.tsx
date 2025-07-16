@@ -6,7 +6,7 @@ import { useState } from "react";
 import Textarea from "../Textarea";
 import { useRouter } from "next/navigation";
 import emailjs from "@emailjs/browser";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 export default function VendorSignupForm({ uid }: { uid: string | null }) {
     const router = useRouter();

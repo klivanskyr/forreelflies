@@ -60,6 +60,8 @@ export type Vendor = {
     allTimeEarnings: number,
     lastEarningsUpdate: Date | FirestoreTimestamp,
     stripeAccountId?: string,
+    hasStripeOnboarding?: boolean,
+    stripeOnboardingUrl?: string,
     reviewSummary?: ReviewSummary,
 }
 
@@ -83,6 +85,7 @@ export type VendorSignUpStatus =
     | "submittedApprovalForm" 
     | "approvalFormApproved" 
     | "approvalFormRejected" 
+    | "vendorActive" 
     | "onboardingStarted" 
     | "onboardingCompleted"
     | "stripeSetupPending";

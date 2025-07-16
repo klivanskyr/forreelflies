@@ -7,6 +7,8 @@ import { useUser } from "@/contexts/UserContext";
 import { useEffect, useState } from "react";
 import { DbUser } from "@/lib/firebase-admin";
 import NoVendorRedirect from "@/components/storeManagerHelpers/NoVendorRedirect";
+import Button from "@/components/buttons/Button";
+import { toast } from "sonner";
 
 export default function Page() {
     const { user } = useUser();
@@ -14,6 +16,7 @@ export default function Page() {
     const [totalProducts, setTotalProducts] = useState(0);
     const [monthlyEarnings, setMonthlyEarnings] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [isProcessingStripe, setIsProcessingStripe] = useState(false);
 
     useEffect(() => {
         const getVendor = async (user: DbUser) => {
@@ -57,6 +60,95 @@ export default function Page() {
         fetchData();
     }, [user]);
 
+    const handleStripeOnboarding = async () => {
+        if (!user?.uid) {
+            toast.error("You must be logged in to set up Stripe payments");
+            return;
+        }
+
+        setIsProcessingStripe(true);
+
+        try {
+            // Check if vendor has a saved onboarding URL
+            if (vendor?.stripeOnboardingUrl) {
+                console.log("Using saved onboarding URL");
+                toast.success("Opening Stripe onboarding...");
+                window.open(vendor.stripeOnboardingUrl, '_blank');
+                return;
+            }
+
+            // Check if vendor already has a Stripe account
+            if (vendor?.stripeAccountId) {
+                // Create onboarding link for existing account
+                const onboardingResponse = await fetch('/api/v1/stripe/create-onboarding-link', {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                });
+
+                if (!onboardingResponse.ok) {
+                    const errorData = await onboardingResponse.json();
+                    console.error("Failed to create onboarding link:", errorData);
+                    toast.error(`Failed to create onboarding link: ${errorData.error || "Unknown error"}`);
+                    return;
+                }
+
+                const onboardingData = await onboardingResponse.json();
+                toast.success("Opening Stripe onboarding...");
+                window.open(onboardingData.url, '_blank');
+                return;
+            }
+
+            // Create new Stripe account
+            const createAccountResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/stripe/create-connect-account`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ uid: user.uid })
+            });
+
+            if (!createAccountResponse.ok) {
+                const errorData = await createAccountResponse.json();
+                console.error("Failed to create Stripe account:", errorData);
+                
+                if (createAccountResponse.status === 401) {
+                    toast.error("Authentication failed. Please log in and try again.");
+                } else if (createAccountResponse.status === 400) {
+                    toast.error("Invalid account setup request. Please contact support.");
+                } else if (createAccountResponse.status >= 500) {
+                    toast.error("Payment system temporarily unavailable. Please try again in a few minutes.");
+                } else {
+                    toast.error(`Failed to set up payment account: ${errorData.error || "Unknown error"}`);
+                }
+                return;
+            }
+
+            const accountLinkData = await createAccountResponse.json();
+            
+            if (!accountLinkData.onboardingLink) {
+                console.error("No onboarding link received:", accountLinkData);
+                toast.error("Failed to generate setup link. Please try again.");
+                return;
+            }
+
+            toast.success("Redirecting to Stripe setup...");
+            window.location.href = accountLinkData.onboardingLink;
+
+        } catch (networkError) {
+            console.error("Network error during Stripe signup:", networkError);
+            
+            if (networkError instanceof TypeError && networkError.message.includes("fetch")) {
+                toast.error("Connection error. Please check your internet connection and try again.");
+            } else {
+                toast.error("Failed to connect to payment setup. Please try again.");
+            }
+        } finally {
+            setIsProcessingStripe(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -73,11 +165,43 @@ export default function Page() {
             <StoreManagerTemplate>
                 <div className="space-y-6">
                     <div className="flex justify-between items-center">
-                        <h1 className="text-2xl font-bold text-gray-900">Store Dashboard</h1>
+                        <h1 className="text-2xl font-bold text-gray-900">Vendor Dashboard</h1>
                         <div className="text-sm text-gray-600">
                             Last updated: {new Date().toLocaleString()}
                         </div>
                     </div>
+
+                    {/* Stripe Onboarding Alert */}
+                    {vendor && !vendor.hasStripeOnboarding && (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                            <div className="flex items-start">
+                                <div className="flex-shrink-0">
+                                    <svg className="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                    </svg>
+                                </div>
+                                <div className="ml-3">
+                                    <h3 className="text-lg font-medium text-yellow-800">
+                                        Complete Payment Setup
+                                    </h3>
+                                    <div className="mt-2 text-sm text-yellow-700">
+                                        <p className="mb-3">
+                                            You need to complete your Stripe payment setup to withdraw earnings from your sales. 
+                                            You can still receive orders and sell products, but you won't be able to withdraw funds until this is completed.
+                                        </p>
+                                        <div className="mt-4">
+                                            <Button 
+                                                text={isProcessingStripe ? "Setting up..." : "Set Up Payment Processing"}
+                                                onClick={handleStripeOnboarding}
+                                                disabled={isProcessingStripe}
+                                                className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Overview Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

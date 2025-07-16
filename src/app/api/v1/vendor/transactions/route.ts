@@ -12,8 +12,13 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+    console.log("🔍 Vendor transactions API - Starting request");
     const user = await requireRole(request, "vendor");
-    if (user instanceof NextResponse) return user;
+    if (user instanceof NextResponse) {
+        console.log("❌ Vendor transactions API - Role check failed:", user.status);
+        return user;
+    }
+    console.log("✅ Vendor transactions API - User authorized:", user.uid, "isVendor:", user.isVendor);
 
     try {
         const { searchParams } = new URL(request.url);
