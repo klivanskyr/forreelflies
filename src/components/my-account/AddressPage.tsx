@@ -6,7 +6,7 @@ import Button from "../buttons/Button";
 import Input from "../inputs/Input";
 import { useUser } from "@/contexts/UserContext";
 import { FaHome, FaBuilding, FaTrash, FaPen, FaStar } from 'react-icons/fa';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 type Address = {
     id: string;
@@ -50,7 +50,7 @@ export default function AddressPage() {
                 label: 'Home',
                 isDefault: true,
                 name: user.username || '',
-                streetAddress: user.streetAddress,
+                streetAddress: user.streetAddress || '',
                 city: user.city || '',
                 state: user.state || '',
                 zipCode: user.zipCode || '',

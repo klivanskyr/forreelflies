@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { FaHome, FaBuilding, FaStar } from 'react-icons/fa'
-import toast from 'react-hot-toast'
+import { toast } from 'sonner'
 
 type Address = {
     id: string;
@@ -49,7 +49,7 @@ export default function ShippingAddressModal({ isOpen, onClose, onAddressAdded }
                     label: 'Home',
                     isDefault: true,
                     name: session.user.username || '',
-                    streetAddress: session.user.streetAddress,
+                    streetAddress: session.user.streetAddress || '',
                     city: session.user.city || '',
                     state: session.user.state || '',
                     zipCode: session.user.zipCode || '',

@@ -5,7 +5,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { FaCheckCircle, FaTruck, FaReceipt, FaStore } from 'react-icons/fa';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 type OrderSummary = {
     sessionId: string;
