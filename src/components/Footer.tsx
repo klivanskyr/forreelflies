@@ -8,14 +8,16 @@ export default function Footer() {
         <div className="w-full flex flex-col">
             <div className="flex flex-col bg-gray-100 p-4 md:p-6">
                 <div className="flex flex-col md:flex-row w-full justify-around gap-8 md:gap-4">
-                    <div className="flex flex-col items-center md:items-start gap-2">
-                        <Link href="/">
+                    <div className="flex flex-col items-center w-full gap-2">
+                        <Link href="/" className="flex justify-center items-center w-full" tabIndex={0} aria-label="Go to homepage">
+                            <span className="sr-only">Go to homepage</span>
                             <Image 
                                 src={logo.src} 
                                 alt="ForReelFlies Logo" 
                                 width={300} 
                                 height={300} 
-                                className="w-[200px] md:w-[250px] h-auto"
+                                className="mx-auto w-[200px] md:w-[250px] h-auto group-hover:opacity-80 transition-opacity"
+                                priority
                             />
                         </Link>
                     </div>

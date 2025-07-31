@@ -24,103 +24,29 @@ const classNames = {
     div: "w-full",
 }
 
-export default function StoreManagerSidebar({ className="" }:{ className?: string }) {
+export default function StoreManagerSidebar({ className = "" }: { className?: string }) {
     return (
-        <div className={`${className} w-64 bg-white rounded-lg shadow-card border border-gray-200 p-4`}>
+        <nav
+            className={`w-64 max-w-full bg-white rounded-lg shadow-card border border-gray-200 p-4 h-full overflow-y-auto ${className}`}
+            aria-label="Sidebar"
+        >
             <div className="space-y-2">
-                <PathHighlightTextLink 
-                    classNames={classNames}
-                    href="/store-manager/"
-                    text="Home" 
-                    startingIcon={<HomeIcon />} 
-                    path={"/store-manager"} 
-                />
-                <PathHighlightTextLink 
-                    classNames={classNames}
-                    href="/store-manager/customization"
-                    text="Customization" 
-                    startingIcon={<CustomizationIcon />} 
-                    path={"/store-manager/customization"}
-                />
-                <PathHighlightTextLink 
-                    classNames={classNames}
-                    href="/store-manager/media"
-                    text="Media" 
-                    startingIcon={<MediaIcon />} 
-                    path={"/store-manager/media"}
-                />
-                <PathHighlightTextLink 
-                    classNames={classNames}
-                    href="/store-manager/products"
-                    text="Products" 
-                    startingIcon={<ProductsIcon />} 
-                    path={"/store-manager/products"}
-                />
-                <PathHighlightTextLink 
-                    classNames={classNames}
-                    href="/store-manager/orders"
-                    text="Orders" 
-                    startingIcon={<OrdersIcon />} 
-                    path={"/store-manager/orders"}
-                />
-                <PathHighlightTextLink 
-                    classNames={classNames}
-                    href="/store-manager/payments"
-                    text="Payments" 
-                    startingIcon={<PaymentsIcon />} 
-                    path={"/store-manager/payments"}
-                />
-                <PathHighlightTextLink 
-                    classNames={classNames}
-                    href="/store-manager/customers"
-                    text="Customers" 
-                    startingIcon={<CustomersIcon />} 
-                    path={"/store-manager/customers"}
-                />
-                <PathHighlightTextLink 
-                    classNames={classNames}
-                    href="/store-manager/promotions"
-                    text="Promotions" 
-                    startingIcon={<PromotionsIcon />} 
-                    path={"/store-manager/promotions"}
-                />
-                <PathHighlightTextLink 
-                    classNames={classNames}
-                    href="/store-manager/refund"
-                    text="Refund" 
-                    startingIcon={<RefundIcon />} 
-                    path={"/store-manager/refund"}
-                />
-                <PathHighlightTextLink 
-                    classNames={classNames}
-                    href="/store-manager/reviews"
-                    text="Reviews" 
-                    startingIcon={<ReviewsIcon />} 
-                    path={"/store-manager/reviews"}
-                />
-                <PathHighlightTextLink 
-                    classNames={classNames}
-                    href="/store-manager/reports"
-                    text="Reports" 
-                    startingIcon={<ReportsIcon />} 
-                    path={"/store-manager/reports"}
-                />
-                <PathHighlightTextLink 
-                    classNames={classNames}
-                    href="/store-manager/settings"
-                    text="Settings" 
-                    startingIcon={<SettingsIcon />} 
-                    path={"/store-manager/settings"}
-                />
-                
+                <PathHighlightTextLink classNames={classNames} href="/store-manager/" text="Home" startingIcon={<HomeIcon />} path={"/store-manager"} />
+                <PathHighlightTextLink classNames={classNames} href="/store-manager/customization" text="Customization" startingIcon={<CustomizationIcon />} path={"/store-manager/customization"} />
+                <PathHighlightTextLink classNames={classNames} href="/store-manager/media" text="Media" startingIcon={<MediaIcon />} path={"/store-manager/media"} />
+                <PathHighlightTextLink classNames={classNames} href="/store-manager/products" text="Products" startingIcon={<ProductsIcon />} path={"/store-manager/products"} />
+                <PathHighlightTextLink classNames={classNames} href="/store-manager/orders" text="Orders" startingIcon={<OrdersIcon />} path={"/store-manager/orders"} />
+                <PathHighlightTextLink classNames={classNames} href="/store-manager/payments" text="Payments" startingIcon={<PaymentsIcon />} path={"/store-manager/payments"} />
+                <PathHighlightTextLink classNames={classNames} href="/store-manager/customers" text="Customers" startingIcon={<CustomersIcon />} path={"/store-manager/customers"} />
+                <PathHighlightTextLink classNames={classNames} href="/store-manager/promotions" text="Promotions" startingIcon={<PromotionsIcon />} path={"/store-manager/promotions"} />
+                <PathHighlightTextLink classNames={classNames} href="/store-manager/refund" text="Refund" startingIcon={<RefundIcon />} path={"/store-manager/refund"} />
+                <PathHighlightTextLink classNames={classNames} href="/store-manager/reviews" text="Reviews" startingIcon={<ReviewsIcon />} path={"/store-manager/reviews"} />
+                <PathHighlightTextLink classNames={classNames} href="/store-manager/reports" text="Reports" startingIcon={<ReportsIcon />} path={"/store-manager/reports"} />
+                <PathHighlightTextLink classNames={classNames} href="/store-manager/settings" text="Settings" startingIcon={<SettingsIcon />} path={"/store-manager/settings"} />
                 <div className="pt-4 border-t">
-                    <SignOutButton 
-                        className="w-full text-left px-4 py-3 rounded-lg transition-all duration-200 hover:bg-red-50 hover:text-red-600 !gap-3" 
-                        text="Sign Out" 
-                        startingIcon={<LogoutIcon className="w-4 h-4"/>} 
-                    />
+                    <SignOutButton className="w-full text-left px-4 py-3 rounded-lg transition-all duration-200 hover:bg-red-50 hover:text-red-600 !gap-3" text="Sign Out" startingIcon={<LogoutIcon className="w-4 h-4" />} />
                 </div>
             </div>
-        </div>
-    )
+        </nav>
+    );
 }
