@@ -39,8 +39,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         // Create onboarding link
         const accountLink = await stripe.accountLinks.create({
             account: stripeAccountId,
-            refresh_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/store-manager`,
-            return_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/store-manager`,
+            refresh_url: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/store-manager`,
+            return_url: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/store-manager`,
             type: 'account_onboarding',
         });
 
