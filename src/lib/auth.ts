@@ -112,7 +112,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       // Always fetch fresh data for vendor status to ensure UI updates immediately
       const shouldFetchFresh = !token.lastUpdated || 
-        (Date.now() - (token.lastUpdated as number)) > 5 * 60 * 1000 || // 5 minutes
+        (Date.now() - (token.lastUpdated as number)) > 30 * 1000 || // 30 seconds (reduced from 5 minutes)
         !token.vendorSignUpStatus // Force fetch if vendor status is missing
 
       if (token?.uid && shouldFetchFresh) {

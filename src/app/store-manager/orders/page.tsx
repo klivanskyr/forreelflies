@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import StoreManagerTemplate from "@/components/storeManagerHelpers/StoreManagerTemplate";
 import { useUser } from "@/contexts/UserContext";
@@ -64,7 +64,7 @@ interface Order {
     shippingStatus?: 'label_failed' | 'label_created' | 'shipped';
 };
 
-export default function Page() {
+function OrdersContent() {
     const { user } = useUser();
     const [orders, setOrders] = useState<FirestoreOrder[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -648,5 +648,20 @@ export default function Page() {
                 />
             )}
         </StoreManagerTemplate>
+    );
+}
+
+export default function Page() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="flex flex-col items-center space-y-4">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-greenPrimary"></div>
+                    <p className="text-gray-600">Loading...</p>
+                </div>
+            </div>
+        }>
+            <OrdersContent />
+        </Suspense>
     );
 }

@@ -83,7 +83,7 @@ export default function Home() {
         ) : error ? (
           <div>{error}</div>
         ) : topProducts.length === 0 ? (
-          <div className="text-2xl mb-2 text-black text-opacity-80 text-center py-8">Products coming soon!</div>
+          <div className="text-2xl mb-2 text-black text-opacity-80 text-center py-8 min-h-[50vh]">Products coming soon!</div>
         ) : (
           <PaginatedCardList>
             {topProducts.map((product) => (
