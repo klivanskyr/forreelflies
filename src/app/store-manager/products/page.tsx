@@ -1,7 +1,7 @@
 'use client';
 
 import { Product, Vendor } from "@/app/types/types";
-import { useRef } from "react";
+import { useRef, Suspense } from "react";
 import NoVendorRedirect from "@/components/storeManagerHelpers/NoVendorRedirect";
 import StoreManagerProductsTable from "@/components/storeManagerHelpers/StoreManagerProductsTable";
 import StoreManagerTemplate from "@/components/storeManagerHelpers/StoreManagerTemplate";
@@ -10,6 +10,7 @@ import { useUser } from "@/contexts/UserContext";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
+import type { TourStep } from "@/components/storeManagerHelpers/ProductQuickStartGuide";
 
 const ProductQuickStartGuide = dynamic(() => import("@/components/storeManagerHelpers/ProductQuickStartGuide"), { ssr: false });
 
@@ -76,7 +77,7 @@ const productTourSteps: TourStep[] = [
     }
 ];
 
-export default function Page() {
+function ProductsContent() {
     const { user } = useUser();
     const [vendor, setVendor] = useState<Vendor | undefined>(undefined);
     const [products, setProducts] = useState<Product[]>([]);
@@ -99,15 +100,24 @@ export default function Page() {
 
             if (vendorResponse.ok) {
                 const vendorData = await vendorResponse.json();
-                const vendorInfo = vendorData.vendor as Vendor;
-                setVendor(vendorInfo);
+                setVendor(vendorData);
+            } else {
+                console.error('Failed to fetch vendor');
+            }
 
-                // Fetch products for this vendor
-                const productsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/product?vendorId=${vendorInfo.id}`);
-                if (productsResponse.ok) {
-                    const productsData = await productsResponse.json();
-                    setProducts(productsData.data as Product[]);
+            // Fetch products
+            const productsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/product?vendorId=${user.uid}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
                 }
+            });
+
+            if (productsResponse.ok) {
+                const productsData = await productsResponse.json();
+                setProducts(productsData);
+            } else {
+                console.error('Failed to fetch products');
             }
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -115,7 +125,6 @@ export default function Page() {
             setLoading(false);
         }
     };
-
 
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -135,7 +144,6 @@ export default function Page() {
             router.prefetch && router.prefetch('/store-manager/orders?tour=1');
         }
     }, [showTour, router]);
-
 
     // Tour step logic
     useEffect(() => {
@@ -234,7 +242,7 @@ export default function Page() {
                     products={products}
                     onProductUpdated={fetchVendorAndProducts}
                     vendorId={vendor?.id || ''}
-                    draftProductId={draftProductId}
+                    draftProductId={draftProductId || undefined}
                     tourStep={showTour ? tourStep : undefined}
                 />
                 {showTour && (
@@ -247,5 +255,20 @@ export default function Page() {
                 )}
             </StoreManagerTemplate>
         </NoVendorRedirect>
+    );
+}
+
+export default function Page() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="flex flex-col items-center space-y-4">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-greenPrimary"></div>
+                    <p className="text-gray-600">Loading...</p>
+                </div>
+            </div>
+        }>
+            <ProductsContent />
+        </Suspense>
     );
 }

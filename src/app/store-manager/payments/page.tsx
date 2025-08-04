@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import StoreManagerTemplate from "@/components/storeManagerHelpers/StoreManagerTemplate";
 import ProductQuickStartGuide from "@/components/storeManagerHelpers/ProductQuickStartGuide";
 import { useUser } from "@/contexts/UserContext";
 import { toast } from "sonner";
 
-export default function Page() {
+function PaymentsContent() {
     const { user } = useUser();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -55,5 +55,20 @@ export default function Page() {
                 )}
             </div>
         </StoreManagerTemplate>
+    );
+}
+
+export default function Page() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="flex flex-col items-center space-y-4">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-greenPrimary"></div>
+                    <p className="text-gray-600">Loading...</p>
+                </div>
+            </div>
+        }>
+            <PaymentsContent />
+        </Suspense>
     );
 }

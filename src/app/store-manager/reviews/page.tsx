@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import StoreManagerTemplate from "@/components/storeManagerHelpers/StoreManagerTemplate";
 import { ProductReview, VendorReview } from "@/app/types/types";
@@ -28,7 +28,7 @@ type ReviewStats = {
     };
 };
 
-export default function Page() {
+function ReviewsContent() {
     const ProductQuickStartGuide = dynamic(() => import("@/components/storeManagerHelpers/ProductQuickStartGuide"), { ssr: false });
 
     const { data: session } = useSession();
@@ -433,5 +433,20 @@ export default function Page() {
                 </div>
             </div>
         </StoreManagerTemplate>
+    );
+}
+
+export default function Page() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="flex flex-col items-center space-y-4">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-greenPrimary"></div>
+                    <p className="text-gray-600">Loading...</p>
+                </div>
+            </div>
+        }>
+            <ReviewsContent />
+        </Suspense>
     );
 }

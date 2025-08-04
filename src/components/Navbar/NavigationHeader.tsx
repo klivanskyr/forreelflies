@@ -12,17 +12,14 @@ import ProfileButtonAndBar from "./ProfileButtonAndBar";
 import CartIcon from "./CartIcon";
 import { useSession } from "next-auth/react";
 import { useUser } from "@/contexts/UserContext";
+import { useVendor } from "@/hooks/useVendor";
 import { FaBars, FaTimes } from "react-icons/fa";
 
 export default function NavigationHeader({ isScrolled }: { isScrolled: boolean }) {
     const { data: session } = useSession();
     const { user } = useUser();
+    const { isApprovedVendor, loading: vendorLoading } = useVendor();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    
-    // Check if user is an approved vendor
-    const isApprovedVendor = user?.vendorSignUpStatus === "vendorActive" || 
-                            user?.vendorSignUpStatus === "onboardingStarted" || 
-                            user?.vendorSignUpStatus === "onboardingCompleted";
     
     return (
         <>
@@ -56,7 +53,14 @@ export default function NavigationHeader({ isScrolled }: { isScrolled: boolean }
                     <NavSearchTopBar />
                     <CartIcon />
                     {session?.user 
-                        ? <ProfileButtonAndBar isVendor={isApprovedVendor} /> 
+                        ? (
+                            <div className="relative">
+                                <ProfileButtonAndBar isVendor={isApprovedVendor} />
+                                {vendorLoading && (
+                                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                                )}
+                            </div>
+                        ) 
                         : <SigninButtonAndBar />
                     }
                 </div>
@@ -148,7 +152,14 @@ export default function NavigationHeader({ isScrolled }: { isScrolled: boolean }
                         <NavSearchTopBar />
                         <CartIcon />
                         {session?.user 
-                            ? <ProfileButtonAndBar isVendor={isApprovedVendor} /> 
+                            ? (
+                                <div className="relative">
+                                    <ProfileButtonAndBar isVendor={isApprovedVendor} />
+                                    {vendorLoading && (
+                                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                                    )}
+                                </div>
+                            ) 
                             : <SigninButtonAndBar />
                         }
                     </div>

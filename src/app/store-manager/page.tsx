@@ -3,7 +3,8 @@
 import StoreManagerTemplate from "@/components/storeManagerHelpers/StoreManagerTemplate";
 import { Vendor } from "../types/types";
 import { useUser } from "@/contexts/UserContext";
-import { useEffect, useState } from "react";
+import { useVendor } from "@/hooks/useVendor";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DbUser } from "@/lib/firebase-admin";
 import NoVendorRedirect from "@/components/storeManagerHelpers/NoVendorRedirect";
@@ -11,37 +12,24 @@ import Button from "@/components/buttons/Button";
 import { toast } from "sonner";
 import ProductQuickStartGuide from "@/components/storeManagerHelpers/ProductQuickStartGuide";
 
-export default function Page() {
+function StoreManagerContent() {
     const { user } = useUser();
-    const [vendor, setVendor] = useState<Vendor | undefined>(undefined);
+    const { vendor, loading: vendorLoading } = useVendor();
     const [totalProducts, setTotalProducts] = useState(0);
     const [monthlyEarnings, setMonthlyEarnings] = useState(0);
     const [loading, setLoading] = useState(true);
     const [isProcessingStripe, setIsProcessingStripe] = useState(false);
+    const [tourStep, setTourStep] = useState(0);
+
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const showTour = searchParams.get('tour') === '1';
 
     useEffect(() => {
-        const getVendor = async (user: DbUser) => {
-            try {
-                const res = await fetch(`/api/v1/vendor?userId=${user.uid}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                });
-                const data = await res.json();
-                setVendor(data.vendor);
-            } catch (error) {
-                console.error("Failed to fetch vendor:", error);
-            }
-        };
-
         const fetchData = async () => {
-            if (!user) return;
+            if (!user || vendorLoading) return;
             setLoading(true);
             try {
-                // Fetch vendor data
-                await getVendor(user);
-
                 // Fetch products count
                 const productsRes = await fetch(`/api/v1/product?vendorId=${user.uid}`);
                 const productsData = await productsRes.json();
@@ -59,7 +47,7 @@ export default function Page() {
         };
 
         fetchData();
-    }, [user]);
+    }, [user, vendorLoading]);
 
     const handleStripeOnboarding = async () => {
         if (!user?.uid) {
@@ -117,70 +105,38 @@ export default function Page() {
                 if (createAccountResponse.status === 401) {
                     toast.error("Authentication failed. Please log in and try again.");
                 } else if (createAccountResponse.status === 400) {
-                    toast.error("Invalid account setup request. Please contact support.");
-                } else if (createAccountResponse.status >= 500) {
-                    toast.error("Payment system temporarily unavailable. Please try again in a few minutes.");
+                    toast.error(`Invalid request: ${errorData.error || "Unknown error"}`);
                 } else {
-                    toast.error(`Failed to set up payment account: ${errorData.error || "Unknown error"}`);
+                    toast.error(`Failed to create Stripe account: ${errorData.error || "Unknown error"}`);
                 }
                 return;
             }
 
-            const accountLinkData = await createAccountResponse.json();
-            
-            if (!accountLinkData.onboardingLink) {
-                console.error("No onboarding link received:", accountLinkData);
-                toast.error("Failed to generate setup link. Please try again.");
-                return;
-            }
-
-            toast.success("Redirecting to Stripe setup...");
-            window.location.href = accountLinkData.onboardingLink;
-
-        } catch (networkError) {
-            console.error("Network error during Stripe signup:", networkError);
-            
-            if (networkError instanceof TypeError && networkError.message.includes("fetch")) {
-                toast.error("Connection error. Please check your internet connection and try again.");
-            } else {
-                toast.error("Failed to connect to payment setup. Please try again.");
-            }
+            const createAccountData = await createAccountResponse.json();
+            toast.success("Opening Stripe onboarding...");
+            window.open(createAccountData.url, '_blank');
+        } catch (error) {
+            console.error("Error setting up Stripe:", error);
+            toast.error("An unexpected error occurred while setting up payment processing");
         } finally {
             setIsProcessingStripe(false);
         }
     };
 
-
-    // TOUR LOGIC
-    const router = useRouter();
-    const searchParams = useSearchParams();
-    const showTour = searchParams.get('tour') === '1';
-
-    // Tour step handling
-    const [tourStep, setTourStep] = useState(0);
-    
-    // When "Start Tour" is clicked, start the tour on this page
     const handleStartTour = () => {
-        router.push('/store-manager?tour=1', { scroll: false });
+        setTourStep(0);
+        router.push('/store-manager?tour=1');
     };
 
-    // When tour finishes on this page, go to products with tour
     const handleTourFinish = () => {
         router.push('/store-manager/products?tour=1');
     };
 
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="flex flex-col items-center space-y-4">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-greenPrimary"></div>
-                    <p className="text-gray-600">Loading dashboard...</p>
-                </div>
-            </div>
-        );
-    }
+    // Show skeleton loading instead of full-screen loading
+    const showSkeleton = loading || vendorLoading;
+    
     return (
-        <NoVendorRedirect vendor={vendor}>
+        <NoVendorRedirect vendor={vendor as any || undefined}>
             <StoreManagerTemplate>
                 <div className="space-y-6">
                     <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
@@ -245,7 +201,13 @@ export default function Page() {
                                 </div>
                                 <div className="ml-4">
                                     <p className="text-sm font-medium text-gray-600">Total Products</p>
-                                    <p className="text-2xl font-semibold text-gray-900">{totalProducts}</p>
+                                    <p className="text-2xl font-semibold text-gray-900">
+                                        {showSkeleton ? (
+                                            <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+                                        ) : (
+                                            totalProducts
+                                        )}
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -273,7 +235,13 @@ export default function Page() {
                                 </div>
                                 <div className="ml-4">
                                     <p className="text-sm font-medium text-gray-600">This Month</p>
-                                    <p className="text-2xl font-semibold text-gray-900">${monthlyEarnings.toFixed(2)}</p>
+                                    <p className="text-2xl font-semibold text-gray-900">
+                                        {showSkeleton ? (
+                                            <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+                                        ) : (
+                                            `$${monthlyEarnings.toFixed(2)}`
+                                        )}
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -297,7 +265,7 @@ export default function Page() {
                             </a>
                             <a data-tour="reviews" href="/store-manager/reviews" className="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                                 <svg className="w-8 h-8 text-yellow-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976-2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
                                 </svg>
                                 <span className="text-sm font-medium text-gray-900">Reviews</span>
                             </a>
@@ -320,5 +288,20 @@ export default function Page() {
                 )}
             </StoreManagerTemplate>
         </NoVendorRedirect>
+    );
+}
+
+export default function Page() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="flex flex-col items-center space-y-4">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-greenPrimary"></div>
+                    <p className="text-gray-600">Loading...</p>
+                </div>
+            </div>
+        }>
+            <StoreManagerContent />
+        </Suspense>
     );
 }
