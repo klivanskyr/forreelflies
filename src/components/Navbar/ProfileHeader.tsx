@@ -7,6 +7,7 @@ import { FaInstagram } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
+import Link from "next/link";
 
 export default function ProfileHeader({ user }: { user: DbUser | null }) {
     const router = useRouter();
@@ -29,8 +30,10 @@ export default function ProfileHeader({ user }: { user: DbUser | null }) {
     return (
         <div className="flex flex-row justify-between bg-gray-100 py-2 px-4 md:px-8 lg:px-32">
             <div className="flex flex-row gap-3 md:gap-4">
-                <FaFacebook className="w-6 h-6 md:w-[30px] md:h-[30px]" />
-                <FaInstagram className="w-6 h-6 md:w-[30px] md:h-[30px]" />
+                {/* <FaFacebook className="w-6 h-6 md:w-[30px] md:h-[30px]" /> */}
+                <Link href="https://instagram.com/forreelflies" target="_blank" rel="noopener noreferrer">
+                    <FaInstagram className="w-6 h-6 md:w-[30px] md:h-[30px] hover:opacity-80 transition-opacity" />
+                </Link>
             </div>
             <div>
                 {currentUser?.vendorSignUpStatus === "vendorActive" || currentUser?.vendorSignUpStatus === "onboardingStarted" || currentUser?.vendorSignUpStatus === "onboardingCompleted" 

@@ -65,21 +65,21 @@ export default function NavigationHeader({ isScrolled }: { isScrolled: boolean }
                 <div className={`${isMenuOpen ? 'block' : 'hidden'} absolute top-full left-0 right-0 bg-white p-4 border-b shadow-lg z-10`}>
                     <div className="flex flex-col items-start gap-6">
                         <Underline>
-                            <TextLink href="/" text="HOME" className="!text-black hover:!text-greenPrimary transition-all" />
+                            <TextLink href="/" text="HOME" className="!text-black hover:!text-greenPrimary transition-all" onClick={() => setIsMenuOpen(false)} />
                         </Underline>
                         <Underline>
-                            <TextLink href="/shop" text="SHOP" className="!text-black hover:!text-greenPrimary transition-all" />
+                            <TextLink href="/shop" text="SHOP" className="!text-black hover:!text-greenPrimary transition-all" onClick={() => setIsMenuOpen(false)} />
                         </Underline>
                         <div className="relative">
                             <HoverPopup
                                 classNames={{ "hover": "border pl-10 py-8 bg-white" }}
                                 hoverElement={
                                     <div className="flex flex-col gap-8 w-64">
-                                        <TextLink href="/shop?category=dry-flies" text="Dry Flies" />
-                                        <TextLink href="/shop?category=nymphs" text="Nymphs" />
-                                        <TextLink href="/shop?category=streamers" text="Streamers" />
-                                        <TextLink href="/shop?category=saltwater-flies" text="Saltwater Flies" />
-                                        <TextLink href="/shop?category=wet-flies" text="Wet Flies" />
+                                        <TextLink href="/shop?category=dry-flies" text="Dry Flies" onClick={() => setIsMenuOpen(false)} />
+                                        <TextLink href="/shop?category=nymphs" text="Nymphs" onClick={() => setIsMenuOpen(false)} />
+                                        <TextLink href="/shop?category=streamers" text="Streamers" onClick={() => setIsMenuOpen(false)} />
+                                        <TextLink href="/shop?category=saltwater-flies" text="Saltwater Flies" onClick={() => setIsMenuOpen(false)} />
+                                        <TextLink href="/shop?category=wet-flies" text="Wet Flies" onClick={() => setIsMenuOpen(false)} />
                                     </div>
                                 }
                             >
@@ -87,10 +87,10 @@ export default function NavigationHeader({ isScrolled }: { isScrolled: boolean }
                             </HoverPopup>
                         </div>
                         <Underline>
-                            <TextLink href="/about" text="ABOUT US" className="!text-black hover:!text-greenPrimary transition-all" />
+                            <TextLink href="/about" text="ABOUT US" className="!text-black hover:!text-greenPrimary transition-all" onClick={() => setIsMenuOpen(false)} />
                         </Underline>
                         <Underline>
-                            <TextLink href="/contact" text="CONTACT US" className="!text-black hover:!text-greenPrimary transition-all" />
+                            <TextLink href="/contact" text="CONTACT US" className="!text-black hover:!text-greenPrimary transition-all" onClick={() => setIsMenuOpen(false)} />
                         </Underline>
                     </div>
                 </div>

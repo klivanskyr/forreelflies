@@ -7,13 +7,16 @@ import { useState } from "react";
 import StoreManagerUpdateProductModal from "./StoreManagerUpdateProductModal";
 import Image from 'next/image';
 
+
 interface Props {
     products: Product[];
     onProductUpdated: () => void;
     vendorId: string;
+    draftProductId?: string;
+    tourStep?: number;
 }
 
-export default function StoreManagerProductsTable({ products, onProductUpdated, vendorId }: Props) {
+export default function StoreManagerProductsTable({ products, onProductUpdated, vendorId, draftProductId, tourStep }: Props) {
     const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
@@ -110,17 +113,20 @@ export default function StoreManagerProductsTable({ products, onProductUpdated, 
 
     return (
         <>
-            <Table 
+            <Table
                 columns={[
-                    { 
-                        label: <h2>Name</h2>, 
+                    {
+                        label: <h2>Name</h2>,
                         key: (item: Product) => (
-                            <div className="flex flex-row w-full h-full items-center">
+                            <div
+                                className={`flex flex-row w-full h-full items-center ${draftProductId && item.id === draftProductId && tourStep === 2 ? 'ring-4 ring-green-400 relative z-[1001]' : ''}`}
+                                data-tour={draftProductId && item.id === draftProductId && tourStep === 2 ? 'product-table-row' : undefined}
+                            >
                                 <div className="flex items-center space-x-3">
                                     {item.images && item.images.length > 0 && (
                                         <div className="relative w-12 h-12">
-                                            <Image 
-                                                src={item.images[0]} 
+                                            <Image
+                                                src={item.images[0]}
                                                 alt={item.name}
                                                 fill
                                                 className="object-cover rounded"

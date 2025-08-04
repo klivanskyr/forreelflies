@@ -1,5 +1,8 @@
 'use client';
 
+import dynamic from "next/dynamic";
+import { useRouter, useSearchParams } from "next/navigation";
+
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import StoreManagerTemplate from "@/components/storeManagerHelpers/StoreManagerTemplate";
@@ -26,6 +29,8 @@ type ReviewStats = {
 };
 
 export default function Page() {
+    const ProductQuickStartGuide = dynamic(() => import("@/components/storeManagerHelpers/ProductQuickStartGuide"), { ssr: false });
+
     const { data: session } = useSession();
     const [reviews, setReviews] = useState<Review[]>([]);
     const [stats, setStats] = useState<ReviewStats>({
@@ -41,16 +46,30 @@ export default function Page() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const showTour = searchParams.get('tour') === '1';
+
     useEffect(() => {
         if (session?.user?.uid) {
             // Add debouncing to prevent excessive calls
             const timeoutId = setTimeout(() => {
                 fetchReviews();
             }, 100);
-            
             return () => clearTimeout(timeoutId);
         }
     }, [session?.user?.uid]);
+
+    useEffect(() => {
+        if (showTour) {
+            router.prefetch && router.prefetch('/store-manager/payments?tour=1');
+        }
+    }, [showTour, router]);
+
+    // When tour finishes, go to payments page with tour param
+    const handleTourFinish = () => {
+        router.push('/store-manager/payments?tour=1');
+    };
 
     const fetchReviews = async () => {
         try {
@@ -72,6 +91,7 @@ export default function Page() {
             }));
 
             // Combine and sort reviews by date
+    // (hooks are already declared at the top-level, remove from here)
             const allReviews = [...productReviews, ...vendorReviews].sort(
                 (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
             );
@@ -198,6 +218,17 @@ export default function Page() {
             <StoreManagerTemplate>
                 <div className="flex items-center justify-center min-h-[60vh]">
                     <div className="text-xl">Loading reviews...</div>
+
+    return (
+        <StoreManagerTemplate>
+            {showTour && (
+                <ProductQuickStartGuide onClose={handleTourFinish} />
+            )}
+            {showTour && (
+                <ProductQuickStartGuide onClose={handleTourFinish} />
+            )}
+        </StoreManagerTemplate>
+    );
                 </div>
             </StoreManagerTemplate>
         );
