@@ -1,13 +1,32 @@
 'use client';
 
-import { useState } from "react";
+import { useState, Dispatch, SetStateAction } from "react";
 import Button from "./buttons/Button";
 import StoreManagerProductModal, { ProductInput } from "./storeManagerHelpers/StoreManagerProductModal";
 import { toast } from "sonner";
 import { FaPlus } from "react-icons/fa";
 
-export default function StoreManagerProductsHeader({ vendorId, onProductAdded }: { vendorId: string; onProductAdded?: () => void }) {
-    const [modalOpen, setModalOpen] = useState<boolean>(false);
+interface Props {
+    vendorId: string;
+    onProductAdded?: () => void;
+    modalOpen?: boolean;
+    setModalOpen?: Dispatch<SetStateAction<boolean>>;
+    tourStep?: number;
+    onDraftCreated?: (draftId: string) => void;
+}
+
+export default function StoreManagerProductsHeader({
+    vendorId,
+    onProductAdded,
+    modalOpen: controlledModalOpen,
+    setModalOpen: controlledSetModalOpen,
+    tourStep,
+    onDraftCreated
+}: Props) {
+    // If controlled props are provided, use them; otherwise, use internal state
+    const [uncontrolledModalOpen, setUncontrolledModalOpen] = useState<boolean>(false);
+    const modalOpen = controlledModalOpen !== undefined ? controlledModalOpen : uncontrolledModalOpen;
+    const setModalOpen = controlledSetModalOpen || setUncontrolledModalOpen;
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [input, setInput] = useState<ProductInput>({
         name: "",
@@ -96,6 +115,11 @@ export default function StoreManagerProductsHeader({ vendorId, onProductAdded }:
                 
                 toast.success(`Product "${input.name}" ${input.isDraft ? 'saved as draft' : 'created'} successfully!`);
                 
+                // Notify parent of draft creation if callback provided
+                if (input.isDraft && onDraftCreated && responseData.id) {
+                    onDraftCreated(responseData.id);
+                }
+
                 // Reset form
                 setInput({ 
                     name: "", 
@@ -119,11 +143,13 @@ export default function StoreManagerProductsHeader({ vendorId, onProductAdded }:
                     trackQuantity: false 
                 });
                 
-                // Close modal and refresh list
-                setTimeout(() => {
-                    setModalOpen(false);
-                    onProductAdded?.(); // Refresh the products list
-                }, 1000);
+                // Only close modal if not in tour mode
+                if (tourStep === undefined) {
+                    setTimeout(() => {
+                        setModalOpen(false);
+                        onProductAdded?.();
+                    }, 1000);
+                }
             } else {
                 const errorData = await response.json();
                 console.error("Product creation failed:", errorData);
@@ -153,17 +179,24 @@ export default function StoreManagerProductsHeader({ vendorId, onProductAdded }:
         }
     };
 
+    // Use controlled modal state when in tour mode
+    const internalModalOpen = controlledModalOpen ?? uncontrolledModalOpen;
+    const setInternalModalOpen = controlledSetModalOpen ?? setUncontrolledModalOpen;
+
     return (
         <div className="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 bg-white border-b border-gray-200">
             <h1 className="text-2xl font-bold text-greenPrimary">Products</h1>
-            
-            <Button 
-                text="Add Product" 
-                onClick={() => setModalOpen(true)} 
+            <Button
+                text="Add Product"
+                onClick={() => setModalOpen(true)}
                 color="green"
+                data-tour="add-product-btn"
+                // Hide button during tour steps 1+ (when modal should be open)
+                style={{ 
+                    visibility: tourStep !== undefined && tourStep >= 1 ? 'hidden' : 'visible' 
+                }}
             />
-
-            <StoreManagerProductModal 
+            <StoreManagerProductModal
                 handleSubmit={handleSubmit}
                 isSubmitting={isSubmitting}
                 input={input}
@@ -171,6 +204,7 @@ export default function StoreManagerProductsHeader({ vendorId, onProductAdded }:
                 modalOpen={modalOpen}
                 setModalOpen={setModalOpen}
                 vendorId={vendorId}
+                tourStep={tourStep}
             />
         </div>
     );

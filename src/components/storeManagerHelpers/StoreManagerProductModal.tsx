@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, Dispatch, SetStateAction, useEffect } from "react";
 import Button from "../buttons/Button";
 import Checkbox from "../Checkbox";
 import Dropdown from "../inputs/Dropdown";
@@ -38,17 +38,27 @@ export interface ProductInput {
     shippingHeight: string;
 }
 
-interface Props<T> {
-    handleSubmit: (imageUrls: string[]) => void;
+interface Props {
+    handleSubmit: (imageUrls: string[]) => Promise<void>;
     isSubmitting: boolean;
-    input: T;
-    setInput: (input: T) => void;
+    input: ProductInput;
+    setInput: Dispatch<SetStateAction<ProductInput>>;
     modalOpen: boolean;
-    setModalOpen: (open: boolean) => void;
+    setModalOpen: Dispatch<SetStateAction<boolean>>;
     vendorId: string;
+    tourStep?: number;
 }
 
-export default function StoreManagerProductModal({ handleSubmit, isSubmitting, input, setInput, modalOpen, setModalOpen }: Props<ProductInput>) {    
+export default function StoreManagerProductModal({
+    handleSubmit,
+    isSubmitting,
+    input,
+    setInput,
+    modalOpen,
+    setModalOpen,
+    vendorId,
+    tourStep
+}: Props) {    
     const stockStatusOptions = [
         { value: "inStock", label: "In Stock" },
         { value: "outOfStock", label: "Out of Stock" },
@@ -84,6 +94,14 @@ export default function StoreManagerProductModal({ handleSubmit, isSubmitting, i
             setImagePreviews([]);
         }
     }, [input.images]);
+
+    // Add useEffect to handle tab switching during tour:
+    useEffect(() => {
+        // Auto-switch to inventory tab during tour step 6
+        if (tourStep === 6) {
+            setActiveTab("inventory");
+        }
+    }, [tourStep]);
 
     // Validate and handle file selection
     const handleFileSelection = (files: FileList | null) => {
@@ -370,6 +388,7 @@ export default function StoreManagerProductModal({ handleSubmit, isSubmitting, i
         <button
             type="button"
             onClick={() => setActiveTab(tab)}
+            data-tour={tab === "inventory" ? "inventory-tab" : undefined} // Add this
             className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
                 activeTab === tab 
                     ? 'bg-greenPrimary text-white border-b-2 border-greenPrimary' 
@@ -402,7 +421,11 @@ export default function StoreManagerProductModal({ handleSubmit, isSubmitting, i
     const completionPercentage = calculateCompletion();
 
     return (
-        <Modal open={modalOpen} setOpen={setModalOpen} className="w-[90%] h-[95%] rounded-xl flex flex-col justify-between">
+        <Modal 
+            open={modalOpen} 
+            setOpen={(open) => tourStep === undefined ? setModalOpen(open) : undefined} 
+            className="w-[90%] h-[95%] rounded-xl flex flex-col justify-between"
+        >
             <div className="w-full h-full flex flex-col items-center overflow-hidden">
                 <div className="w-full p-4 border-b bg-gray-50">
                     <div className="flex items-center justify-between mb-4">
@@ -451,6 +474,7 @@ export default function StoreManagerProductModal({ handleSubmit, isSubmitting, i
                                 onChange={(e) => setInput({ ...input, name: e.target.value })} 
                                 placeholder="Enter product name (e.g., Adams Dry Fly #14)"
                                 disabled={isProcessing}
+                                data-tour="product-name-input"
                                 tooltip={{
                                     type: 'help',
                                     content: 'Choose a descriptive name that clearly identifies your product. Include key details like size, color, or pattern if relevant.'
@@ -464,6 +488,7 @@ export default function StoreManagerProductModal({ handleSubmit, isSubmitting, i
                                 onChange={(e) => setInput({ ...input, shortDescription: e.target.value })} 
                                 placeholder="Brief description for product listings (e.g., Classic dry fly pattern for trout)"
                                 disabled={isProcessing}
+                                data-tour="product-description"
                                 tooltip={{
                                     type: 'tip',
                                     content: 'Keep this concise but informative. Highlight the key benefits and use cases for your product.'
@@ -489,6 +514,7 @@ export default function StoreManagerProductModal({ handleSubmit, isSubmitting, i
                                 onChange={(newTags: string[]) => setInput({ ...input, tags: newTags })} 
                                 selectedTags={input.tags || []} 
                                 disabled={isProcessing}
+                                data-tour="product-tags" // Add this
                                 tooltip={{
                                     type: 'help',
                                     content: 'Add relevant keywords that customers might search for. Examples: dry-fly, trout, mayfly, adams, size-14, olive'
@@ -502,6 +528,7 @@ export default function StoreManagerProductModal({ handleSubmit, isSubmitting, i
                                 onChange={(newCategories: string[]) => setInput({ ...input, catagories: newCategories })} 
                                 selectedTags={input.catagories || []} 
                                 disabled={isProcessing}
+                                data-tour="product-categories" // Add this
                                 tooltip={{
                                     type: 'help',
                                     content: 'Select the main category your product belongs to. Examples: dry-flies, nymphs, streamers, saltwater, wet-flies'
@@ -511,7 +538,7 @@ export default function StoreManagerProductModal({ handleSubmit, isSubmitting, i
                             />
 
                             {/* Enhanced Image Upload */}
-                            <div className="space-y-3">
+                            <div className="space-y-3" data-tour="product-images">
                                 <div className="flex items-center gap-2">
                                     <label className="text-sm font-medium text-gray-700">
                                         Product Images ({input.images?.length || 0}/{MAX_FILES})
@@ -617,6 +644,7 @@ export default function StoreManagerProductModal({ handleSubmit, isSubmitting, i
                                     type="number"
                                     step="0.01"
                                     disabled={isProcessing}
+                                    data-tour="product-price"
                                     tooltip={{
                                         type: 'help',
                                         content: 'Set the price customers will pay. Consider your costs, market rates, and desired profit margin.'
@@ -663,6 +691,7 @@ export default function StoreManagerProductModal({ handleSubmit, isSubmitting, i
                                 options={stockStatusOptions}
                                 setSelected={(newSelected: string) => setInput({ ...input, stockStatus: newSelected as StockStatus })}
                                 disabled={isProcessing}
+                                data-tour="stock-status" // Add this
                                 tooltip={{
                                     type: 'info',
                                     content: 'Indicate the current availability of your product. This helps customers know if they can purchase immediately.'
@@ -720,6 +749,7 @@ export default function StoreManagerProductModal({ handleSubmit, isSubmitting, i
                                 onChange={(newNumbers: number[]) => setInput({ ...input, quantityOptions: newNumbers })} 
                                 placeholder="Enter quantity (e.g., 1, 3, 6, 12)"
                                 disabled={isProcessing}
+                                data-tour="quantity-options" // Add this
                                 tooltip={{
                                     type: 'help',
                                     content: 'Define the quantities customers can purchase. For example, if you sell flies in packs of 6, add 6, 12, 18, etc. This helps customers buy the right amount.'
@@ -728,7 +758,7 @@ export default function StoreManagerProductModal({ handleSubmit, isSubmitting, i
                             />
 
                             {/* Shipping Information */}
-                            <div className="space-y-4">
+                            <div className="space-y-4" data-tour="shipping-info"> {/* Add this */}
                                 <div className="flex items-center gap-2">
                                     <h3 className="text-sm font-medium text-gray-700">Shipping Information *</h3>
                                     <FormFieldTooltip 
@@ -843,6 +873,7 @@ export default function StoreManagerProductModal({ handleSubmit, isSubmitting, i
                             text={uploading ? "Uploading..." : isSubmitting ? "Creating..." : "Save Product"} 
                             onClick={handleSave} 
                             disabled={isProcessing}
+                            data-tour="save-draft"
                         />
                     </div>
                 </div>

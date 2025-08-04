@@ -4,11 +4,12 @@ import StoreManagerTemplate from "@/components/storeManagerHelpers/StoreManagerT
 import { Vendor } from "../types/types";
 import { useUser } from "@/contexts/UserContext";
 import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { DbUser } from "@/lib/firebase-admin";
 import NoVendorRedirect from "@/components/storeManagerHelpers/NoVendorRedirect";
 import Button from "@/components/buttons/Button";
 import { toast } from "sonner";
-import ProductQuickStartGuide from "@/components/ProductQuickStartGuide";
+import ProductQuickStartGuide from "@/components/storeManagerHelpers/ProductQuickStartGuide";
 
 export default function Page() {
     const { user } = useUser();
@@ -149,7 +150,25 @@ export default function Page() {
         }
     };
 
-    const [showTour, setShowTour] = useState(false);
+
+    // TOUR LOGIC
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const showTour = searchParams.get('tour') === '1';
+
+    // Tour step handling
+    const [tourStep, setTourStep] = useState(0);
+    
+    // When "Start Tour" is clicked, start the tour on this page
+    const handleStartTour = () => {
+        router.push('/store-manager?tour=1', { scroll: false });
+    };
+
+    // When tour finishes on this page, go to products with tour
+    const handleTourFinish = () => {
+        router.push('/store-manager/products?tour=1');
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -167,13 +186,16 @@ export default function Page() {
                     <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                         <div className="flex items-center gap-4">
                             <h1 className="text-2xl font-bold text-gray-900">Vendor Dashboard</h1>
-                            <button
-                                className="ml-2 px-4 py-2 bg-green-600 text-white rounded-lg font-semibold shadow hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 transition-all text-base"
-                                onClick={() => setShowTour(true)}
-                                data-testid="dashboard-tour-btn"
-                            >
-                                🚀 Take Dashboard Tour
-                            </button>
+                            {/* Only show Start Tour button if tour is not active */}
+                            {!showTour && (
+                                <button
+                                    className="ml-2 px-4 py-2 bg-green-600 text-white rounded-lg font-semibold shadow hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400 transition-all text-base"
+                                    onClick={handleStartTour}
+                                    data-testid="dashboard-tour-btn"
+                                >
+                                    🚀 Take Store Manager Tour
+                                </button>
+                            )}
                         </div>
                         <div className="text-sm text-gray-600">
                             Last updated: {new Date().toLocaleString()}
@@ -288,8 +310,13 @@ export default function Page() {
                         </div>
                     </div>
                 </div>
+                
                 {showTour && (
-                    <ProductQuickStartGuide onClose={() => setShowTour(false)} />
+                    <ProductQuickStartGuide 
+                        onClose={handleTourFinish}
+                        currentStep={tourStep}
+                        onStepChange={setTourStep}
+                    />
                 )}
             </StoreManagerTemplate>
         </NoVendorRedirect>

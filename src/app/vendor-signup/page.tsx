@@ -11,6 +11,8 @@ import emailjs from "@emailjs/browser";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+export const dynamic = 'force-dynamic';
+
 function VendorSignUpContent() {
     const { user, refreshUser } = useUser();
     const router = useRouter();

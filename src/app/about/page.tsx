@@ -1,36 +1,16 @@
 "use client";
 import { useEffect, useState } from "react";
-import placeholder from "@/../public/placeholder.png";
 import Slide from "@/components/Slider/Slide";
 import Link from "next/link";
 import { ButtonLink } from "@/components/Links";
-import { db } from "@/lib/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
 import { FaFish, FaUsers, FaStore, FaHeart } from "react-icons/fa";
 import { useUser } from "@/contexts/UserContext";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 export default function Page() {
-    const [aboutImage, setAboutImage] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
     const { user } = useUser();
     const router = useRouter();
-
-    useEffect(() => {
-        (async () => {
-            const q = query(collection(db, "adminImageAssignments"), where("section", "==", "about-us"));
-            const snapshot = await getDocs(q);
-            if (!snapshot.empty) {
-                // Use the most recent image if multiple
-                const sorted = snapshot.docs
-                    .map(doc => doc.data())
-                    .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-                setAboutImage(sorted[0].imageUrl);
-            }
-            setLoading(false);
-        })();
-    }, []);
 
     const handleBecomeVendorClick = () => {
         if (!user) {
@@ -44,7 +24,7 @@ export default function Page() {
     return (
         <div className="flex flex-col">
             {/* Hero Section */}
-            <Slide className="mb-0" backgroundSrc={aboutImage || placeholder.src}>
+            <Slide className="mb-0" backgroundSrc="/man_fly_fishing2.jpg">
                 <div className="h-[500px] 2xl:h-[750px] flex flex-col px-6 md:px-16 py-32 w-full md:w-1/2 justify-center">
                     <div className="flex flex-col gap-8">
                         <h1 className="text-4xl md:text-6xl font-bold text-white drop-shadow-lg">ABOUT US</h1>
