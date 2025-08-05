@@ -25,16 +25,16 @@ export default function Navbar() {
     }, []);
 
     return (
-        <>
+        <div className={`${isSticky ? 'sticky top-0' : 'relative'} z-50`}>
             {/* ProfileHeader - Normal document flow */}
             <div ref={profileHeaderRef}>
                 <ProfileHeader user={user} />
             </div>
             
             {/* NavigationHeader - Conditionally sticky */}
-            <nav className={`${isSticky ? 'sticky top-0' : 'relative'} left-0 right-0 z-50 bg-white transition-all duration-300 ${isSticky ? 'shadow-md' : ''} border-b-[1px] border-gray-200`}>
+            <nav className={`left-0 right-0 z-50 bg-white transition-all duration-300 ${isSticky ? 'shadow-md' : ''} border-b-[1px] border-gray-200`}>
                 <NavigationHeader isScrolled={isSticky} />
             </nav>
-        </>
+        </div>
     )
 }
