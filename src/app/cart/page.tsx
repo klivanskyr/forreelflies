@@ -55,14 +55,13 @@ export default function Page() {
             return;
         }
 
-        // Debounce: don't fetch if we're already loading
-        if (loading) return;
-
         const fetchCartData = async () => {
             try {
                 setLoading(true);
                 setError(null);
 
+                console.log("🔍 Fetching cart for user:", session.user.uid);
+                
                 // Fetch cart items
                 const response = await fetch(`/api/v1/user/cart?id=${session.user.uid}`);
                 

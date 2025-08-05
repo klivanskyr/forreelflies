@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 
 type Address = {
     id: string;
-    label: string;
+    label?: string;
     isDefault: boolean;
     name: string;
     streetAddress: string;
@@ -47,7 +47,7 @@ export default function AddressPage() {
         if (user?.streetAddress) {
             setAddresses([{
                 id: '1',
-                label: 'Home',
+                label: 'Primary Address',
                 isDefault: true,
                 name: user.username || '',
                 streetAddress: user.streetAddress || '',
@@ -66,11 +66,15 @@ export default function AddressPage() {
         setError(null);
 
         try {
+            // Generate a default label if none is provided
+            const defaultLabel = formData.label?.trim() || 'Primary Address';
+            
             // In a real app, make API call to save address
             const newAddress: Address = {
                 id: editingAddress?.id || Date.now().toString(),
                 isDefault: addresses.length === 0 ? true : false,
-                ...formData
+                ...formData,
+                label: defaultLabel
             };
 
             if (editingAddress) {
@@ -243,12 +247,12 @@ export default function AddressPage() {
                             )}
                             
                             <div className="flex items-center gap-3 mb-4">
-                                {address.label === 'Home' ? (
+                                {address.label === 'Primary Address' || address.label === 'Home' ? (
                                     <FaHome className="w-5 h-5 text-gray-600" />
                                 ) : (
                                     <FaBuilding className="w-5 h-5 text-gray-600" />
                                 )}
-                                <h3 className="font-medium text-gray-900">{address.label}</h3>
+                                <h3 className="font-medium text-gray-900">{address.label || 'Primary Address'}</h3>
                             </div>
                             
                             <div className="space-y-2 text-gray-600">
@@ -318,11 +322,10 @@ export default function AddressPage() {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="col-span-2">
                                 <Input
-                                    label="Address Label"
+                                    label="Address Label (Optional)"
                                     value={formData.label}
                                     onChange={(e) => setFormData({ ...formData, label: e.target.value })}
                                     placeholder="Home, Office, etc."
-                                    required
                                 />
                             </div>
                             <div className="col-span-2">
