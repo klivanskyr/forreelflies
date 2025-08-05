@@ -7,7 +7,7 @@ import StoreManagerProductsTable from "@/components/storeManagerHelpers/StoreMan
 import StoreManagerTemplate from "@/components/storeManagerHelpers/StoreManagerTemplate";
 import StoreManagerProductsHeader from "@/components/StoreManagerProductsHeader";
 import { useUser } from "@/contexts/UserContext";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import type { TourStep } from "@/components/storeManagerHelpers/ProductQuickStartGuide";
@@ -86,8 +86,11 @@ function ProductsContent() {
     const [tourStep, setTourStep] = useState(0);
     const [draftProductId, setDraftProductId] = useState<string | null>(null);
 
-    const fetchVendorAndProducts = async () => {
-        if (!user) return;
+    const fetchVendorAndProducts = useCallback(async () => {
+        if (!user) {
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         try {
             // Fetch vendor
@@ -100,9 +103,12 @@ function ProductsContent() {
 
             if (vendorResponse.ok) {
                 const vendorData = await vendorResponse.json();
-                setVendor(vendorData);
+                console.log('Vendor data received:', vendorData);
+                setVendor(vendorData.vendor);
             } else {
-                console.error('Failed to fetch vendor');
+                const errorData = await vendorResponse.json();
+                console.error('Failed to fetch vendor:', vendorResponse.status, errorData);
+                setVendor(undefined);
             }
 
             // Fetch products
@@ -115,16 +121,21 @@ function ProductsContent() {
 
             if (productsResponse.ok) {
                 const productsData = await productsResponse.json();
-                setProducts(productsData);
+                console.log('Products data received:', productsData);
+                setProducts(productsData.data || []);
             } else {
-                console.error('Failed to fetch products');
+                const errorData = await productsResponse.json();
+                console.error('Failed to fetch products:', productsResponse.status, errorData);
+                setProducts([]);
             }
         } catch (error) {
             console.error('Error fetching data:', error);
+            setVendor(undefined);
+            setProducts([]);
         } finally {
             setLoading(false);
         }
-    };
+    }, [user?.uid]);
 
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -136,7 +147,7 @@ function ProductsContent() {
 
     useEffect(() => {
         fetchVendorAndProducts();
-    }, [user]);
+    }, [fetchVendorAndProducts]);
 
     // Prefetch next tour page if tour is active
     useEffect(() => {

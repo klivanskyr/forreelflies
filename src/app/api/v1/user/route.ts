@@ -105,7 +105,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             }
 
             // Create the response with success message
-            const res = NextResponse.json({ message: "Successfully created user and signed in" }, { status: 200 });
+            const res = NextResponse.json({ 
+                message: "Successfully created user and signed in",
+                uid: userRecord.uid,
+                userId: userRecord.uid
+            }, { status: 200 });
             
             // Set the cookie with the same parameters as the sign-in endpoint
             const tokenMatch = setCookie.match(/token=([^;]+)/);

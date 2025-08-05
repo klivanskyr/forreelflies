@@ -218,17 +218,6 @@ function ReviewsContent() {
             <StoreManagerTemplate>
                 <div className="flex items-center justify-center min-h-[60vh]">
                     <div className="text-xl">Loading reviews...</div>
-
-    return (
-        <StoreManagerTemplate>
-            {showTour && (
-                <ProductQuickStartGuide onClose={handleTourFinish} />
-            )}
-            {showTour && (
-                <ProductQuickStartGuide onClose={handleTourFinish} />
-            )}
-        </StoreManagerTemplate>
-    );
                 </div>
             </StoreManagerTemplate>
         );

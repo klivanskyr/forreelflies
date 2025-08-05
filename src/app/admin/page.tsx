@@ -13,6 +13,7 @@ const SECTIONS = [
   { value: "vendor-requests", label: "Vendor Requests" },
   { value: "review-testing", label: "Review Testing" },
   { value: "orders", label: "Orders" },
+  { value: "create-users", label: "Create Users & Vendors" },
 ];
 
 const VENDOR_TABS = [
@@ -115,7 +116,7 @@ export default function AdminPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
-  const [view, setView] = useState<'vendor-requests' | 'review-testing' | 'orders'>("vendor-requests");
+  const [view, setView] = useState<'vendor-requests' | 'review-testing' | 'orders' | 'create-users'>("vendor-requests");
   const [vendorRequests, setVendorRequests] = useState<any[]>([]);
   const [vendorMessage, setVendorMessage] = useState("");
   const [vendorTab, setVendorTab] = useState<'pending' | 'accepted'>("pending");
@@ -161,6 +162,59 @@ export default function AdminPage() {
   const [orderSortDirection, setOrderSortDirection] = useState<'asc' | 'desc'>('desc');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isEditingOrder, setIsEditingOrder] = useState(false);
+
+  // Create Users & Vendors states
+  const [userFormData, setUserFormData] = useState({
+    email: "",
+    password: "",
+    fullName: "",
+    vendorName: "",
+    phoneNumber: "",
+    description: "",
+    address: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    country: "US"
+  });
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [createUserMessage, setCreateUserMessage] = useState("");
+  const [createUserError, setCreateUserError] = useState("");
+
+  // User search states
+  const [userSearchTerm, setUserSearchTerm] = useState("");
+  const [userSearchResults, setUserSearchResults] = useState<any[]>([]);
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [showUserSearchResults, setShowUserSearchResults] = useState(false);
+
+  // Handle clicking outside search results
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.user-search-container')) {
+        setShowUserSearchResults(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Search on every character - REMOVED: now handled directly in onChange
+  // useEffect(() => {
+  //   if (userSearchTerm.length >= 1) {
+  //     handleUserSearch(userSearchTerm);
+  //   } else if (userSearchTerm.length === 0) {
+  //     // Show all users when search term is empty
+  //     handleUserSearch("");
+  //   } else {
+  //     setUserSearchResults([]);
+  //     setShowUserSearchResults(false);
+  //   }
+  // }, [userSearchTerm]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -544,6 +598,256 @@ export default function AdminPage() {
       (aValue > bValue ? 1 : -1) : 
       (aValue < bValue ? 1 : -1);
   });
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsCreatingUser(true);
+    setCreateUserMessage("");
+    setCreateUserError("");
+
+    try {
+      // Step 1: Create user
+      const userResponse = await fetch("/api/v1/user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          email: userFormData.email,
+          password: userFormData.password
+        }),
+      });
+
+      if (!userResponse.ok) {
+        const errorData = await userResponse.json();
+        throw new Error(errorData.error || "Failed to create user");
+      }
+
+      const userData = await userResponse.json();
+      console.log("User created successfully:", userData);
+
+      // Step 2: Create vendor request
+      const vendorRequestResponse = await fetch("/api/v1/vendor/request-vendor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          uid: userData.uid || userData.userId, // Handle different response formats
+          name: userFormData.fullName,
+          storeName: userFormData.vendorName,
+          storeSlug: userFormData.vendorName.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+          storeEmail: userFormData.email,
+          storePhone: userFormData.phoneNumber,
+          storeDescription: userFormData.description,
+          storeStreetAddress: userFormData.address,
+          storeCity: userFormData.city,
+          storeZip: userFormData.zipCode,
+          storeCountry: userFormData.country,
+          storeState: userFormData.state
+        }),
+      });
+
+      if (!vendorRequestResponse.ok) {
+        const errorData = await vendorRequestResponse.json();
+        throw new Error(errorData.message || "Failed to create vendor request");
+      }
+
+      console.log("Vendor request created successfully");
+
+      // Step 3: Automatically approve the vendor
+      const approveResponse = await fetch("/api/v1/vendor/approve-vendor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          uid: userData.uid || userData.userId
+        }),
+      });
+
+      if (!approveResponse.ok) {
+        const errorData = await approveResponse.json();
+        throw new Error(errorData.message || "Failed to approve vendor");
+      }
+
+      const approveData = await approveResponse.json();
+      console.log("Vendor approved successfully:", approveData);
+
+      setCreateUserMessage(`✅ User and vendor created successfully! 
+        User ID: ${userData.uid || userData.userId}
+        Store Name: ${userFormData.vendorName}
+        Stripe Account: ${approveData.vendor?.stripeAccountId || 'Created'}`);
+      
+      // Reset form
+      setUserFormData({
+        email: "",
+        password: "",
+        fullName: "",
+        vendorName: "",
+        phoneNumber: "",
+        description: "",
+        address: "",
+        city: "",
+        state: "",
+        zipCode: "",
+        country: "US"
+      });
+
+    } catch (error) {
+      console.error("Error creating user and vendor:", error);
+      setCreateUserError(error instanceof Error ? error.message : "An error occurred");
+    } finally {
+      setIsCreatingUser(false);
+    }
+  };
+
+  const handleUserSearch = async (searchTerm: string) => {
+    if (!searchTerm.trim() || searchTerm.length < 2) {
+      setUserSearchResults([]);
+      setShowUserSearchResults(false);
+      return;
+    }
+
+    setIsSearchingUsers(true);
+    try {
+      console.log('Searching for users with term:', searchTerm);
+      const response = await fetch(`/api/v1/user/search?q=${encodeURIComponent(searchTerm)}`, {
+        credentials: "include"
+      });
+
+      console.log('Search response status:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Search results:', data);
+        setUserSearchResults(data.users || []);
+        setShowUserSearchResults(true);
+      } else {
+        const errorData = await response.json();
+        console.error('Search failed:', errorData);
+        setUserSearchResults([]);
+        setShowUserSearchResults(false);
+      }
+    } catch (error) {
+      console.error('Error searching users:', error);
+      setUserSearchResults([]);
+      setShowUserSearchResults(false);
+    } finally {
+      setIsSearchingUsers(false);
+    }
+  };
+
+  const handleUserSelect = (user: any) => {
+    // Only allow selection if user can be upgraded
+    if (!user.canUpgrade) {
+      return;
+    }
+    
+    setSelectedUser(user);
+    setUserFormData({
+      email: user.email,
+      password: "", // Don't pre-fill password for security
+      fullName: user.username || user.displayName || "",
+      vendorName: "",
+      phoneNumber: user.phoneNumber || "",
+      description: "",
+      address: user.streetAddress || "",
+      city: user.city || "",
+      state: user.state || "",
+      zipCode: user.zipCode || "",
+      country: user.country || "US"
+    });
+    setUserSearchTerm(user.email);
+    setShowUserSearchResults(false);
+    setCreateUserMessage("");
+    setCreateUserError("");
+  };
+
+  const handleUpgradeToVendor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) {
+      setCreateUserError("Please select a user first");
+      return;
+    }
+
+    setIsCreatingUser(true);
+    setCreateUserMessage("");
+    setCreateUserError("");
+
+    try {
+      // Step 1: Create vendor request
+      const vendorRequestResponse = await fetch("/api/v1/vendor/request-vendor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          uid: selectedUser.uid,
+          name: userFormData.fullName,
+          storeName: userFormData.vendorName,
+          storeSlug: userFormData.vendorName.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+          storeEmail: userFormData.email,
+          storePhone: userFormData.phoneNumber,
+          storeDescription: userFormData.description,
+          storeStreetAddress: userFormData.address,
+          storeCity: userFormData.city,
+          storeZip: userFormData.zipCode,
+          storeCountry: userFormData.country,
+          storeState: userFormData.state
+        }),
+      });
+
+      if (!vendorRequestResponse.ok) {
+        const errorData = await vendorRequestResponse.json();
+        throw new Error(errorData.message || "Failed to create vendor request");
+      }
+
+      console.log("Vendor request created successfully");
+
+      // Step 2: Automatically approve the vendor
+      const approveResponse = await fetch("/api/v1/vendor/approve-vendor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          uid: selectedUser.uid
+        }),
+      });
+
+      if (!approveResponse.ok) {
+        const errorData = await approveResponse.json();
+        throw new Error(errorData.message || "Failed to approve vendor");
+      }
+
+      const approveData = await approveResponse.json();
+      console.log("Vendor approved successfully:", approveData);
+
+      setCreateUserMessage(`✅ User upgraded to vendor successfully! 
+        User ID: ${selectedUser.uid}
+        Store Name: ${userFormData.vendorName}
+        Stripe Account: ${approveData.vendor?.stripeAccountId || 'Created'}`);
+      
+      // Reset form
+      setSelectedUser(null);
+      setUserFormData({
+        email: "",
+        password: "",
+        fullName: "",
+        vendorName: "",
+        phoneNumber: "",
+        description: "",
+        address: "",
+        city: "",
+        state: "",
+        zipCode: "",
+        country: "US"
+      });
+      setUserSearchTerm("");
+
+    } catch (error) {
+      console.error("Error upgrading user to vendor:", error);
+      setCreateUserError(error instanceof Error ? error.message : "An error occurred");
+    } finally {
+      setIsCreatingUser(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -1227,6 +1531,357 @@ export default function AdminPage() {
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+            {view === "create-users" && (
+              <div className="p-6">
+                <h1 className="text-2xl font-bold mb-4">Create Users & Vendors</h1>
+                <p className="text-gray-600 mb-6">Create new users and automatically approve them as vendors, or search for existing users to upgrade them.</p>
+                
+                {/* User Search Section - At the top */}
+                <div className="bg-white border rounded-lg p-6 mb-6">
+                  <h3 className="text-lg font-semibold mb-4">Search Existing Users</h3>
+                  <p className="text-gray-600 mb-4">Search for existing users to upgrade them to vendors. All users are shown, but only non-vendors can be selected for upgrade.</p>
+                  
+                  <div className="relative user-search-container">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Search Users</label>
+                    <input
+                      type="text"
+                      value={userSearchTerm}
+                      onChange={(e) => {
+                        setUserSearchTerm(e.target.value);
+                        // Trigger search immediately on every character
+                        if (e.target.value.length >= 1) {
+                          handleUserSearch(e.target.value);
+                          setShowUserSearchResults(true);
+                        } else if (e.target.value.length === 0) {
+                          handleUserSearch("");
+                          setShowUserSearchResults(true);
+                        } else {
+                          setUserSearchResults([]);
+                          setShowUserSearchResults(false);
+                        }
+                      }}
+                      onFocus={() => {
+                        if (userSearchTerm.length >= 1) {
+                          setShowUserSearchResults(true);
+                        } else if (userSearchTerm.length === 0) {
+                          // Show all users when focused and empty
+                          handleUserSearch("");
+                          setShowUserSearchResults(true);
+                        }
+                      }}
+                      className="w-full border rounded p-2"
+                      placeholder="Type to search users (searches on every character)..."
+                    />
+                    
+                    {/* Search Results Dropdown */}
+                    {showUserSearchResults && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                        {isSearchingUsers ? (
+                          <div className="p-3 text-center text-gray-500">
+                            Searching...
+                          </div>
+                        ) : userSearchResults.length === 0 ? (
+                          <div className="p-3 text-center text-gray-500">
+                            {userSearchTerm.length >= 1 ? "No users found matching your search" : "No users available"}
+                          </div>
+                        ) : (
+                          <>
+                            <div className="p-2 bg-gray-50 text-xs text-gray-600 border-b">
+                              Showing {userSearchResults.length} user{userSearchResults.length !== 1 ? 's' : ''}. Only non-vendors can be selected for upgrade.
+                            </div>
+                            {userSearchResults.map((user) => (
+                              <button
+                                key={user.uid}
+                                type="button"
+                                onClick={() => handleUserSelect(user)}
+                                className={`w-full text-left p-3 hover:bg-gray-100 border-b last:border-b-0 ${
+                                  !user.canUpgrade ? 'opacity-60 cursor-not-allowed bg-gray-50' : 'hover:bg-blue-50'
+                                }`}
+                                disabled={!user.canUpgrade}
+                                title={!user.canUpgrade ? 'This user is already a vendor and cannot be upgraded' : 'Click to select this user for upgrade'}
+                              >
+                                <div className={`font-medium ${!user.canUpgrade ? 'text-gray-500' : 'text-gray-900'}`}>
+                                  {user.email}
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  {user.username && `Username: ${user.username}`}
+                                  {user.vendorSignUpStatus === "submittedApprovalForm" && (
+                                    <span className="ml-2 text-orange-600 font-medium">(Pending Approval)</span>
+                                  )}
+                                  {user.vendorSignUpStatus === "vendorActive" && (
+                                    <span className="ml-2 text-green-600 font-medium">✓ Already a Vendor</span>
+                                  )}
+                                  {user.vendorSignUpStatus === "notStarted" && (
+                                    <span className="ml-2 text-blue-600 font-medium">• Available for Upgrade</span>
+                                  )}
+                                  {!user.canUpgrade && user.vendorSignUpStatus !== "submittedApprovalForm" && (
+                                    <span className="ml-2 text-gray-500">(Cannot Upgrade)</span>
+                                  )}
+                                </div>
+                              </button>
+                            ))}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedUser && (
+                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-medium text-blue-900">Selected User</h4>
+                          <p className="text-sm text-blue-700">{selectedUser.email}</p>
+                          {selectedUser.username && (
+                            <p className="text-sm text-blue-700">Username: {selectedUser.username}</p>
+                          )}
+                          <p className="text-sm text-blue-600 mt-1">
+                            {selectedUser.vendorSignUpStatus === "notStarted" && "• This user will be upgraded to vendor"}
+                            {selectedUser.vendorSignUpStatus === "submittedApprovalForm" && "• This user's pending approval will be automatically approved"}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedUser(null);
+                            setUserSearchTerm("");
+                            setUserFormData({
+                              email: "",
+                              password: "",
+                              fullName: "",
+                              vendorName: "",
+                              phoneNumber: "",
+                              description: "",
+                              address: "",
+                              city: "",
+                              state: "",
+                              zipCode: "",
+                              country: "US"
+                            });
+                          }}
+                          className="text-blue-600 hover:text-blue-800 text-sm"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Create New User Form */}
+                <div className="bg-white border rounded-lg p-6">
+                  <h3 className="text-lg font-semibold mb-4">
+                    {selectedUser 
+                      ? `Upgrade User to Vendor - ${selectedUser.email}`
+                      : "Create New User & Vendor"
+                    }
+                  </h3>
+                  
+                  <form onSubmit={selectedUser ? handleUpgradeToVendor : handleCreateUser} className="space-y-6">
+                    {/* User Information */}
+                    <div>
+                      <h4 className="text-md font-semibold mb-4">User Information</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                          <input
+                            type="email"
+                            required
+                            value={userFormData.email}
+                            onChange={(e) => setUserFormData({...userFormData, email: e.target.value})}
+                            className="w-full border rounded p-2"
+                            placeholder="user@example.com"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                          <input
+                            type="text"
+                            required
+                            value={userFormData.password}
+                            onChange={(e) => setUserFormData({...userFormData, password: e.target.value})}
+                            className="w-full border rounded p-2"
+                            placeholder="Enter password"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                          <input
+                            type="text"
+                            required
+                            value={userFormData.fullName}
+                            onChange={(e) => setUserFormData({...userFormData, fullName: e.target.value})}
+                            className="w-full border rounded p-2"
+                            placeholder="John Doe"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+                          <input
+                            type="tel"
+                            required
+                            value={userFormData.phoneNumber}
+                            onChange={(e) => setUserFormData({...userFormData, phoneNumber: e.target.value})}
+                            className="w-full border rounded p-2"
+                            placeholder="(555) 123-4567"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Vendor Information */}
+                    <div>
+                      <h4 className="text-md font-semibold mb-4">Vendor Information</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Store Name *</label>
+                          <input
+                            type="text"
+                            required
+                            value={userFormData.vendorName}
+                            onChange={(e) => setUserFormData({...userFormData, vendorName: e.target.value})}
+                            className="w-full border rounded p-2"
+                            placeholder="Fly Fishing Store"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Country *</label>
+                          <select
+                            required
+                            value={userFormData.country}
+                            onChange={(e) => setUserFormData({...userFormData, country: e.target.value})}
+                            className="w-full border rounded p-2"
+                          >
+                            <option value="US">United States</option>
+                            <option value="CA">Canada</option>
+                            <option value="UK">United Kingdom</option>
+                            <option value="AU">Australia</option>
+                          </select>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Store Description *</label>
+                        <textarea
+                          required
+                          value={userFormData.description}
+                          onChange={(e) => setUserFormData({...userFormData, description: e.target.value})}
+                          className="w-full border rounded p-2"
+                          rows={3}
+                          placeholder="Describe your store and the products you sell..."
+                        />
+                      </div>
+                    </div>
+
+                    {/* Address Information */}
+                    <div>
+                      <h4 className="text-md font-semibold mb-4">Address Information</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Street Address *</label>
+                          <input
+                            type="text"
+                            required
+                            value={userFormData.address}
+                            onChange={(e) => setUserFormData({...userFormData, address: e.target.value})}
+                            className="w-full border rounded p-2"
+                            placeholder="123 Main Street"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
+                          <input
+                            type="text"
+                            required
+                            value={userFormData.city}
+                            onChange={(e) => setUserFormData({...userFormData, city: e.target.value})}
+                            className="w-full border rounded p-2"
+                            placeholder="New York"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">State/Province *</label>
+                          <input
+                            type="text"
+                            required
+                            value={userFormData.state}
+                            onChange={(e) => setUserFormData({...userFormData, state: e.target.value})}
+                            className="w-full border rounded p-2"
+                            placeholder="NY"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">ZIP/Postal Code *</label>
+                          <input
+                            type="text"
+                            required
+                            value={userFormData.zipCode}
+                            onChange={(e) => setUserFormData({...userFormData, zipCode: e.target.value})}
+                            className="w-full border rounded p-2"
+                            placeholder="10001"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Submit Buttons */}
+                    <div className="flex gap-4">
+                      <button
+                        type="submit"
+                        disabled={isCreatingUser}
+                        className={`px-6 py-2 rounded text-white disabled:bg-gray-400 disabled:cursor-not-allowed ${
+                          selectedUser 
+                            ? 'bg-blue-600 hover:bg-blue-700' 
+                            : 'bg-green-600 hover:bg-green-700'
+                        }`}
+                      >
+                        {isCreatingUser 
+                          ? (selectedUser ? "Upgrading User to Vendor..." : "Creating User & Vendor...")
+                          : (selectedUser ? "Upgrade User to Vendor" : "Create User & Vendor")
+                        }
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedUser(null);
+                          setUserSearchTerm("");
+                          setUserFormData({
+                            email: "",
+                            password: "",
+                            fullName: "",
+                            vendorName: "",
+                            phoneNumber: "",
+                            description: "",
+                            address: "",
+                            city: "",
+                            state: "",
+                            zipCode: "",
+                            country: "US"
+                          });
+                          setCreateUserMessage("");
+                          setCreateUserError("");
+                        }}
+                        className="bg-gray-600 text-white px-6 py-2 rounded hover:bg-gray-700"
+                      >
+                        Clear Form
+                      </button>
+                    </div>
+
+                    {/* Messages */}
+                    {createUserMessage && (
+                      <div className="p-3 bg-green-100 text-green-700 rounded">
+                        {createUserMessage}
+                      </div>
+                    )}
+                    {createUserError && (
+                      <div className="p-3 bg-red-100 text-red-700 rounded">
+                        {createUserError}
+                      </div>
+                    )}
+                  </form>
+                </div>
               </div>
             )}
           </div>
