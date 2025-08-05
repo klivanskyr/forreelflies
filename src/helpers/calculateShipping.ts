@@ -11,6 +11,19 @@ type T = {
 }
 
 export async function calculateShipping(buyer: DbUser, products: Product[]): Promise<[Rate[], string]> {
+    console.log("calculateShipping called with buyer:", {
+        uid: buyer.uid,
+        username: buyer.username,
+        hasAddress: !!(buyer.streetAddress && buyer.city && buyer.state && buyer.zipCode),
+        address: {
+            street: buyer.streetAddress,
+            city: buyer.city,
+            state: buyer.state,
+            zip: buyer.zipCode,
+            country: buyer.country
+        }
+    });
+
     // Create buyer address
     const addressTo = {
         name: buyer.username,
@@ -71,6 +84,12 @@ export async function calculateShipping(buyer: DbUser, products: Product[]): Pro
 
             if (!addressTo.street1 || !addressTo.city || !addressTo.state || !addressTo.zip) {
                 console.error("Incomplete buyer address:", addressTo);
+                console.error("Missing fields:", {
+                    street: !addressTo.street1 ? "MISSING" : "OK",
+                    city: !addressTo.city ? "MISSING" : "OK", 
+                    state: !addressTo.state ? "MISSING" : "OK",
+                    zip: !addressTo.zip ? "MISSING" : "OK"
+                });
                 return null;
             }
 

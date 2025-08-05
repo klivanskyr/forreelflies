@@ -7,14 +7,12 @@ import { useUser } from "@/contexts/UserContext";
 import { toast } from "sonner";
 import { FaSearch, FaSort, FaSortUp, FaSortDown, FaDownload, FaShippingFast, FaEye, FaFilter, FaExternalLinkAlt } from "react-icons/fa";
 import ProductQuickStartGuide, { TourStep } from "@/components/storeManagerHelpers/ProductQuickStartGuide";
-import { OrderProduct } from "@/app/types/types";
+import { OrderProduct, PayoutStatus } from "@/app/types/types";
 
 // Define the types we need
 type SortField = 'purchaseDate' | 'amount' | 'payoutStatus' | 'customerName' | 'products';
 type SortDirection = 'asc' | 'desc';
 type FirestoreTimestamp = { seconds: number; nanoseconds: number };
-
-type PayoutStatus = 'pending' | 'paid' | 'withdrawn';
 
 const orderTourSteps: TourStep[] = [
     {
@@ -59,9 +57,12 @@ interface Order {
     subtotal: number;
     shippingCost: number;
     payoutStatus: PayoutStatus;
+    vendorEarnings?: number;
     trackingNumber?: string;
     shippoLabelUrl?: string;
     shippingStatus?: 'label_failed' | 'label_created' | 'shipped';
+    shippingCarrier?: string;
+    shippingService?: string;
 };
 
 function OrdersContent() {
@@ -212,12 +213,20 @@ function OrdersContent() {
     const getStatusBadgeClass = (status: PayoutStatus) => {
         const baseClasses = 'px-2 py-1 text-xs font-medium rounded-full';
         switch (status) {
-            case 'pending':
+            case 'pending_delivery':
                 return `${baseClasses} bg-yellow-100 text-yellow-800`;
-            case 'paid':
+            case 'pending_holdback':
+                return `${baseClasses} bg-orange-100 text-orange-800`;
+            case 'available':
                 return `${baseClasses} bg-green-100 text-green-800`;
+            case 'admin_approved':
+                return `${baseClasses} bg-purple-100 text-purple-800`;
             case 'withdrawn':
                 return `${baseClasses} bg-blue-100 text-blue-800`;
+            case 'blocked':
+                return `${baseClasses} bg-red-100 text-red-800`;
+            case 'refunded':
+                return `${baseClasses} bg-gray-100 text-gray-800`;
             default:
                 return `${baseClasses} bg-gray-100 text-gray-800`;
         }
@@ -225,19 +234,27 @@ function OrdersContent() {
 
     const getStatusLabel = (status: PayoutStatus) => {
         switch (status) {
-            case 'pending':
-                return 'Pending';
-            case 'paid':
-                return 'Paid';
+            case 'pending_delivery':
+                return 'Pending Delivery';
+            case 'pending_holdback':
+                return 'Pending Holdback';
+            case 'available':
+                return 'Available';
+            case 'admin_approved':
+                return 'Admin Approved';
             case 'withdrawn':
                 return 'Withdrawn';
+            case 'blocked':
+                return 'Blocked';
+            case 'refunded':
+                return 'Refunded';
             default:
                 return 'Unknown';
         }
     };
 
     const canWithdraw = (order: FirestoreOrder) => {
-        return order.payoutStatus === 'paid' && !order.withdrawalPending;
+        return (order.payoutStatus === 'available' || order.payoutStatus === 'admin_approved') && !order.withdrawalPending;
     };
 
     const handleIndividualWithdraw = async (orderId: string) => {
@@ -272,18 +289,18 @@ function OrdersContent() {
         if (!user) return;
         setIsLoading(true);
         try {
-            const response = await fetch(`/api/v1/vendor/retry-shipping/${orderId}`, {
+            const response = await fetch('/api/v1/shipping/retry-label', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    vendorId: user.uid,
+                    orderId: orderId,
                 }),
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Failed to retry shipping label');
-            toast.success('Shipping label retry requested');
+            toast.success('Shipping label created successfully');
             fetchOrders(); // Refresh orders list
         } catch (error) {
             console.error('Error retrying shipping label:', error);
@@ -341,9 +358,13 @@ function OrdersContent() {
                                         className="pl-4 pr-8 py-2 border border-gray-300 rounded-lg appearance-none bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     >
                                         <option value="all">All Orders</option>
-                                        <option value="pending">Pending</option>
-                                        <option value="paid">Paid</option>
+                                        <option value="pending_delivery">Pending Delivery</option>
+                                        <option value="pending_holdback">Pending Holdback</option>
+                                        <option value="available">Available</option>
+                                        <option value="admin_approved">Admin Approved</option>
                                         <option value="withdrawn">Withdrawn</option>
+                                        <option value="blocked">Blocked</option>
+                                        <option value="refunded">Refunded</option>
                                     </select>
                                     <FaFilter className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                                 </div>
@@ -550,6 +571,36 @@ function OrdersContent() {
                                             </div>
                                         </div>
 
+                                        {/* Shipping Status */}
+                                        <div>
+                                            <h3 className="text-sm font-medium text-gray-500">Shipping Status</h3>
+                                            <div className="mt-1 text-sm text-gray-900">
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                                        selectedOrder.shippingStatus === 'label_created' ? 'bg-green-100 text-green-800' :
+                                                        selectedOrder.shippingStatus === 'label_failed' ? 'bg-red-100 text-red-800' :
+                                                        selectedOrder.shippingStatus === 'shipped' ? 'bg-blue-100 text-blue-800' :
+                                                        'bg-gray-100 text-gray-800'
+                                                    }`}>
+                                                        {selectedOrder.shippingStatus === 'label_created' ? 'Label Created' :
+                                                         selectedOrder.shippingStatus === 'label_failed' ? 'Label Failed' :
+                                                         selectedOrder.shippingStatus === 'shipped' ? 'Shipped' :
+                                                         'No Label'}
+                                                    </span>
+                                                    {selectedOrder.trackingNumber && (
+                                                        <span className="text-xs text-gray-500">
+                                                            Tracking: {selectedOrder.trackingNumber}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {selectedOrder.shippingCarrier && selectedOrder.shippingService && (
+                                                    <div className="text-xs text-gray-500 mt-1">
+                                                        {selectedOrder.shippingCarrier} - {selectedOrder.shippingService}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
                                         {/* Order Totals */}
                                         <div className="mt-6 border-t pt-4 space-y-2">
                                             <div className="flex justify-between text-sm">
@@ -612,17 +663,17 @@ function OrdersContent() {
                                                     className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
                                                 >
                                                     <FaDownload className="w-4 h-4" />
-                                                    Withdraw Funds (${(selectedOrder.amount * 0.9).toFixed(2)})
+                                                    Withdraw Funds (${selectedOrder.vendorEarnings?.toFixed(2) || (selectedOrder.amount * 0.9).toFixed(2)})
                                                 </button>
                                             )}
                                             
-                                            {selectedOrder.shippingStatus === 'label_failed' && (
+                                            {(!selectedOrder.shippoLabelUrl || selectedOrder.shippingStatus === 'label_failed') && (
                                                 <button
                                                     onClick={() => retryShippingLabel(selectedOrder.id)}
                                                     className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors flex items-center gap-2"
                                                 >
                                                     <FaShippingFast className="w-4 h-4" />
-                                                    Retry Shipping Label
+                                                    {selectedOrder.shippingStatus === 'label_failed' ? 'Retry Shipping Label' : 'Create Shipping Label'}
                                                 </button>
                                             )}
                                             

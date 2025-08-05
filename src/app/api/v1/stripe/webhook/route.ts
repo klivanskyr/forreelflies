@@ -412,14 +412,23 @@ export async function POST(request: NextRequest) {
     const isPaymentEvent = event.type.startsWith('payment_intent.') || event.type.startsWith('charge.') || event.type.startsWith('payment.');
     const isAccountEvent = event.type.startsWith('account.') || event.type.startsWith('capability.') || event.type.startsWith('person.') || event.type === 'financial_connections.account.created';
     
-    if ((isCheckoutEvent || isPaymentEvent) && webhookSecret !== 'PERSONAL') {
-        console.error(`❌ Wrong webhook secret used for ${event.type}. Expected PERSONAL, got ${webhookSecret}`);
-        return NextResponse.json({ error: 'Wrong webhook endpoint for this event type' }, { status: 400 });
-    }
+    // For local development with stripe listen, be more flexible with webhook secret validation
+    const isLocalDevelopment = process.env.NODE_ENV === 'development';
     
-    if (isAccountEvent && webhookSecret !== 'CONNECTED') {
-        console.error(`❌ Wrong webhook secret used for ${event.type}. Expected CONNECTED, got ${webhookSecret}`);
-        return NextResponse.json({ error: 'Wrong webhook endpoint for this event type' }, { status: 400 });
+    if (isLocalDevelopment) {
+        // In development, allow any webhook secret to work for any event type
+        console.log(`🔧 Local development mode - allowing ${event.type} with ${webhookSecret} secret`);
+    } else {
+        // In production, enforce strict webhook secret validation
+        if ((isCheckoutEvent || isPaymentEvent) && webhookSecret !== 'PERSONAL') {
+            console.error(`❌ Wrong webhook secret used for ${event.type}. Expected PERSONAL, got ${webhookSecret}`);
+            return NextResponse.json({ error: 'Wrong webhook endpoint for this event type' }, { status: 400 });
+        }
+        
+        if (isAccountEvent && webhookSecret !== 'CONNECTED') {
+            console.error(`❌ Wrong webhook secret used for ${event.type}. Expected CONNECTED, got ${webhookSecret}`);
+            return NextResponse.json({ error: 'Wrong webhook endpoint for this event type' }, { status: 400 });
+        }
     }
     
     console.log('✅ Webhook secret validation passed');

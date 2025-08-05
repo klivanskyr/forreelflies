@@ -23,7 +23,7 @@ interface ShippingAddressModalProps {
 }
 
 export default function ShippingAddressModal({ isOpen, onClose, onAddressAdded }: ShippingAddressModalProps) {
-    const { data: session } = useSession()
+    const { data: session, update } = useSession()
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [addresses, setAddresses] = useState<Address[]>([])
@@ -35,39 +35,57 @@ export default function ShippingAddressModal({ isOpen, onClose, onAddressAdded }
         city: '',
         state: '',
         zipCode: '',
-        country: 'US'
+        country: 'US',
+        phone: ''
     })
 
     useEffect(() => {
-        // In a real app, fetch addresses from API
-        // For now, create a mock address if user has address data
-        if (session?.user?.streetAddress) {
-            // Add debouncing to prevent excessive calls
-            const timeoutId = setTimeout(() => {
-                setAddresses([{
-                    id: '1',
-                    label: 'Primary Address',
-                    isDefault: true,
-                    name: session.user.username || '',
-                    streetAddress: session.user.streetAddress || '',
-                    city: session.user.city || '',
-                    state: session.user.state || '',
-                    zipCode: session.user.zipCode || '',
-                    country: session.user.country || 'US',
-                    phone: session.user.phoneNumber || ''
-                }]);
-            }, 100);
+        // Auto-fill form with existing address data when modal opens
+        if (session?.user?.streetAddress && isOpen) {
+            setFormData({
+                label: 'Primary Address',
+                name: session.user.username || '',
+                streetAddress: session.user.streetAddress || '',
+                city: session.user.city || '',
+                state: session.user.state || '',
+                zipCode: session.user.zipCode || '',
+                country: session.user.country || 'US',
+                phone: session.user.phoneNumber || ''
+            });
             
-            return () => clearTimeout(timeoutId);
+            // Create address object for display
+            const existingAddress = {
+                id: '1',
+                label: 'Primary Address',
+                isDefault: true,
+                name: session.user.username || '',
+                streetAddress: session.user.streetAddress || '',
+                city: session.user.city || '',
+                state: session.user.state || '',
+                zipCode: session.user.zipCode || '',
+                country: session.user.country || 'US',
+                phone: session.user.phoneNumber || ''
+            };
+            
+            setAddresses([existingAddress]);
+            
+            // Auto-select the existing address if it's complete
+            if (session.user.streetAddress && session.user.city && session.user.state && session.user.zipCode) {
+                // Auto-close modal and trigger address added callback
+                setTimeout(() => {
+                    onAddressAdded();
+                    onClose();
+                }, 500);
+            }
         }
-    }, [session?.user?.streetAddress, session?.user?.username, session?.user?.city, session?.user?.state, session?.user?.zipCode, session?.user?.country, session?.user?.phoneNumber]);
+    }, [session?.user?.streetAddress, session?.user?.username, session?.user?.city, session?.user?.state, session?.user?.zipCode, session?.user?.country, session?.user?.phoneNumber, isOpen]);
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!session?.user) return
+        e.preventDefault();
+        if (!session?.user) return;
 
-        setLoading(true)
-        setError(null)
+        setLoading(true);
+        setError(null);
 
         try {
             // Generate a default label if none is provided
@@ -92,28 +110,40 @@ export default function ShippingAddressModal({ isOpen, onClose, onAddressAdded }
                     city: formData.city,
                     state: formData.state,
                     zipCode: formData.zipCode,
-                    country: formData.country
+                    country: formData.country,
+                    phoneNumber: formData.phone
                 })
-            })
+            });
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || 'Failed to update address')
+                throw new Error(errorData.error || 'Failed to update address');
             }
 
-            setAddresses(prev => [...prev, newAddress])
+            setAddresses(prev => [...prev, newAddress]);
             toast.success('Address added successfully!');
-            onAddressAdded()
-            setShowAddForm(false)
+            
+            // Force session refresh by calling update with new data
+            await update({
+                streetAddress: formData.streetAddress,
+                city: formData.city,
+                state: formData.state,
+                zipCode: formData.zipCode,
+                country: formData.country,
+                phoneNumber: formData.phone || session?.user?.phoneNumber
+            });
+            
+            onAddressAdded();
+            setShowAddForm(false);
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Failed to save address';
             console.error('Address save error:', err);
             toast.error(errorMessage);
-            setError(errorMessage)
+            setError(errorMessage);
         } finally {
-            setLoading(false)
+            setLoading(false);
         }
-    }
+    };
 
     const handleSelectAddress = async (address: Address) => {
         if (!session?.user) return;
@@ -144,6 +174,17 @@ export default function ShippingAddressModal({ isOpen, onClose, onAddressAdded }
             }
 
             toast.success('Address selected successfully!');
+            
+            // Force session refresh by calling update with new data
+            await update({
+                streetAddress: address.streetAddress,
+                city: address.city,
+                state: address.state,
+                zipCode: address.zipCode,
+                country: address.country,
+                phoneNumber: address.phone
+            });
+            
             onAddressAdded();
             onClose();
         } catch (err) {
@@ -370,6 +411,22 @@ export default function ShippingAddressModal({ isOpen, onClose, onAddressAdded }
                                         <option value="MX">Mexico</option>
                                     </select>
                                 </div>
+                            </div>
+
+                            {/* Phone Number */}
+                            <div>
+                                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Phone Number (Optional)
+                                </label>
+                                <input
+                                    type="tel"
+                                    id="phone"
+                                    name="phone"
+                                    value={formData.phone}
+                                    onChange={handleInputChange}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                    placeholder="(555) 123-4567"
+                                />
                             </div>
 
                             {/* Shipping Info */}

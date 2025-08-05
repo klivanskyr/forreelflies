@@ -1,11 +1,22 @@
 import React, { useState } from "react";
 import StoreManagerSidebar from "./StoreManagerSidebar";
+import { useUser } from "@/contexts/UserContext";
+import NoXRedirect from "@/components/NoXRedirect";
 
 export default function StoreManagerTemplate({ children }: { children: React.ReactNode }) {
+    const { user } = useUser();
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
+    // Only allow approved vendors
+    const isApprovedVendor = user && (
+        user.vendorSignUpStatus === "vendorActive" ||
+        user.vendorSignUpStatus === "onboardingStarted" ||
+        user.vendorSignUpStatus === "onboardingCompleted"
+    );
+
     return (
-        <div className="w-full max-w-[1400px] mx-auto p-4 min-h-screen">
+        <NoXRedirect x={isApprovedVendor} redirectUrl="/my-account">
+            <div className="w-full max-w-[1400px] mx-auto p-4 min-h-screen">
             <div className="flex items-center justify-between mb-6">
                 <h1 className="text-3xl font-bold text-greenPrimary">Vendor Dashboard</h1>
                 {/* Hamburger for mobile */}
@@ -59,5 +70,6 @@ export default function StoreManagerTemplate({ children }: { children: React.Rea
                 }
             `}</style>
         </div>
+        </NoXRedirect>
     );
 }
