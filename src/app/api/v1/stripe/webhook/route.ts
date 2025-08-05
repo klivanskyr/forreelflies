@@ -6,6 +6,8 @@ import { Order } from "@/app/types/types";
 import shippo from "@/lib/shippo";
 import type { Rate, Parcel } from "shippo";
 
+export const dynamic = 'force-dynamic';
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
 
 // Helper function to create shipping label

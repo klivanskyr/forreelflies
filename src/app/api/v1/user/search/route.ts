@@ -3,6 +3,8 @@ import { requireAdmin } from "@/app/api/utils/adminAuth";
 import { db } from "@/lib/firebase";
 import { collection, query, where, getDocs, limit } from "firebase/firestore";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest): Promise<NextResponse> {
     try {
         // Check if user is authenticated as admin

@@ -5,6 +5,8 @@ import shippo from "@/lib/shippo";
 import crypto from "crypto";
 import { Order } from "@/app/types/types";
 
+export const dynamic = 'force-dynamic';
+
 // Shippo webhook secret should be set in environment variables
 const SHIPPO_WEBHOOK_SECRET = process.env.SHIPPO_WEBHOOK_SECRET;
 

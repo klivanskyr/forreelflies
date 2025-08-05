@@ -1,15 +1,15 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { motion } from "framer-motion";
 import Input from "@/components/inputs/Input";
 import Button from "@/components/buttons/Button";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { getAuth, confirmPasswordReset, verifyPasswordResetCode } from "firebase/auth";
+import { getAuth, confirmPasswordReset, verifyPasswordResetCode, ActionCodeInfo } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,13 +31,13 @@ export default function ResetPasswordPage() {
 
             try {
                 // Use Firebase client SDK to verify the reset code
-                const actionCodeInfo = await verifyPasswordResetCode(auth, oobCode);
+                const email = await verifyPasswordResetCode(auth, oobCode);
                 setIsValid(true);
-                setEmail(actionCodeInfo.email || "");
+                setEmail(email || "");
             } catch (error: any) {
                 console.error("Error validating reset code:", error);
                 setIsValid(false);
-            } finally {
+                setEmail("");
                 setIsValidating(false);
             }
         };
@@ -236,4 +236,25 @@ export default function ResetPasswordPage() {
             </div>
         </div>
     );
-} 
+}
+
+export default function ResetPasswordPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+                <div className="sm:mx-auto sm:w-full sm:max-w-md">
+                    <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+                            <h2 className="mt-4 text-xl font-medium text-gray-900">
+                                Loading...
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }>
+            <ResetPasswordContent />
+        </Suspense>
+    );
+}
