@@ -624,87 +624,53 @@ export default function Page() {
                                     </div>
 
                                     {/* Quantity */}
-                                    <div className="w-full md:w-1/6 flex flex-col items-center mt-4 md:mt-0 space-y-2">
-                                        {/* Base Quantity */}
-                                        <label className="block text-sm font-medium text-gray-900">
-                                            Base Quantity
+                                    <div className="w-full md:w-1/6 flex flex-col items-center mt-4 md:mt-0">
+                                        <label className="block text-sm font-medium text-gray-900 mb-2">
+                                            Quantity
                                         </label>
-                                        <Dropdown
-                                            options={(item.product.quantityOptions || [1]).map(qty => ({
-                                                value: qty.toString(),
-                                                label: qty.toString()
-                                            }))}
-                                            selected={{ 
-                                                value: (item.product.quantityOptions?.[0] || 1).toString(), 
-                                                label: (item.product.quantityOptions?.[0] || 1).toString() 
-                                            }}
-                                            setSelected={(value) => {
-                                                const baseQty = parseInt(value);
-                                                const currentMultiplier = Math.round(item.quantity / (item.product.quantityOptions?.[0] || 1));
-                                                const newQuantity = baseQty * currentMultiplier;
-                                                handleUpdateQuantity(item.product.id, newQuantity);
-                                            }}
-                                            classNames={{ select: "w-full" }}
-                                        />
-                                        
-                                        <div className="mt-4">
-                                            <label className="block text-sm font-medium text-gray-900">
-                                                Quantity Multiplier
-                                            </label>
-                                            <div className="flex items-center space-x-3 mt-2">
-                                                <div className="flex items-center border border-gray-300 rounded-lg">
-                                                    <button 
-                                                        className="p-2 hover:bg-gray-50 transition-colors disabled:opacity-50"
-                                                        onClick={() => {
-                                                            const baseQty = item.product.quantityOptions?.[0] || 1;
-                                                            const currentMultiplier = Math.round(item.quantity / baseQty);
-                                                            if (currentMultiplier > 1) {
-                                                                handleUpdateQuantity(item.product.id, baseQty * (currentMultiplier - 1));
-                                                            }
-                                                        }}
-                                                        disabled={item.quantity <= (item.product.quantityOptions?.[0] || 1) || updatingItems.has(item.product.id)}
-                                                    >
-                                                        <FaMinus className="w-3 h-3 text-gray-600" />
-                                                    </button>
-                                                    <input
-                                                        type="number"
-                                                        value={Math.round(item.quantity / (item.product.quantityOptions?.[0] || 1))}
-                                                        onChange={(e) => {
-                                                            const value = e.target.value;
-                                                            if (value === "") return;
-                                                            
-                                                            const numValue = parseInt(value);
-                                                            if (!isNaN(numValue) && numValue >= 1) {
-                                                                const baseQty = item.product.quantityOptions?.[0] || 1;
-                                                                handleUpdateQuantity(item.product.id, baseQty * numValue);
-                                                            }
-                                                        }}
-                                                        onBlur={(e) => {
-                                                            const value = e.target.value;
-                                                            if (value === "" || parseInt(value) < 1) {
-                                                                const baseQty = item.product.quantityOptions?.[0] || 1;
-                                                                handleUpdateQuantity(item.product.id, baseQty);
-                                                            }
-                                                        }}
-                                                        className="px-4 py-2 text-center w-20 focus:outline-none font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                                        min={1}
-                                                    />
-                                                    <button 
-                                                        className="p-2 hover:bg-gray-50 transition-colors disabled:opacity-50"
-                                                        onClick={() => {
-                                                            const baseQty = item.product.quantityOptions?.[0] || 1;
-                                                            const currentMultiplier = Math.round(item.quantity / baseQty);
-                                                            handleUpdateQuantity(item.product.id, baseQty * (currentMultiplier + 1));
-                                                        }}
-                                                        disabled={updatingItems.has(item.product.id)}
-                                                    >
-                                                        <FaPlus className="w-3 h-3 text-gray-600" />
-                                                    </button>
-                                                </div>
-                                                <div className="text-sm text-gray-600">
-                                                    <span>{item.product.quantityOptions?.[0] || 1} × {Math.round(item.quantity / (item.product.quantityOptions?.[0] || 1))} = {item.quantity} items</span>
-                                                </div>
-                                            </div>
+                                        <div className="flex items-center border border-gray-300 rounded-lg">
+                                            <button 
+                                                className="p-2 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                                                onClick={() => {
+                                                    if (item.quantity > 1) {
+                                                        handleUpdateQuantity(item.product.id, item.quantity - 1);
+                                                    }
+                                                }}
+                                                disabled={item.quantity <= 1 || updatingItems.has(item.product.id)}
+                                            >
+                                                <FaMinus className="w-3 h-3 text-gray-600" />
+                                            </button>
+                                            <input
+                                                type="number"
+                                                value={item.quantity}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    if (value === "") return;
+                                                    
+                                                    const numValue = parseInt(value);
+                                                    if (!isNaN(numValue) && numValue >= 1) {
+                                                        handleUpdateQuantity(item.product.id, numValue);
+                                                    }
+                                                }}
+                                                onBlur={(e) => {
+                                                    const value = e.target.value;
+                                                    if (value === "" || parseInt(value) < 1) {
+                                                        handleUpdateQuantity(item.product.id, 1);
+                                                    }
+                                                }}
+                                                className="px-4 py-2 text-center w-20 focus:outline-none font-medium [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                min={1}
+                                                disabled={updatingItems.has(item.product.id)}
+                                            />
+                                            <button 
+                                                className="p-2 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                                                onClick={() => {
+                                                    handleUpdateQuantity(item.product.id, item.quantity + 1);
+                                                }}
+                                                disabled={updatingItems.has(item.product.id)}
+                                            >
+                                                <FaPlus className="w-3 h-3 text-gray-600" />
+                                            </button>
                                         </div>
                                     </div>
 
@@ -732,7 +698,7 @@ export default function Page() {
                                 <button 
                                     onClick={handleClearCart}
                                     disabled={clearingCart}
-                                    className="text-red-500 mt-4 md:mt-0 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="text-red-500 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {clearingCart ? 'Clearing...' : 'Clear Shopping Cart'}
                                 </button>
@@ -790,6 +756,11 @@ export default function Page() {
                                     <div className="text-xs text-green-700 mt-1">
                                         {session.user.streetAddress}, {session.user.city}, {session.user.state} {session.user.zipCode}
                                     </div>
+                                    {session.user.phoneNumber && (
+                                        <div className="text-xs text-green-600 mt-1">
+                                            📞 {session.user.phoneNumber}
+                                        </div>
+                                    )}
                                     <div className="text-xs text-green-600 mt-1">
                                         {shippingCalculationStatus === 'calculating' ? 'Calculating shipping rates...' :
                                          shippingCalculationStatus === 'success' ? 'Shipping rates calculated' :

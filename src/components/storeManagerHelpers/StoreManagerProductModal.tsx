@@ -11,7 +11,7 @@ import Modal from "../modal/Modal";
 import Textarea from "../Textarea";
 import FormFieldTooltip from "../inputs/FormFieldTooltip";
 import { StockStatus } from "@/app/types/types";
-import { uploadFileAndGetUrl } from "@/lib/firebase";
+import { uploadFileAndGetUrl, testFirebaseStorageConnection } from "@/lib/firebase";
 import { toast } from "sonner";
 import { FaCamera, FaUpload, FaTrash, FaInfoCircle, FaLightbulb } from "react-icons/fa";
 import { ref, uploadBytes, getStorage } from "firebase/storage";
@@ -83,6 +83,8 @@ export default function StoreManagerProductModal({
     const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     const MAX_FILES = 10;
     const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+
+
 
     // Preview selected images
     React.useEffect(() => {
@@ -295,14 +297,9 @@ export default function StoreManagerProductModal({
             
             if (input.images && input.images.length > 0) {
                 // Test Firebase Storage connectivity first
-                try {
-                    console.log('Testing Firebase Storage connectivity...');
-                    const testRef = ref(getStorage(), 'test-connection.txt');
-                    await uploadBytes(testRef, new Blob(['test'], { type: 'text/plain' }));
-                    console.log('Firebase Storage connection test successful');
-                } catch (connectionError) {
-                    console.error('Firebase Storage connection test failed:', connectionError);
-                    toast.error('Cannot connect to file storage. Please check your internet connection and try again.', { id: 'upload-toast' });
+                const isConnected = await testFirebaseStorageConnection();
+                if (!isConnected) {
+                    toast.error('Firebase Storage is not available. Please check your configuration.', { id: 'upload-toast' });
                     setUploading(false);
                     setUploadAbortController(null);
                     return;
@@ -310,42 +307,28 @@ export default function StoreManagerProductModal({
 
                 toast.loading(`Uploading ${input.images.length} images...`, { id: 'upload-toast' });
                 
-                // Upload images with retry logic
-                const uploadWithRetry = async (file: File, index: number, retries = 2): Promise<string> => {
-                    for (let attempt = 1; attempt <= retries; attempt++) {
-                        try {
-                            // Check if upload was cancelled
-                            if (abortController.signal.aborted) {
-                                throw new Error('Upload cancelled');
-                            }
-                            
-                            console.log(`Starting upload for image ${index + 1} (attempt ${attempt}): ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
-                            
-                            // Add a small delay between attempts to avoid overwhelming Firebase
-                            if (attempt > 1) {
-                                await new Promise(resolve => setTimeout(resolve, 2000));
-                            }
-                            
-                            const url = await uploadFileAndGetUrl(file, `products/${input.name}_${Date.now()}_${file.name}`);
-                            console.log(`Successfully uploaded image ${index + 1}: ${file.name}`);
-                            return url;
-                        } catch (uploadError) {
-                            console.error(`Failed to upload image ${index + 1} (attempt ${attempt}):`, uploadError);
-                            if (uploadError instanceof Error && uploadError.message === 'Upload cancelled') {
-                                throw uploadError;
-                            }
-                            if (attempt === retries) {
-                                const errorMessage = uploadError instanceof Error ? uploadError.message : 'Unknown error';
-                                throw new Error(`Failed to upload "${file.name}" after ${retries} attempts: ${errorMessage}`);
-                            }
-                            // Wait before retry with exponential backoff
-                            await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt - 1)));
+                // Upload images with improved error handling and fallback
+                const uploadPromises = input.images.map(async (file, index) => {
+                    try {
+                        // Check if upload was cancelled
+                        if (abortController.signal.aborted) {
+                            throw new Error('Upload cancelled');
                         }
+                        
+                        console.log(`Starting upload for image ${index + 1}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+                        
+                        // Upload to Firebase Storage
+                        const url = await uploadFileAndGetUrl(file, `products/${input.name}_${Date.now()}_${file.name}`, 3);
+                        console.log(`Successfully uploaded image ${index + 1} to Firebase Storage: ${file.name}`);
+                        return url;
+                    } catch (uploadError) {
+                        console.error(`Failed to upload image ${index + 1}:`, uploadError);
+                        if (uploadError instanceof Error && uploadError.message === 'Upload cancelled') {
+                            throw uploadError;
+                        }
+                        throw new Error(`Failed to upload "${file.name}": ${uploadError instanceof Error ? uploadError.message : 'Unknown error'}`);
                     }
-                    throw new Error(`Failed to upload "${file.name}" after ${retries} attempts`);
-                };
-
-                const uploadPromises = input.images.map((file, index) => uploadWithRetry(file, index));
+                });
 
                 try {
                     imageUrls = await Promise.all(uploadPromises);
@@ -358,9 +341,22 @@ export default function StoreManagerProductModal({
                         toast.error(`Image upload failed: ${errorMessage}`, { id: 'upload-toast' });
                         console.error('Upload error details:', uploadError);
                         
-                        // Show troubleshooting tips
+                        // Show specific troubleshooting tips based on error
                         setTimeout(() => {
-                            toast.error('Troubleshooting: Check internet connection, try smaller images, or contact support if the issue persists.', { 
+                            let troubleshootingMessage = 'Troubleshooting: ';
+                            if (errorMessage.includes('permission') || errorMessage.includes('unauthorized')) {
+                                troubleshootingMessage += 'Please check your authentication and try logging out and back in.';
+                            } else if (errorMessage.includes('quota')) {
+                                troubleshootingMessage += 'Storage quota exceeded. Please contact support.';
+                            } else if (errorMessage.includes('timeout')) {
+                                troubleshootingMessage += 'Upload timed out. Please check your internet connection and try smaller images.';
+                            } else if (errorMessage.includes('bucket not found') || errorMessage.includes('storage/unknown')) {
+                                troubleshootingMessage += 'Firebase Storage is not properly configured. Images are being stored as base64 (temporary solution).';
+                            } else {
+                                troubleshootingMessage += 'Check internet connection, try smaller images, or contact support if the issue persists.';
+                            }
+                            
+                            toast.error(troubleshootingMessage, { 
                                 id: 'troubleshooting-toast',
                                 duration: 8000 
                             });

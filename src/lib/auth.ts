@@ -97,7 +97,10 @@ export const authOptions: NextAuthOptions = {
         token.country = user.country
         token.photoURL = user.photoURL
         token.isAdmin = user.isAdmin
-        token.isVendor = user.isVendor
+        // Calculate vendor status based on vendorSignUpStatus
+        token.isVendor = (user.vendorSignUpStatus || "notStarted") === 'vendorActive' || 
+                        (user.vendorSignUpStatus || "notStarted") === 'onboardingStarted' || 
+                        (user.vendorSignUpStatus || "notStarted") === 'onboardingCompleted'
         // Add timestamp for caching
         token.lastUpdated = Date.now()
       }
@@ -140,6 +143,7 @@ export const authOptions: NextAuthOptions = {
             
             // Update token with fresh data and timestamp
             token.lastUpdated = Date.now()
+            token.isVendor = session.user.isVendor
           } else {
             // Fallback to token data if document doesn't exist
             session.user.uid = token.uid as string

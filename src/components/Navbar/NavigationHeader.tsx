@@ -45,6 +45,7 @@ export default function NavigationHeader({ isScrolled }: { isScrolled: boolean }
                         width={150} 
                         height={150} 
                         className={`transition-all duration-300 ${isScrolled ? 'w-[90px]' : 'w-[105px]'} h-auto`}
+                        style={{ width: 'auto', height: 'auto' }}
                     />
                 </div>
 

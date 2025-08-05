@@ -14,15 +14,11 @@ export default function DashboardTemplate({ children }: DashboardTemplateProps) 
   const { user } = useUser();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Only allow vendor users
-  const isVendor = user && (
-    user.vendorSignUpStatus === "vendorActive" ||
-    user.vendorSignUpStatus === "onboardingStarted" ||
-    user.vendorSignUpStatus === "onboardingCompleted"
-  );
+  // Allow all authenticated users
+  const isAuthenticated = !!user;
 
   return (
-    <NoXRedirect x={isVendor} redirectUrl="/">
+    <NoXRedirect x={isAuthenticated} redirectUrl="/?login=true">
       <div className="flex min-h-screen bg-gray-50 flex-col md:flex-row">
         {/* Mobile Topbar */}
         <div className="flex md:hidden items-center justify-between px-4 py-3 bg-white border-b shadow-sm sticky top-0 z-30">
@@ -33,7 +29,7 @@ export default function DashboardTemplate({ children }: DashboardTemplateProps) 
             <div>
               <h2 className="text-base font-semibold text-gray-900 truncate">{user?.email}</h2>
               <p className="text-xs text-gray-500">
-                {isVendor ? "Vendor Account" : "Customer Account"}
+                {user?.vendorSignUpStatus === "vendorActive" || user?.vendorSignUpStatus === "onboardingStarted" || user?.vendorSignUpStatus === "onboardingCompleted" ? "Vendor Account" : "Customer Account"}
               </p>
             </div>
           </div>
@@ -57,7 +53,7 @@ export default function DashboardTemplate({ children }: DashboardTemplateProps) 
                 <div>
                   <h2 className="text-base font-semibold text-gray-900 truncate">{user?.email}</h2>
                   <p className="text-xs text-gray-500">
-                    {isVendor ? "Vendor Account" : "Customer Account"}
+                    {user?.vendorSignUpStatus === "vendorActive" || user?.vendorSignUpStatus === "onboardingStarted" || user?.vendorSignUpStatus === "onboardingCompleted" ? "Vendor Account" : "Customer Account"}
                   </p>
                 </div>
               </div>
@@ -85,7 +81,7 @@ export default function DashboardTemplate({ children }: DashboardTemplateProps) 
                   <div>
                     <h2 className="text-base font-semibold text-gray-900 truncate">{user?.email}</h2>
                     <p className="text-xs text-gray-500">
-                      {isVendor ? "Vendor Account" : "Customer Account"}
+                      {user?.vendorSignUpStatus === "vendorActive" || user?.vendorSignUpStatus === "onboardingStarted" || user?.vendorSignUpStatus === "onboardingCompleted" ? "Vendor Account" : "Customer Account"}
                     </p>
                   </div>
                 </div>
