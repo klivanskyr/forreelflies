@@ -4,8 +4,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/app/api/utils/withRole";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
+    console.log("🔍 Cart API called");
     const user = await requireRole(request, "user");
     if (user instanceof NextResponse) return user;
+    console.log("🔍 User authenticated:", user.uid);
     try {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get("id")
@@ -18,6 +20,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         const cart = userCartDocs.docs.map(doc => { 
             return { id: doc.id, quantity: doc.data().quantity }
         });
+
+        console.log("🔍 Cart items found:", cart.length, "items");
 
         return NextResponse.json({ data: cart }, { status: 200 });
     } catch (error) {

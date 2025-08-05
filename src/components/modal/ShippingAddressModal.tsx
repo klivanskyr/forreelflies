@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 
 type Address = {
     id: string;
-    label: string;
+    label?: string;
     isDefault: boolean;
     name: string;
     streetAddress: string;
@@ -46,7 +46,7 @@ export default function ShippingAddressModal({ isOpen, onClose, onAddressAdded }
             const timeoutId = setTimeout(() => {
                 setAddresses([{
                     id: '1',
-                    label: 'Home',
+                    label: 'Primary Address',
                     isDefault: true,
                     name: session.user.username || '',
                     streetAddress: session.user.streetAddress || '',
@@ -70,10 +70,14 @@ export default function ShippingAddressModal({ isOpen, onClose, onAddressAdded }
         setError(null)
 
         try {
+            // Generate a default label if none is provided
+            const defaultLabel = formData.label.trim() || 'Primary Address';
+            
             const newAddress: Address = {
                 id: Date.now().toString(),
                 isDefault: addresses.length === 0,
-                ...formData
+                ...formData,
+                label: defaultLabel
             };
 
             const response = await fetch('/api/v1/user', {
@@ -206,12 +210,12 @@ export default function ShippingAddressModal({ isOpen, onClose, onAddressAdded }
                                     )}
                                     
                                     <div className="flex items-center gap-3 mb-4">
-                                        {address.label === 'Home' ? (
+                                        {address.label === 'Primary Address' || address.label === 'Home' ? (
                                             <FaHome className="w-5 h-5 text-gray-600" />
                                         ) : (
                                             <FaBuilding className="w-5 h-5 text-gray-600" />
                                         )}
-                                        <h3 className="font-medium text-gray-900">{address.label}</h3>
+                                        <h3 className="font-medium text-gray-900">{address.label || 'Primary Address'}</h3>
                                     </div>
                                     
                                     <div className="space-y-1 text-gray-600 text-sm">
@@ -245,13 +249,12 @@ export default function ShippingAddressModal({ isOpen, onClose, onAddressAdded }
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label htmlFor="label" className="block text-sm font-medium text-gray-700 mb-1">
-                                        Address Label *
+                                        Address Label (Optional)
                                     </label>
                                     <input
                                         type="text"
                                         id="label"
                                         name="label"
-                                        required
                                         value={formData.label}
                                         onChange={handleInputChange}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
