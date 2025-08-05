@@ -98,8 +98,8 @@ export async function POST(request: NextRequest) {
             parcels,
             async: false,
             extra: {
-                reference1: order.id,
-                reference2: `Vendor: ${vendorData.storeName}`,
+                reference1: (order.id || '').substring(0, 50),
+                reference2: `Vendor: ${vendorData.storeName}`.substring(0, 50),
             }
         });
 
