@@ -39,5 +39,15 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Firebase service account keys (all variations)
 forreelflies-441004-9404044469bd.json
-forreelflies-9abdb-firebase-adminsdk-91l3l-596e3f30c1.json
+forreelflies-9abdb-firebase-adminsdk-*.json
+*-firebase-adminsdk-*.json
+
+# Documentation files (except README)
+*.md 
+!README.md
+
+# Debug and test files
+debug*
+test-*
