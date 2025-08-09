@@ -1,4 +1,4 @@
-'use server';
+"use client";
 
 import { Layout, Product, Sort, ReviewSummary } from "@/app/types/types";
 import BasicCard from "../cards/BasicCard";
@@ -68,19 +68,19 @@ const ProductGridCard = async ({ product }: { product: Product }) => {
         <BasicCard className="w-full h-full group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="h-full flex flex-col relative">
                 {/* Badges Container */}
-                <div className="absolute top-2 right-2 flex flex-col gap-1.5 z-10">
+                <div className="absolute top-3 right-3 flex flex-col gap-2 z-10">
                     {hasDiscount && (
-                        <div className="bg-red-500 text-white text-sm font-bold px-2 py-1 rounded-full shadow-md animate-bounce">
+                        <div className="bg-red-500 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-lg animate-pulse">
                             {discountPercentage}% OFF
                         </div>
                     )}
                     {isLowStock && (
-                        <div className="bg-amber-500 text-white text-sm font-bold px-2 py-1 rounded-full shadow-md">
+                        <div className="bg-amber-500 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-lg">
                             Low Stock
                         </div>
                     )}
                     {product.stockStatus === 'outOfStock' && (
-                        <div className="bg-gray-500 text-white text-sm font-bold px-2 py-1 rounded-full shadow-md">
+                        <div className="bg-gray-500 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow-lg">
                             Out of Stock
                         </div>
                     )}
@@ -89,9 +89,9 @@ const ProductGridCard = async ({ product }: { product: Product }) => {
                 {/* Product Image with Hover Effect */}
                 {product?.images && (
                     <Link className="block relative overflow-hidden rounded-t-lg group" href={`/product/${product.id}`}>
-                        <div className="aspect-square bg-gray-50 relative h-[250px]">
+                        <div className="aspect-[4/5] bg-gray-100 relative h-[500px] w-full">
                             <Image 
-                                className="group-hover:scale-110 transition-transform duration-500 ease-out object-cover" 
+                                className="group-hover:scale-105 transition-transform duration-500 ease-out object-contain" 
                                 src={product.images[0]} 
                                 alt={product.name}
                                 fill
@@ -100,7 +100,7 @@ const ProductGridCard = async ({ product }: { product: Product }) => {
                             />
                             {product.images.length > 1 && (
                                 <Image 
-                                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ease-out object-cover" 
+                                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ease-out object-contain" 
                                     src={product.images[1]} 
                                     alt={`${product.name} alternate view`}
                                     fill
@@ -111,64 +111,63 @@ const ProductGridCard = async ({ product }: { product: Product }) => {
                     </Link>
                 )}
                 
-                {/* Product Info */}
-                <div className="p-3 flex flex-col flex-grow">
-                    <Link href={`/product/${product.id}`} className="group">
-                        <h3 className="text-lg font-medium text-gray-900 group-hover:text-green-600 line-clamp-1">{product.name}</h3>
-                    </Link>
-                    <p className="text-sm text-gray-500 mt-1 line-clamp-2">{product.shortDescription}</p>
+                {/* Product Info Section */}
+                <div className="flex flex-col flex-1 p-6">
+                    <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-3 line-clamp-2">
+                        {product.name}
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                        {product.shortDescription || "No description available"}
+                    </p>
                     
                     {/* Vendor Info */}
-                    <div className="mt-2 flex items-center gap-1.5 text-sm">
-                        <FaStore className="text-gray-400" />
-                        <span className="text-gray-600">{product.vendorName}</span>
+                    <div className="mt-auto mb-4 flex items-center gap-2 text-sm text-gray-600">
+                        <FaStore className="w-4 h-4 text-blue-600" />
+                        <span>{product.vendorName || "Unknown Vendor"}</span>
                     </div>
                     
                     {/* Ratings */}
-                    <div className="mt-1.5 flex items-center gap-1">
-                        <div className="flex text-amber-400">
+                    <div className="mb-4 flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                             {[...Array(5)].map((_, i) => (
-                                <span key={i}>
-                                    {i < Math.floor(productReviews.averageRating) ? (
-                                        <FaStar />
-                                    ) : i < productReviews.averageRating ? (
-                                        <FaStarHalfAlt />
-                                    ) : (
-                                        <FaRegStar />
-                                    )}
-                                </span>
+                                <FaStar 
+                                    key={i} 
+                                    className={`w-4 h-4 ${i < (product.reviewSummary?.averageRating || 0) ? 'text-yellow-400' : 'text-gray-300'}`} 
+                                />
                             ))}
                         </div>
-                        <span className="text-sm text-gray-500">({productReviews.totalReviews})</span>
+                        <span className="text-sm text-gray-600">
+                            ({product.reviewSummary?.totalReviews || 0} reviews)
+                        </span>
                     </div>
                 </div>
                 
                 {/* Price and Actions */}
-                <div className="p-3 pt-0">
-                    <div className="flex flex-col items-center gap-1.5 mb-3">
-                        <div className="flex items-center gap-2">
-                            <span className="text-xl font-bold text-gray-900">${product.price.toFixed(2)}</span>
-                            {hasDiscount && product.originalPrice && (
-                                <span className="text-sm text-gray-500 line-through">${product.originalPrice.toFixed(2)}</span>
+                <div className="p-6 pt-0 border-t border-gray-100">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                            <span className="text-2xl md:text-3xl font-bold text-gray-900">
+                                ${product.price?.toFixed(2) || "0.00"}
+                            </span>
+                            {product.originalPrice && product.originalPrice > product.price && (
+                                <span className="px-3 py-1 bg-red-100 text-red-800 text-sm font-medium rounded-full">
+                                    Save ${(product.originalPrice - product.price).toFixed(2)}
+                                </span>
                             )}
                         </div>
-                        {hasDiscount && product.originalPrice && (
-                            <div className="text-xs text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded-full">
-                                Save ${(product.originalPrice - product.price).toFixed(2)}!
-                            </div>
-                        )}
                     </div>
                     
-                    <div className="flex flex-col gap-2">
-                        <Link href={`/product/${product.id}`} className="w-full">
-                            <button className="w-full py-2.5 px-6 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg transition-all duration-300 hover:border-green-500 hover:text-green-600 font-medium text-base">
-                                View Details
-                            </button>
+                    <div className="flex flex-col gap-3">
+                        <Link 
+                            href={`/product/${product.id}`}
+                            className="w-full py-3 px-6 text-center border-2 border-gray-300 text-gray-700 font-medium rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-colors duration-200"
+                        >
+                            View Details
                         </Link>
                         <ClientAddToCartButton 
                             product={product} 
                             quantity={product.quantityOptions?.[0] || 1}
-                            className="w-full py-2.5 px-6 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors duration-300 font-medium shadow-md hover:shadow-lg text-base"
+                            className="w-full py-3 px-6 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors duration-200"
                         />
                     </div>
                 </div>
@@ -421,20 +420,20 @@ export default async function  ProductList({ sort, pageSize, page, layout, searc
 
     const getContainerClassName = () => {
         if (layout === 'list') {
-            return "w-full space-y-6 px-4 xl:px-6";
+            return "w-full space-y-6 px-2 xl:px-4 max-w-7xl mx-auto";
         }
         
         switch (layout) {
             case "column":
-                return "w-full grid grid-cols-1 items-start justify-items-center gap-6 px-4 xl:px-6 max-w-2xl mx-auto"
+                return "w-full grid grid-cols-1 items-start justify-items-center gap-8 px-2 xl:px-4 max-w-3xl mx-auto"
             case "grid2":
-                return "w-full grid grid-cols-1 md:grid-cols-2 items-start justify-items-center gap-6 px-4 xl:px-6"
+                return "w-full grid grid-cols-1 lg:grid-cols-2 items-start justify-items-center gap-8 px-2 xl:px-4 max-w-7xl mx-auto"
             case "grid3":
-                return "w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 items-start justify-items-center gap-6 px-4 xl:px-6"
+                return "w-full grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 items-start justify-items-center gap-8 px-2 xl:px-4 max-w-8xl mx-auto"
             case "grid4":
-                return "w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-start justify-items-center gap-6 px-4 xl:px-6"
+                return "w-full grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 items-start justify-items-center gap-8 px-2 xl:px-4 max-w-[1920px] mx-auto"
             default:
-                return "w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 items-start justify-items-center gap-6 px-4 xl:px-6"
+                return "w-full grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 items-start justify-items-center gap-8 px-2 xl:px-4 max-w-8xl mx-auto"
         }
     }
 

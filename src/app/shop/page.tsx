@@ -14,17 +14,19 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ [
 
     return (
         <div className="flex flex-col w-full min-h-screen bg-gray-50">
-            <ShopHeader sort={sort} pageSize={pageSize} layout={layout} />
-            <div className="flex-1">
-                <ProductList 
-                    sort={sort} 
-                    pageSize={pageSize} 
-                    page={page} 
-                    layout={layout}
-                    search={search || undefined}
-                    category={category || undefined}
-                    tag={tag || undefined}
-                />
+            <div className="max-w-[95vw] mx-[2.5%] flex flex-col gap-4 w-full justify-center items-center">
+                <ShopHeader sort={sort} pageSize={pageSize} layout={layout} />
+                <div className="flex-1">
+                    <ProductList 
+                        sort={sort} 
+                        pageSize={pageSize} 
+                        page={page} 
+                        layout={layout}
+                        search={search || undefined}
+                        category={category || undefined}
+                        tag={tag || undefined}
+                    />
+                </div>
             </div>
         </div>
     )
