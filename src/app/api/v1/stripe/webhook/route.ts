@@ -48,6 +48,7 @@ async function createShippingLabel(order: Order, vendorData: any) {
         state: !fromAddress.state,
         zip: !fromAddress.zip
       });
+<<<<<<< HEAD
       
       // Update order with specific error message instead of throwing
       if (order.id) {
@@ -63,6 +64,14 @@ async function createShippingLabel(order: Order, vendorData: any) {
       }
       
       return false; // Return false instead of throwing to prevent webhook failure
+=======
+      throw new Error(`Vendor address is incomplete. Missing: ${[
+        !fromAddress.street1 && 'street address',
+        !fromAddress.city && 'city',
+        !fromAddress.state && 'state',
+        !fromAddress.zip && 'zip'
+      ].filter(Boolean).join(', ')}`);
+>>>>>>> 4ff0cf88b9e222dca3d5f0b0d9f562cc58577412
     }
 
     console.log("📍 To address for shipping:", toAddress);
@@ -75,6 +84,7 @@ async function createShippingLabel(order: Order, vendorData: any) {
         state: !toAddress.state,
         zip: !toAddress.zip
       });
+<<<<<<< HEAD
       
       // Update order with specific error message instead of throwing
       if (order.id) {
@@ -90,6 +100,14 @@ async function createShippingLabel(order: Order, vendorData: any) {
       }
       
       return false; // Return false instead of throwing to prevent webhook failure
+=======
+      throw new Error(`Customer address is incomplete. Missing: ${[
+        !toAddress.street1 && 'street address',
+        !toAddress.city && 'city',
+        !toAddress.state && 'state',
+        !toAddress.zip && 'zip'
+      ].filter(Boolean).join(', ')}`);
+>>>>>>> 4ff0cf88b9e222dca3d5f0b0d9f562cc58577412
     }
 
     // Calculate parcel dimensions based on order items
@@ -189,6 +207,7 @@ async function createShippingLabel(order: Order, vendorData: any) {
     });
 
     console.log("✅ Shipping label created successfully");
+<<<<<<< HEAD
     console.log("📦 Order update details:", {
       orderId: order.id,
       labelUrl: transaction.labelUrl,
@@ -197,6 +216,8 @@ async function createShippingLabel(order: Order, vendorData: any) {
       service: cheapestRate.servicelevel.name,
       cost: cheapestRate.amount
     });
+=======
+>>>>>>> 4ff0cf88b9e222dca3d5f0b0d9f562cc58577412
     return true;
   } catch (error) {
     console.error("❌ Error creating shipping label:", error);
