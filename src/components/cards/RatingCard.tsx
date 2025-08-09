@@ -23,7 +23,7 @@ export default function Card({ className="", title, rating, vendorName, price, i
     if (!product) return null; // Don't render if no product data
 
     return (
-        <div className={`${className} flex flex-col items-center p-5 gap-3 border rounded-md relative`}>
+        <div className={`${className} flex flex-col items-center p-3 md:p-5 gap-3 md:gap-4 border rounded-lg relative w-full max-w-full bg-white shadow-sm hover:shadow-md transition-shadow`}>
             {/* Discount Badge */}
             {hasDiscount && (
                 <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded z-10">
@@ -31,7 +31,7 @@ export default function Card({ className="", title, rating, vendorName, price, i
                 </div>
             )}
             
-            <Link href={`/product/${product.id}`} className="relative w-[250px] h-[200px] cursor-pointer">
+            <Link href={`/product/${product.id}`} className="relative w-full max-w-[280px] h-[160px] md:h-[200px] cursor-pointer">
                 <Image src={image || placeholder.src} alt={title} fill className="object-contain hover:scale-105 transition-transform duration-300" /> 
             </Link>
             <Link href={`/product/${product.id}`}>

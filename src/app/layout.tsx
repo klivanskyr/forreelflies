@@ -22,7 +22,7 @@ export default function RootLayout({
         <UserProvider>
           <DevelopmentBanner />
           <Navbar />
-          <main className="flex-grow w-full">
+          <main className="flex-grow w-full max-w-full overflow-x-hidden">
             {children}
           </main>
           <Footer />

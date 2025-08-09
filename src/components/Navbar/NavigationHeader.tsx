@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Underline from "./underline/Underline";
 import HoverPopup from "../hoverComponents/HoverPopup";
 import TextLink from "../Links/textlink/TextLink";
@@ -21,13 +21,26 @@ export default function NavigationHeader({ isScrolled }: { isScrolled: boolean }
     const { isApprovedVendor, loading: vendorLoading } = useVendor();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     
+    // Prevent body scroll when mobile menu is open
+    useEffect(() => {
+        if (isMenuOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [isMenuOpen]);
+    
     return (
         <>
             {/* Mobile Navigation (md:hidden) */}
-            <div className="relative flex md:hidden items-center justify-between px-4 py-2 w-full bg-white">
+            <div className="relative flex md:hidden items-center justify-between px-4 py-2 w-full bg-white overflow-hidden">
                 {/* Left Section - Hamburger */}
                 <button 
-                    className="flex items-center justify-center z-20 w-10"
+                    className="flex items-center justify-center z-50 w-10"
                     onClick={() => setIsMenuOpen(!isMenuOpen)}
                 >
                     {isMenuOpen ? (
@@ -38,14 +51,13 @@ export default function NavigationHeader({ isScrolled }: { isScrolled: boolean }
                 </button>
 
                 {/* Center Section - Logo */}
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none w-20 h-16 flex items-center justify-center">
                     <Image 
                         src={logo.src} 
                         alt="logo" 
-                        width={150} 
-                        height={150} 
-                        className={`transition-all duration-300 ${isScrolled ? 'w-[90px]' : 'w-[105px]'} h-auto`}
-                        style={{ width: 'auto', height: 'auto' }}
+                        width={80} 
+                        height={80} 
+                        className="w-[80px] h-auto max-w-none object-contain"
                     />
                 </div>
 
@@ -67,8 +79,21 @@ export default function NavigationHeader({ isScrolled }: { isScrolled: boolean }
                 </div>
 
                 {/* Mobile Navigation Links - Hidden Menu */}
-                <div className={`${isMenuOpen ? 'block' : 'hidden'} absolute top-full left-0 right-0 bg-white p-4 border-b shadow-lg z-10`}>
-                    <div className="flex flex-col items-start gap-6">
+                <div className={`${isMenuOpen ? 'block' : 'hidden'} fixed inset-0 top-0 bg-white z-[9999]`}>
+                    {/* Close Button - Top Right */}
+                    <button
+                        onClick={() => setIsMenuOpen(false)}
+                        className="absolute top-6 right-6 p-3 hover:bg-gray-100 rounded-full transition-colors z-[10000]"
+                    >
+                        <FaTimes className="w-6 h-6 text-gray-800" />
+                    </button>
+                    
+                    {/* Menu Header */}
+                    <div className="pt-20 pb-6 px-6 border-b border-gray-200">
+                        <h2 className="text-2xl font-bold text-gray-800">Menu</h2>
+                    </div>
+                    
+                    <div className="flex flex-col items-start gap-6 p-6">
                         <Underline>
                             <TextLink href="/" text="HOME" className="!text-black hover:!text-greenPrimary transition-all" onClick={() => setIsMenuOpen(false)} />
                         </Underline>
