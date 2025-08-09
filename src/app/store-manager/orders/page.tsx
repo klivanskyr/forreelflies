@@ -95,14 +95,7 @@ function OrdersContent() {
         router.push('/store-manager/payments?tour=1');
     };
 
-    // Order-specific tour steps
-    const orderTourSteps = [
-        {
-            selector: "[data-tour='orders-table']",
-            title: "Orders Dashboard",
-            description: "Here you can view and manage all your customer orders. Use filters to find specific orders and sort by different criteria."
-        }
-    ];
+    // Order-specific tour steps - using the one defined above
 
     // Fetch orders
     const fetchOrders = async () => {
@@ -300,8 +293,40 @@ function OrdersContent() {
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Failed to retry shipping label');
+            
+            // Immediately update the local order state with the new shipping information
+            setOrders(prevOrders => prevOrders.map(order => {
+                if (order.id === orderId) {
+                    return {
+                        ...order,
+                        shippoLabelUrl: data.labelUrl,
+                        trackingNumber: data.trackingNumber,
+                        shippingStatus: 'label_created' as const,
+                        shippingCarrier: data.carrier,
+                        shippingService: data.service,
+                        shippingError: null, // Clear any previous errors
+                    };
+                }
+                return order;
+            }));
+
+            // Also update the selected order if it's the same one
+            if (selectedOrder && selectedOrder.id === orderId) {
+                setSelectedOrder(prev => prev ? {
+                    ...prev,
+                    shippoLabelUrl: data.labelUrl,
+                    trackingNumber: data.trackingNumber,
+                    shippingStatus: 'label_created' as const,
+                    shippingCarrier: data.carrier,
+                    shippingService: data.service,
+                    shippingError: null,
+                } : null);
+            }
+
             toast.success('Shipping label created successfully');
-            fetchOrders(); // Refresh orders list
+            
+            // Refresh orders list to ensure consistency with database
+            fetchOrders();
         } catch (error) {
             console.error('Error retrying shipping label:', error);
             toast.error('Failed to retry shipping label');
