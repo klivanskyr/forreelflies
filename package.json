@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:retry-label": "node test-retry-label.js",
+    "test:retry-label-simple": "node test-retry-label-simple.js"
   },
   "devDependencies": {
     "@types/node": "^20",
