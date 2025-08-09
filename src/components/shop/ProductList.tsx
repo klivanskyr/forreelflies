@@ -1,5 +1,3 @@
-"use client";
-
 import { Layout, Product, Sort, ReviewSummary } from "@/app/types/types";
 import BasicCard from "../cards/BasicCard";
 import Link from "next/link";
